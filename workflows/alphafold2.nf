@@ -165,6 +165,8 @@ workflow ALPHAFOLD2 {
         )
         ch_versions = ch_versions.mix(RUN_ALPHAFOLD2_PRED.out.versions)
         ch_multiqc_rep = RUN_ALPHAFOLD2_PRED.out.multiqc.collect()
+    } else if (params.alphafold2_mode == 'split_msa_prediction_job_stack') {
+        // TODO: Implement
     }
 
     //
