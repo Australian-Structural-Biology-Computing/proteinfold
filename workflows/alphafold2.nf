@@ -165,6 +165,28 @@ workflow ALPHAFOLD2 {
         )
         ch_versions = ch_versions.mix(RUN_ALPHAFOLD2_PRED.out.versions)
         ch_multiqc_rep = RUN_ALPHAFOLD2_PRED.out.multiqc.collect()
+    } else if (params.alphafold2_mode == 'split_msa_prediction_job_stack') {
+        // TODO: Implement
+        for (fasta in ch_fasta) {
+           RUN_ALPHAFOLD2_PRED (
+              fasta,
+              params.full_dbs,
+              params.alphafold2_model_preset,
+              PREPARE_ALPHAFOLD2_DBS.out.params,
+              PREPARE_ALPHAFOLD2_DBS.out.bfd.ifEmpty([]),
+              PREPARE_ALPHAFOLD2_DBS.out.small_bfd.ifEmpty([]),
+              PREPARE_ALPHAFOLD2_DBS.out.mgnify,
+              PREPARE_ALPHAFOLD2_DBS.out.pdb70,
+              PREPARE_ALPHAFOLD2_DBS.out.pdb_mmcif,
+              PREPARE_ALPHAFOLD2_DBS.out.uniclust30,
+              PREPARE_ALPHAFOLD2_DBS.out.uniref90,
+              PREPARE_ALPHAFOLD2_DBS.out.pdb_seqres,
+              PREPARE_ALPHAFOLD2_DBS.out.uniprot,
+              RUN_ALPHAFOLD2_MSA.out.features
+           )
+           // TODO: Implement wait and collector
+           // https://stackoverflow.com/questions/75100652/nextflow-dsl2-how-to-combine-outputs-channels-from-multiple-processes-into-in
+        }
     }
 
     //
