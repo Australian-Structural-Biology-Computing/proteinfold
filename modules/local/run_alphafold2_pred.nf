@@ -46,7 +46,7 @@ process RUN_ALPHAFOLD2_PRED {
         --model_preset=${alphafold2_model_preset} \
         --output_dir=\$PWD \
         --data_dir=\$PWD \
-        --random_seed=53343 \
+        --random_seed=\$RANDOM \
         --msa_path=${msa} \
         --use_gpu_relax \
         $args
