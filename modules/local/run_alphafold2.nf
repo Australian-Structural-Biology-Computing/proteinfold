@@ -64,7 +64,7 @@ process RUN_ALPHAFOLD2 {
         --mgnify_database_path=${params.alphafold2_db}/mgnify/mgy_clusters_2022_05.fa \
         --template_mmcif_dir=${params.alphafold2_db}/pdb_mmcif/mmcif_files \
         --obsolete_pdbs_path=${params.alphafold2_db}/pdb_mmcif/obsolete.dat \
-        --random_seed=53343 \
+        --random_seed=\$RANDOM \
         --use_gpu_relax \
         $args
 
