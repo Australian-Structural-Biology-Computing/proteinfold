@@ -45,7 +45,7 @@ workflow ROSETTAFOLD_ALL_ATOM {
 
     main:
     ch_multiqc_files = Channel.empty()
-
+    
     //
     // SUBWORKFLOW: Run Rosettafold_All_Atom
     //

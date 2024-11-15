@@ -3,15 +3,15 @@
  */
 process RUN_ROSETTAFOLD_ALL_ATOM {
     tag "$meta.id"
-    label 'process_medium'
     label 'gpu_compute'
+    label 'process_medium'
 
     // Exit if running this module with -profile conda / -profile mamba
     if (workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1) {
         error("Local RUN_ROSETTAFOLD_ALL_ATOM module does not support Conda. Please use Docker / Singularity / Podman instead.")
     }
 
-    container "/srv/scratch/z5378336/RoseTTAFold_All_Atom.sif"
+    container "/srv/scratch/sbf/apptainers/RoseTTAFold_All_Atom.sif"
 
     input:
     tuple val(meta), path(fasta)
@@ -21,8 +21,9 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
 
     output:
     path ("${fasta.baseName}*")
-    tuple val(meta), path ("*pdb"), emit: pdb
-    tuple val(meta), path ("*_mqc.tsv"), emit: multiqc
+    tuple val(meta), path ("${meta.id}_rosettafold_all_atom.pdb")   , emit: main_pdb
+    tuple val(meta), path ("*pdb")                                  , emit: pdb
+    tuple val(meta), path ("*_mqc.tsv")                             , emit: multiqc
     path "versions.yml", emit: versions
 
     when:
@@ -33,14 +34,14 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
     ln -s /app/RoseTTAFold-All-Atom/* .
 
     mamba run --name RFAA python -m rf2aa.run_inference \
-    --config-dir $PWD \
-    --config-path $PWD \
+    checkpoint_path="/srv/scratch/sbf/rfaa/RFAA_paper_weights.pt" \
+    --config-dir /app/RoseTTAFold-All-Atom/rf2aa/config/inference \
     --config-name "${fasta}"
 
-    cp "${fasta.baseName}".pdb ./"${fasta.baseName}".rosettafold_all_atom.pdb
-    awk '{print \$6"\\t"\$11}' "${fasta.baseName}".rosettafold_all_atom.pdb | uniq > plddt.tsv
-    echo -e Positions"\\t" > header.tsv
-    cat header.tsv plddt.tsv > "${fasta.baseName}"_plddt_mqc.tsv
+    cp "${fasta.baseName}".pdb ./"${meta.id}"_rosettafold_all_atom.pdb
+    awk '{print \$6"\\t"\$11}' "${meta.id}"_rosettafold_all_atom.pdb | uniq > plddt.tsv
+    echo -e Positions"\\t""${meta.id}"_rosettafold_all_atom.pdb > header.tsv
+    cat header.tsv plddt.tsv > "${meta.id}"_plddt_mqc.tsv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -50,8 +51,8 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
 
     stub:
     """
-    touch ./"${fasta.baseName}".rosettafold_all_atom.pdb
-    touch ./"${fasta.baseName}"_mqc.tsv
+    touch ./"${meta.id}"_rosettafold_all_atom.pdb
+    touch ./"${meta.id}"_mqc.tsv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
