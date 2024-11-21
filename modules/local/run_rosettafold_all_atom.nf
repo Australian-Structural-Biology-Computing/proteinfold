@@ -1,0 +1,63 @@
+/*
+ * Run RoseTTAFold_All_Atom 
+ */
+process RUN_ROSETTAFOLD_ALL_ATOM {
+    tag "$meta.id"
+    label 'gpu_compute'
+    label 'process_medium'
+
+    // Exit if running this module with -profile conda / -profile mamba
+    if (workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1) {
+        error("Local RUN_ROSETTAFOLD_ALL_ATOM module does not support Conda. Please use Docker / Singularity / Podman instead.")
+    }
+
+    container "/srv/scratch/sbf-pipelines/proteinfold/singularity/rosettafold_all_atom.sif"
+
+    input:
+    tuple val(meta), path(fasta)
+    path ('bfd/*')
+    path ('UniRef30_2020_06/*')
+    path ('pdb100_2021Mar03/*')
+    
+    output:
+    path ("${fasta.baseName}*")
+    tuple val(meta), path ("${meta.id}_rosettafold_all_atom.pdb")   , emit: main_pdb
+    tuple val(meta), path ("*pdb")                                  , emit: pdb
+    tuple val(meta), path ("*_mqc.tsv")                             , emit: multiqc
+    path "versions.yml", emit: versions
+
+    when:
+    task.ext.when == null || task.ext.when
+
+    script:
+    """
+    ln -s /app/RoseTTAFold-All-Atom/* .
+
+    mamba run --name RFAA python -m rf2aa.run_inference \
+    loader_params.MAXCYCLE=1 \
+    checkpoint_path="/srv/scratch/sbf/rfaa/RFAA_paper_weights.pt" \
+    --config-dir /app/RoseTTAFold-All-Atom/rf2aa/config/inference \
+    --config-name "${fasta}"
+
+    cp "${fasta.baseName}".pdb ./"${meta.id}"_rosettafold_all_atom.pdb
+    awk '{print \$6"\\t"\$11}' "${meta.id}"_rosettafold_all_atom.pdb | uniq > plddt.tsv
+    echo -e Positions"\\t""${meta.id}"_rosettafold_all_atom.pdb > header.tsv
+    cat header.tsv plddt.tsv > "${meta.id}"_plddt_mqc.tsv
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        python: \$(python3 --version | sed 's/Python //g')
+    END_VERSIONS
+    """
+
+    stub:
+    """
+    touch ./"${meta.id}"_rosettafold_all_atom.pdb
+    touch ./"${meta.id}"_mqc.tsv
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        python: \$(python3 --version | sed 's/Python //g')
+    END_VERSIONS
+    """
+}

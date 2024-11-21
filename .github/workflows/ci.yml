@@ -43,6 +43,8 @@ jobs:
           - "test_colabfold_webserver"
           - "test_colabfold_download"
           - "test_esmfold"
+          - "test_rosettafold_all_atom"
+          - "test_helixfold3"
         isMaster:
           - ${{ github.base_ref == 'master' }}
         # Exclude conda and singularity on dev

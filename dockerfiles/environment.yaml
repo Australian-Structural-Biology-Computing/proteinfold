@@ -1,0 +1,16 @@
+name: helixfold
+channels:
+  - conda-forge
+  - bioconda
+  - nvidia
+  - biocore
+  - defaults
+
+dependencies:
+  - python=3.9
+  - cuda-toolkit=12.0
+  - cudnn=8.4.0
+  - nccl=2.14
+  - libgcc
+  - libgomp
+  - pip
