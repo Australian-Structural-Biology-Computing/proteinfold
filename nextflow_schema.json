@@ -803,7 +803,26 @@
         },
         "helixfold3_maxit_src_path": {
             "type": "string",
-            "default": "null/maxit-v11.200-prod-src/*"
+            "default": "null/maxit-v11.200-prod-src/*",
+        "uniref30_rosettafold_all_atom_link": {
+            "type": "string",
+            "default": "http://wwwuser.gwdg.de/~compbiol/uniclust/2020_06/UniRef30_2020_06_hhsuite.tar.gz"
+        },
+        "pdb100_rosettafold_all_atom_link": {
+            "type": "string",
+            "default": "https://files.ipd.uw.edu/pub/RoseTTAFold/pdb100_2021Mar03.tar.gz"
+        },
+        "rfaa_paper_weights_link": {
+            "type": "string",
+            "default": "http://files.ipd.uw.edu/pub/RF-All-Atom/weights/RFAA_paper_weights.pt"
+        },
+        "pdb100_rosettafold_all_atom_path": {
+            "type": "string",
+            "default": "null/pdb100_2021Mar03/*"
+        },
+        "rfaa_paper_weights_path": {
+            "type": "string",
+            "default": "null/RFAA_paper_weights.pt"
         }
     }
 }

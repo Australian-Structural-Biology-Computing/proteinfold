@@ -73,6 +73,7 @@ workflow NFCORE_PROTEINFOLD {
     ch_alphafold_top_ranked_pdb = Channel.empty()
     ch_colabfold_top_ranked_pdb = Channel.empty()
     ch_esmfold_top_ranked_pdb   = Channel.empty()
+    ch_rosettafold_all_atom_top_ranked_pdb   = Channel.empty()
     ch_multiqc                  = Channel.empty()
     ch_versions                 = Channel.empty()
     ch_report_input             = Channel.empty()
@@ -223,7 +224,8 @@ workflow NFCORE_PROTEINFOLD {
         PREPARE_ROSETTAFOLD_ALL_ATOM_DBS (
             params.bfd_rosettafold_all_atom_path,
             params.uniref30_rosettafold_all_atom_path,
-            params.pdb100_path
+            params.pdb100_rosettafold_all_atom_path,
+            params.rfaa_paper_weights_path
         )
         ch_versions = ch_versions.mix(PREPARE_ROSETTAFOLD_ALL_ATOM_DBS.out.versions)
 
@@ -235,12 +237,15 @@ workflow NFCORE_PROTEINFOLD {
             ch_versions,
             PREPARE_ROSETTAFOLD_ALL_ATOM_DBS.out.bfd.ifEmpty([]).first(),
             PREPARE_ROSETTAFOLD_ALL_ATOM_DBS.out.uniref30,
-            PREPARE_ROSETTAFOLD_ALL_ATOM_DBS.out.pdb100
+            PREPARE_ROSETTAFOLD_ALL_ATOM_DBS.out.pdb100,
+            PREPARE_ROSETTAFOLD_ALL_ATOM_DBS.out.rfaa_paper_weights,
+            ch_dummy_file
         )
-        ch_multiqc  = ROSETTAFOLD_ALL_ATOM.out.multiqc_report
-        ch_versions = ch_versions.mix(ROSETTAFOLD_ALL_ATOM.out.versions)
+        ch_rosettafold_all_atom_top_ranked_pdb  = ROSETTAFOLD_ALL_ATOM.out.top_ranked_pdb
+        ch_multiqc                              = ch_multiqc.mix(ROSETTAFOLD_ALL_ATOM.out.multiqc_report.collect())
+        ch_versions                             = ch_versions.mix(ROSETTAFOLD_ALL_ATOM.out.versions)
+        ch_report_input                         = ch_report_input.mix(ROSETTAFOLD_ALL_ATOM.out.pdb_msa)
     }
-
 
     //
     // WORKFLOW: Run helixfold3
@@ -345,7 +350,8 @@ workflow NFCORE_PROTEINFOLD {
         ch_multiqc_methods_description,
         ch_alphafold_top_ranked_pdb,
         ch_colabfold_top_ranked_pdb,
-        ch_esmfold_top_ranked_pdb
+        ch_esmfold_top_ranked_pdb,
+        ch_rosettafold_all_atom_top_ranked_pdb
     )
 
     emit:

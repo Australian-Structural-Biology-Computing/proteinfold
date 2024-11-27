@@ -15,19 +15,6 @@ include { RUN_ROSETTAFOLD_ALL_ATOM      } from '../modules/local/run_rosettafold
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-//
-// MODULE: Installed directly from nf-core/modules
-//
-include { MULTIQC } from '../modules/nf-core/multiqc/main'
-
-//
-// SUBWORKFLOW: Consisting entirely of nf-core/modules
-//
-include { paramsSummaryMap       } from 'plugin/nf-schema'
-include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
-include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
-include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
-
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -42,10 +29,16 @@ workflow ROSETTAFOLD_ALL_ATOM {
     ch_bfd                  // channel: path(bfd)
     ch_uniref30             // channel: path(uniref30)
     ch_pdb100
+    ch_rfaa_paper_weights
+    ch_dummy_file
 
     main:
-    ch_multiqc_files = Channel.empty()
-    
+    ch_multiqc_files    = Channel.empty()
+    ch_pdb              = Channel.empty()
+    ch_top_ranked_pdb   = Channel.empty()
+    ch_msa              = Channel.empty()
+    ch_multiqc_report   = Channel.empty()
+
     //
     // SUBWORKFLOW: Run Rosettafold_All_Atom
     //
@@ -53,50 +46,43 @@ workflow ROSETTAFOLD_ALL_ATOM {
         ch_samplesheet,
         ch_bfd,
         ch_uniref30,
-        ch_pdb100
+        ch_pdb100,
+        ch_rfaa_paper_weights
     )
-    ch_multiqc_rep = RUN_ROSETTAFOLD_ALL_ATOM.out.multiqc.collect()
-    ch_versions    = ch_versions.mix(RUN_ROSETTAFOLD_ALL_ATOM.out.versions)
 
-    //
-    // Collate and save software versions
-    //
-    softwareVersionsToYAML(ch_versions)
-        .collectFile(storeDir: "${params.outdir}/pipeline_info", name: 'nf_core_proteinfold_software_mqc_versions.yml', sort: true, newLine: true)
-        .set { ch_collated_versions }
+    RUN_ROSETTAFOLD_ALL_ATOM
+        .out
+        .multiqc
+        .map { it[1] }
+        .toSortedList()
+        .map { [ [ "model": "rosettafold_all_atom" ], it.flatten() ] }
+        .set { ch_multiqc_report }
 
-    //
-    // MODULE: MultiQC
-    //
-    ch_multiqc_report = Channel.empty()
-    if (!params.skip_multiqc) {
-        ch_multiqc_report        = Channel.empty()
-        ch_multiqc_config        = Channel.fromPath("$projectDir/assets/multiqc_config.yml", checkIfExists: true)
-        ch_multiqc_custom_config = params.multiqc_config ? Channel.fromPath( params.multiqc_config ) : Channel.empty()
-        ch_multiqc_logo          = params.multiqc_logo   ? Channel.fromPath( params.multiqc_logo )   : Channel.empty()
-        summary_params           = paramsSummaryMap(workflow, parameters_schema: "nextflow_schema.json")
-        ch_workflow_summary      = Channel.value(paramsSummaryMultiqc(summary_params))
-        ch_multiqc_custom_methods_description = params.multiqc_methods_description ? file(params.multiqc_methods_description, checkIfExists: true) : file("$projectDir/assets/methods_description_template.yml", checkIfExists: true)
-        ch_methods_description                = Channel.value(methodsDescriptionText(ch_multiqc_custom_methods_description))
+    ch_pdb            = ch_pdb.mix(RUN_ROSETTAFOLD_ALL_ATOM.out.pdb)
+    ch_top_ranked_pdb = ch_top_ranked_pdb.mix(RUN_ROSETTAFOLD_ALL_ATOM.out.top_ranked_pdb)
+    ch_versions       = ch_versions.mix(RUN_ROSETTAFOLD_ALL_ATOM.out.versions)
 
-        ch_multiqc_files = Channel.empty()
-        ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
-        ch_multiqc_files = ch_multiqc_files.mix(ch_methods_description.collectFile(name: 'methods_description_mqc.yaml'))
-        ch_multiqc_files = ch_multiqc_files.mix(ch_collated_versions)
-        ch_multiqc_files = ch_multiqc_files.mix(ch_multiqc_rep)
+    RUN_ROSETTAFOLD_ALL_ATOM
+        .out
+        .pdb
+        .combine(ch_dummy_file)
+        .map {
+            it[0]["model"] = "esmfold"
+            it
+        }
+        .set { ch_pdb_msa }
 
-        MULTIQC (
-            ch_multiqc_files.collect(),
-            ch_multiqc_config.toList(),
-            ch_multiqc_custom_config.toList(),
-            ch_multiqc_logo.toList(),
-            [],
-            []
-        )
-        ch_multiqc_report = MULTIQC.out.report.toList()
-    }
+    ch_top_ranked_pdb
+        .map { [ it[0]["id"], it[0], it[1] ] }
+        .set { ch_top_ranked_pdb }
+
+    ch_pdb_msa
+        .map { [ it[0]["id"], it[0], it[1], it[2] ] }
+        .set { ch_top_ranked_pdb }
 
     emit:
+    pdb_msa        = ch_pdb_msa        // channel: [ meta, /path/to/*.pdb, dummy_file ]
+    top_ranked_pdb = ch_top_ranked_pdb // channel: [ id, /path/to/*.pdb ]
     multiqc_report = ch_multiqc_report // channel: /path/to/multiqc_report.html
     versions       = ch_versions       // channel: [ path(versions.yml) ]
 }

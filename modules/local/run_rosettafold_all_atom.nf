@@ -18,10 +18,11 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
     path ('bfd/*')
     path ('UniRef30_2020_06/*')
     path ('pdb100_2021Mar03/*')
+    path ('*')
     
     output:
     path ("${fasta.baseName}*")
-    tuple val(meta), path ("${meta.id}_rosettafold_all_atom.pdb")   , emit: main_pdb
+    tuple val(meta), path ("${meta.id}_rosettafold_all_atom.pdb")   , emit: top_ranked_pdb
     tuple val(meta), path ("*pdb")                                  , emit: pdb
     tuple val(meta), path ("*_mqc.tsv")                             , emit: multiqc
     path "versions.yml", emit: versions
@@ -34,8 +35,6 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
     ln -s /app/RoseTTAFold-All-Atom/* .
 
     mamba run --name RFAA python -m rf2aa.run_inference \
-    loader_params.MAXCYCLE=1 \
-    checkpoint_path="/srv/scratch/sbf/rfaa/RFAA_paper_weights.pt" \
     --config-dir /app/RoseTTAFold-All-Atom/rf2aa/config/inference \
     --config-name "${fasta}"
 
