@@ -27,6 +27,10 @@ if (params.mode.toLowerCase().split(",").contains("esmfold")) {
     include { PREPARE_ESMFOLD_DBS } from './subworkflows/local/prepare_esmfold_dbs'
     include { ESMFOLD             } from './workflows/esmfold'
 }
+if (params.mode.toLowerCase().split(",").contains("rosettafold_all_atom")) {
+    include { PREPARE_ROSETTAFOLD_ALL_ATOM_DBS  } from './subworkflows/local/prepare_rosettafold_all_atom_dbs'
+    include { ROSETTAFOLD_ALL_ATOM              } from './workflows/rosettafold_all_atom'
+}
 if (params.mode.toLowerCase().split(",").contains("helixfold3")) {
     include { PREPARE_HELIXFOLD3_DBS    } from './subworkflows/local/prepare_helixfold3_dbs'
     include { HELIXFOLD3                } from './workflows/helixfold3'
@@ -214,7 +218,7 @@ workflow NFCORE_PROTEINFOLD {
     //
     // WORKFLOW: Run rosettafold_all_atom
     //
-    if(params.mode == "rosettafold_all_atom") {
+    if(requested_modes.contains("rosettafold_all_atom")) {
         //
         // SUBWORKFLOW: Prepare Rosettafold-all-atom DBs
         //
