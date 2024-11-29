@@ -178,12 +178,25 @@ Below you can find an indicative example of the TSV file with the pLDDT scores p
 | 49                 | CB        | VAL          | 7                       | 52.74 |
 | 50                 | O         | VAL          | 7                       | 56.46 |
 
-### HelixFold3
+### RoseTTAFold-All-Atom
 
 <details markdown="1">
 <summary>Output files</summary>
 
 - `run/`
+  - `<SEQUENCE NAME>_rosettafold_all_atom.pdb` that is the structure with the highest pLDDT score (ranked first)
+  - `<SEQUENCE NAME>_plddt_mqc.tsv` that presents the pLDDT scores per residue for the predicted model
+  - `<SEQUENCE NAME>_aux.pt` pytorch file with confidence metrics stored (can load with torch.load(file, map_location="cpu"))
+  - `<SEQUENCE NAME>/` that contains the computed MSAs, prediction metadata
+
+</details>
+
+### HelixFold3
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- 'run/'
   - `<SEQUENCE NAME>_helixfold3.pdb` that is the structure with the highest pLDDT score (ranked first)
   - `<SEQUENCE NAME>_plddt_mqc.tsv` that presents the pLDDT scores per residue for the predicted model
   - `<SEQUENCE NAME>/` that contains the computed MSAs, prediction metadata, ranked structures, raw model outputs etc. 

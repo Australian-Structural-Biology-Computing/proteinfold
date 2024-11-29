@@ -59,7 +59,6 @@ workflow ROSETTAFOLD_ALL_ATOM {
         .set { ch_multiqc_report }
 
     ch_pdb            = ch_pdb.mix(RUN_ROSETTAFOLD_ALL_ATOM.out.pdb)
-    ch_top_ranked_pdb = ch_top_ranked_pdb.mix(RUN_ROSETTAFOLD_ALL_ATOM.out.top_ranked_pdb)
     ch_versions       = ch_versions.mix(RUN_ROSETTAFOLD_ALL_ATOM.out.versions)
 
     RUN_ROSETTAFOLD_ALL_ATOM
@@ -67,14 +66,10 @@ workflow ROSETTAFOLD_ALL_ATOM {
         .pdb
         .combine(ch_dummy_file)
         .map {
-            it[0]["model"] = "esmfold"
+            it[0]["model"] = "rosettafold_all_atom"
             it
         }
         .set { ch_pdb_msa }
-
-    ch_top_ranked_pdb
-        .map { [ it[0]["id"], it[0], it[1] ] }
-        .set { ch_top_ranked_pdb }
 
     ch_pdb_msa
         .map { [ it[0]["id"], it[0], it[1], it[2] ] }

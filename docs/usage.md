@@ -39,7 +39,7 @@ Each FASTA file should contain a single protein sequence unless using multimer m
 
 ## Running the pipeline
 
-The typical commands for running the pipeline on AlphaFold2, Colabfold and ESMFold modes are shown below.
+The typical commands for running the pipeline on AlphaFold2, Colabfold, ESMFold and RoseTTAFold-All-Atom modes are shown below.
 
 > You can run any combination of the models by providing them to the `--mode` parameter separated by a comma. For example: `--mode alphafold2,esmfold,colabfold` will run the three models in parallel.
 
@@ -439,6 +439,19 @@ nextflow run nf-core/proteinfold \
 ```
 
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
+
+
+AlphaFold2 regular can be run using this command:
+
+```bash
+nextflow run nf-core/proteinfold \
+      --input samplesheet.csv \
+      --outdir <OUTDIR> \
+      --mode rosettafold_all_atom \
+      --rosettafold_all_atom_db <null (default) | DB_PATH> \
+      --use_gpu <true/false> \
+      -profile <docker/singularity/.../institute>
+```
 
 Note that the pipeline will create the following files in your working directory:
 

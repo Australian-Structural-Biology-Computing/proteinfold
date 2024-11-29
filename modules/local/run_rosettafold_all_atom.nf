@@ -1,5 +1,5 @@
 /*
- * Run RoseTTAFold_All_Atom 
+ * Run RoseTTAFold_All_Atom
  */
 process RUN_ROSETTAFOLD_ALL_ATOM {
     tag "$meta.id"
@@ -19,7 +19,7 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
     path ('UniRef30_2020_06/*')
     path ('pdb100_2021Mar03/*')
     path ('*')
-    
+
     output:
     path ("${fasta.baseName}*")
     tuple val(meta), path ("${meta.id}_rosettafold_all_atom.pdb")   , emit: top_ranked_pdb
@@ -39,7 +39,7 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
     --config-name "${fasta}"
 
     cp "${fasta.baseName}".pdb ./"${meta.id}"_rosettafold_all_atom.pdb
-    awk '{print \$6"\\t"\$11}' "${meta.id}"_rosettafold_all_atom.pdb | uniq > plddt.tsv
+    awk '{printf "%s\\t%.0f\\n", \$6, \$11 * 100}' "${meta.id}"_rosettafold_all_atom.pdb | uniq > plddt.tsv
     echo -e Positions"\\t""${meta.id}"_rosettafold_all_atom.pdb > header.tsv
     cat header.tsv plddt.tsv > "${meta.id}"_plddt_mqc.tsv
 
