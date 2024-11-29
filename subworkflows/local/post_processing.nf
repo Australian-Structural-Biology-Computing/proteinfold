@@ -38,7 +38,7 @@ workflow POST_PROCESSING {
     ch_alphafold2_top_ranked_pdb
     ch_colabfold_top_ranked_pdb
     ch_esmfold_top_ranked_pdb
-    ch_rosettafold_all_atom_top_ranked_pdb
+    ch_helixfold3_top_ranked_pdb
 
     main:
     ch_comparison_report_files = Channel.empty()
@@ -69,7 +69,7 @@ workflow POST_PROCESSING {
             )
 
             ch_comparison_report_files = ch_comparison_report_files.mix(
-                ch_rosettafold_all_atom_top_ranked_pdb
+                ch_helixfold3_top_ranked_pdb
             )
 
             ch_comparison_report_files

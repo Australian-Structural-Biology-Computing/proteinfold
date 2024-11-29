@@ -35,6 +35,8 @@ The samplesheet can have as many columns as you desire, however, there is a stri
 
 An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
 
+Each FASTA file should contain a single protein sequence unless using multimer mode. To provide a FASTA file with multiple sequences for individual folding, you can use one or more FASTA files with the `--split_fasta` parameter. This will treat each sequence in the FASTA file as a separate entry, folding them individually and in parallel, as if each sequence were listed separately in the samplesheet.
+
 ## Running the pipeline
 
 The typical commands for running the pipeline on AlphaFold2, Colabfold and ESMFold modes are shown below.
@@ -422,6 +424,18 @@ If you specify the `--esmfold_db <PATH>` parameter, the directory structure of y
     ├── esm2_t36_3B_UR50D-contact-regression.pt
     ├── esm2_t36_3B_UR50D.pt
     └── esmfold_3B_v1.pt
+```
+
+HelixFold3 can be run using this command (note that HF3 requires .json files not .fasta):
+
+```console
+nextflow run nf-core/proteinfold \
+      --input samplesheet.csv \
+      --outdir <OUTDIR> \
+      --mode helixfold3 \
+      --helixfold3_db <null (default) | DB_PATH> \
+      --use_gpu <true/false> \
+      -profile <docker>
 ```
 
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.

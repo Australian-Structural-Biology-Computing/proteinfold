@@ -30,10 +30,10 @@ process RUN_HELIXFOLD3 {
 
     output:
     path ("${fasta.baseName}*")
-    tuple val(meta), path ("${meta.id}_helixfold3.cif")     , emit: main_cif
-    tuple val(meta), path ("${meta.id}_helixfold3.pdb")     , emit: main_pdb
-    tuple val(meta), path ("ranked*pdb")                    , emit: pdb
-    tuple val(meta), path ("*_mqc.tsv")                     , emit: multiqc
+    tuple val(meta), path ("${meta.id}_helixfold3.pdb")   , emit: top_ranked_pdb
+    tuple val(meta), path ("${fasta.baseName}/ranked*pdb"), emit: pdb
+    tuple val(meta), path ("*_mqc.tsv")                   , emit: multiqc
+    tuple val(meta), path ("${meta.id}_helixfold3.cif")   , emit: main_cif
     path "versions.yml", emit: versions
 
     when:
@@ -74,23 +74,21 @@ process RUN_HELIXFOLD3 {
         --model_name allatom_demo \
         --init_model "./init_models/HelixFold3-240814.pdparams" \
         --infer_times 4 \
-        --diff_batch_size 1 \
         --logging_level "ERROR" \
         --precision "bf16"
 
     cp "${fasta.baseName}"/"${fasta.baseName}"-rank1/predicted_structure.pdb ./"${meta.id}"_helixfold3.pdb
     cp "${fasta.baseName}"/"${fasta.baseName}"-rank1/predicted_structure.cif ./"${meta.id}"_helixfold3.cif
     cd "${fasta.baseName}"
-    awk '{print \$6"\\t"\$11}' "${fasta.baseName}"-rank1/predicted_structure.pdb | uniq > ranked_1_plddt.tsv
+    awk '{print \$6"\\t"\$11}' "${fasta.baseName}"-rank1/predicted_structure.pdb > ranked_1_plddt.tsv
     for i in 2 3 4
-        do awk '{print \$6"\\t"\$11}' "${fasta.baseName}"-rank\$i/predicted_structure.pdb | uniq | awk '{print \$2}' > ranked_"\$i"_plddt.tsv
+        do awk '{print \$6"\\t"\$11}' "${fasta.baseName}"-rank\$i/predicted_structure.pdb | awk '{print \$2}' > ranked_"\$i"_plddt.tsv
     done
     paste ranked_1_plddt.tsv ranked_2_plddt.tsv ranked_3_plddt.tsv ranked_4_plddt.tsv > plddt.tsv
     echo -e Positions"\\t"rank_1"\\t"rank_2"\\t"rank_3"\\t"rank_4 > header.tsv
     cat header.tsv plddt.tsv > ../"${meta.id}"_plddt_mqc.tsv
-    cp final_features.pkl ../
-    for i in 2 3 4
-        do cp ""${fasta.baseName}"-rank\$i/predicted_structure.pdb" ../ranked_\$i.pdb
+    for i in 1 2 3 4
+        do cp ""${fasta.baseName}"-rank\$i/predicted_structure.pdb" ./ranked_\$i.pdb
     done
     cd ..
 
@@ -104,11 +102,12 @@ process RUN_HELIXFOLD3 {
     """
     touch ./"${meta.id}"_helixfold3.cif
     touch ./"${meta.id}"_helixfold3.pdb
-    touch ./"${meta.id}"_mqc.tsv
-    touch "ranked_1.pdb"
-    touch "ranked_2.pdb"
-    touch "ranked_3.pdb"
-    touch "ranked_4.pdb"
+    touch ./"${meta.id}"_plddt_mqc.tsv
+    mkdir "${fasta.baseName}"
+    touch "${fasta.baseName}/ranked_1.pdb"
+    touch "${fasta.baseName}/ranked_2.pdb"
+    touch "${fasta.baseName}/ranked_3.pdb"
+    touch "${fasta.baseName}/ranked_4.pdb"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

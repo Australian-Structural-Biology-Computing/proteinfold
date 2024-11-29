@@ -120,7 +120,7 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
             linecolor="black",
             gridcolor="WhiteSmoke",
         ),
-        legend=dict(yanchor="bottom", y=0, xanchor="right", x=1.3),
+        legend=dict(yanchor="bottom", y=0.02, xanchor="right", x=1, bordercolor="Black", borderwidth=1),
         plot_bgcolor="white",
         width=600,
         height=600,

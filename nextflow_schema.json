@@ -40,6 +40,11 @@
                     "description": "Run on CPUs (default) or GPUs",
                     "fa_icon": "fas fa-microchip"
                 },
+                "split_fasta": {
+                    "type": "boolean",
+                    "description": "Split input multi-fasta file in separated fasta files each of them containing one sequence to be folded",
+                    "fa_icon": "fas fa-microchip"
+                },
                 "email": {
                     "type": "string",
                     "description": "Email address for completion summary.",
@@ -679,29 +684,6 @@
         }
     ],
     "properties": {
-        "rosettafold_all_atom_db": {
-            "type": "string"
-        },
-        "uniref30_rosettafold_all_atom_path": {
-            "type": "string",
-            "default": "null/uniref30/UniRef30_2020_06/*"
-        },
-        "pdb100_path": {
-            "type": "string",
-            "default": "null/pdb100_2021Mar03/*"
-        },
-        "bfd_rosettafold_all_atom_path": {
-            "type": "string",
-            "default": "null/bfd/*"
-        },
-        "uniref30": {
-            "type": "string",
-            "default": "http://wwwuser.gwdg.de/~compbiol/uniclust/2020_06/UniRef30_2020_06_hhsuite.tar.gz"
-        },
-        "pdb100": {
-            "type": "string",
-            "default": "https://files.ipd.uw.edu/pub/RoseTTAFold/pdb100_2021Mar03.tar.gz"
-        },
         "helixfold3_init_models_link": {
             "type": "string",
             "default": "https://paddlehelix.bd.bcebos.com/HelixFold3/params/HelixFold3-params-240814.zip"
@@ -735,7 +717,7 @@
         },
         "helixfold3_pdb_seqres_link": {
             "type": "string",
-            "default": "ftp://ftp.wwpdb.org/pub/pdb/derived_data/pdb_seqres.txt"
+            "default": "https://files.wwpdb.org/pub/pdb/derived_data/pdb_seqres.txt"
         },
         "helixfold3_uniref90_link": {
             "type": "string",
@@ -803,26 +785,7 @@
         },
         "helixfold3_maxit_src_path": {
             "type": "string",
-            "default": "null/maxit-v11.200-prod-src/*",
-        "uniref30_rosettafold_all_atom_link": {
-            "type": "string",
-            "default": "http://wwwuser.gwdg.de/~compbiol/uniclust/2020_06/UniRef30_2020_06_hhsuite.tar.gz"
-        },
-        "pdb100_rosettafold_all_atom_link": {
-            "type": "string",
-            "default": "https://files.ipd.uw.edu/pub/RoseTTAFold/pdb100_2021Mar03.tar.gz"
-        },
-        "rfaa_paper_weights_link": {
-            "type": "string",
-            "default": "http://files.ipd.uw.edu/pub/RF-All-Atom/weights/RFAA_paper_weights.pt"
-        },
-        "pdb100_rosettafold_all_atom_path": {
-            "type": "string",
-            "default": "null/pdb100_2021Mar03/*"
-        },
-        "rfaa_paper_weights_path": {
-            "type": "string",
-            "default": "null/RFAA_paper_weights.pt"
+            "default": "null/maxit-v11.200-prod-src"
         }
     }
 }
