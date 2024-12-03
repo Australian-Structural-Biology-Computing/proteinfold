@@ -199,7 +199,7 @@ Below you can find an indicative example of the TSV file with the pLDDT scores p
 - 'run/'
   - `<SEQUENCE NAME>_helixfold3.pdb` that is the structure with the highest pLDDT score (ranked first)
   - `<SEQUENCE NAME>_plddt_mqc.tsv` that presents the pLDDT scores per residue for the predicted model
-  - `<SEQUENCE NAME>/` that contains the computed MSAs, prediction metadata, ranked structures, raw model outputs etc. 
+  - `<SEQUENCE NAME>/` that contains the computed MSAs, prediction metadata, ranked structures, raw model outputs etc.
 
 </details>
 

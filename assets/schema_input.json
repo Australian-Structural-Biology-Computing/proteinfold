@@ -28,9 +28,6 @@
             }
         },
         "required": ["fasta"],
-        "anyOf": [
-            { "required": ["sequence"] },
-            { "required": ["id"] }
-        ]
+        "anyOf": [{ "required": ["sequence"] }, { "required": ["id"] }]
     }
 }

@@ -440,7 +440,6 @@ nextflow run nf-core/proteinfold \
 
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
 
-
 AlphaFold2 regular can be run using this command:
 
 ```bash
