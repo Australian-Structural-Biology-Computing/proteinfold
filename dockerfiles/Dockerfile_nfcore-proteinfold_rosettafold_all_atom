@@ -1,0 +1,38 @@
+FROM nvidia/cuda:12.6.0-cudnn-devel-ubuntu24.04
+
+LABEL Author="j.caley@unsw.edu.au" \
+    title="nfcore/proteinfold_alphafold2_standard" \
+    Version="0.9.0" \
+    description="Docker image containing all software requirements to run the RUN_ROSETTAFOLD_ALL_ATOM module using the nf-core/proteinfold pipeline"
+
+ENV PYTHONPATH="/app/RoseTTAFold-All-Atom:$PYTHONPATH" \
+    PATH="/opt/miniforge/bin:/app/RoseTTAFold-All-Atom:$PATH" \
+    DGLBACKEND="pytorch"
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y wget git && \
+
+	wget -q -P /tmp "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh" && \
+	bash /tmp/Miniforge3-$(uname)-$(uname -m).sh && \
+    rm /tmp/Miniforge3-Linux-x86_64.sh && \
+    export PATH="/opt/miniforge/bin:$PATH" && \
+
+    git clone --single-branch --depth 1 https://github.com/Australian-Structural-Biology-Computing/RoseTTAFold-All-Atom.git /app/RoseTTAFold-All-Atom && \
+    cd /app/RoseTTAFold-All-Atom && \
+
+    mamba env create -f environment.yaml && \
+    mamba run -n RFAA \
+        'python rf2aa/SE3Transformer/setup.py install && \
+        bash install_dependencies.sh' && \
+
+    wget https://ftp.ncbi.nlm.nih.gov/blast/executables/legacy.NOTSUPPORTED/2.2.26/blast-2.2.26-x64-linux.tar.gz && \
+    mkdir -p blast-2.2.26 && \
+    tar -xf blast-2.2.26-x64-linux.tar.gz -C blast-2.2.26 && \
+    cp -r blast-2.2.26/blast-2.2.26/ blast-2.2.26_bk && \
+    rm -r blast-2.2.26 && \
+    mv blast-2.2.26_bk/ blast-2.2.26 && \
+
+    apt-get autoremove -y && apt-get remove --purge -y wget git && apt-get clean -y && \
+    rm -rf /var/lib/apt/lists/* /root/.cache *.tar.gz && \
+    mamba clean --all --force-pkgs-dirs -y
+
+ENTRYPOINT ["mamba", "run", "--name", "RFAA", "python", "-m", "rf2aa.run_inference", "--config-name"]
