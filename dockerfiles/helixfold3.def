@@ -1,19 +1,19 @@
 Bootstrap: docker
-From: nvidia/cuda:12.6.0-cudnn-devel-ubuntu24.04
+From: nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
 
 %labels
     Author j.caley@unsw.edu.au
-    Version 0.2.1
+    Version 0.2.4
 
 %files
-    environment.yaml .
+    hf3_environment.yaml .
 
 %post
-    apt update && DEBIAN_FRONTEND=noninteractive apt install --no-install-recommends -y wget git
+    apt update && DEBIAN_FRONTEND=noninteractive apt install --no-install-recommends -y wget git build-essential
 
-    wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh"
-    bash Miniforge3-Linux-x86_64.sh -b -p /opt/miniforge
-    rm Miniforge3-Linux-x86_64.sh
+    wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
+    bash Miniforge3-$(uname)-$(uname -m).sh -b -p /opt/miniforge
+    rm Miniforge3-$(uname)-$(uname -m).sh
     export PATH="/opt/miniforge/bin:$PATH"
 
     git clone --single-branch --branch dev --depth 1 --no-checkout https://github.com/PaddlePaddle/PaddleHelix.git app/helixfold3
@@ -23,18 +23,11 @@ From: nvidia/cuda:12.6.0-cudnn-devel-ubuntu24.04
     git checkout dev
     mv apps/protein_folding/helixfold3/* .
     rm -rf apps
-    mv /environment.yaml .
-    mamba env create -f environment.yaml
-
-    conda install -y -c bioconda aria2 hmmer==3.3.2 kalign2==2.04 hhsuite==3.3.0 -n helixfold
-    conda install -y -c conda-forge openbabel -n helixfold
-
-    mamba run -n helixfold \
-        'python3 -m pip install paddlepaddle-gpu==2.6.1 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html && \
-        python3 -m pip install -r requirements.txt'
+    mv /hf3_environment.yaml .
+    CONDA_PKGS_DIRS=$(mktemp -d -p "${TMPDIR:-/tmp}") mamba env create --file=hf3_environment.yaml
 
     apt autoremove -y && apt remove --purge -y wget git && apt clean -y
-    rm -rf /var/lib/apt/lists/* /root/.cache *.tar.gz
+    rm -rf /var/lib/apt/lists/* /root/.cache $CONDA_PKGS_DIRS
     mamba clean --all --force-pkgs-dirs -y
 
 %environment
