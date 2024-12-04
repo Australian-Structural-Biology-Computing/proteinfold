@@ -9,29 +9,28 @@ ENV PYTHONPATH="/app/RoseTTAFold-All-Atom:$PYTHONPATH" \
     PATH="/conda/bin:/app/RoseTTAFold-All-Atom:$PATH" \
     DGLBACKEND="pytorch"
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y wget git && \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y wget git
 
-	wget -q -P /tmp "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh" && \
-	bash /tmp/Miniforge3-$(uname)-$(uname -m).sh -b -p /conda && \
+RUN wget -q -P /tmp "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh" && \
+    bash /tmp/Miniforge3-$(uname)-$(uname -m).sh -b -p /conda && \
     rm /tmp/Miniforge3-$(uname)-$(uname -m).sh && \
-    export PATH="/conda/bin:$PATH" && \
+    export PATH="/conda/bin:$PATH"
 
-    git clone --single-branch --depth 1 https://github.com/Australian-Structural-Biology-Computing/RoseTTAFold-All-Atom.git /app/RoseTTAFold-All-Atom && \
+RUN git clone --single-branch --depth 1 https://github.com/Australian-Structural-Biology-Computing/RoseTTAFold-All-Atom.git /app/RoseTTAFold-All-Atom && \
     cd /app/RoseTTAFold-All-Atom && \
-
     mamba env create --file=environment.yaml && \
     mamba run -n RFAA \
-        'python rf2aa/SE3Transformer/setup.py install && \
-        bash install_dependencies.sh' && \
+        'python /app/RoseTTAFold-All-Atom/rf2aa/SE3Transformer/setup.py install && \
+        bash /app/RoseTTAFold-All-Atom/install_dependencies.sh'
 
-    wget https://ftp.ncbi.nlm.nih.gov/blast/executables/legacy.NOTSUPPORTED/2.2.26/blast-2.2.26-x64-linux.tar.gz && \
+RUN wget https://ftp.ncbi.nlm.nih.gov/blast/executables/legacy.NOTSUPPORTED/2.2.26/blast-2.2.26-x64-linux.tar.gz && \
     mkdir -p blast-2.2.26 && \
     tar -xf blast-2.2.26-x64-linux.tar.gz -C blast-2.2.26 && \
     cp -r blast-2.2.26/blast-2.2.26/ blast-2.2.26_bk && \
     rm -r blast-2.2.26 && \
-    mv blast-2.2.26_bk/ blast-2.2.26 && \
+    mv blast-2.2.26_bk/ blast-2.2.26
 
-    apt-get autoremove -y && apt-get remove --purge -y wget git && apt-get clean -y && \
+RUN apt-get autoremove -y && apt-get remove --purge -y wget git && apt-get clean -y && \
     rm -rf /var/lib/apt/lists/* /root/.cache *.tar.gz && \
     mamba clean --all --force-pkgs-dirs -y
 
