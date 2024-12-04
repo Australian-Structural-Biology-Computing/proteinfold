@@ -6,20 +6,20 @@ LABEL Author="j.caley@unsw.edu.au" \
     description="Docker image containing all software requirements to run the RUN_ROSETTAFOLD_ALL_ATOM module using the nf-core/proteinfold pipeline"
 
 ENV PYTHONPATH="/app/RoseTTAFold-All-Atom:$PYTHONPATH" \
-    PATH="/opt/miniforge/bin:/app/RoseTTAFold-All-Atom:$PATH" \
+    PATH="/conda/bin:/app/RoseTTAFold-All-Atom:$PATH" \
     DGLBACKEND="pytorch"
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y wget git && \
 
 	wget -q -P /tmp "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh" && \
-	bash /tmp/Miniforge3-$(uname)-$(uname -m).sh && \
-    rm /tmp/Miniforge3-Linux-x86_64.sh && \
-    export PATH="/opt/miniforge/bin:$PATH" && \
+	bash /tmp/Miniforge3-$(uname)-$(uname -m).sh -b -p /conda && \
+    rm /tmp/Miniforge3-$(uname)-$(uname -m).sh && \
+    export PATH="/conda/bin:$PATH" && \
 
     git clone --single-branch --depth 1 https://github.com/Australian-Structural-Biology-Computing/RoseTTAFold-All-Atom.git /app/RoseTTAFold-All-Atom && \
     cd /app/RoseTTAFold-All-Atom && \
 
-    mamba env create -f environment.yaml && \
+    mamba env create --file=environment.yaml && \
     mamba run -n RFAA \
         'python rf2aa/SE3Transformer/setup.py install && \
         bash install_dependencies.sh' && \
@@ -35,4 +35,4 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-instal
     rm -rf /var/lib/apt/lists/* /root/.cache *.tar.gz && \
     mamba clean --all --force-pkgs-dirs -y
 
-ENTRYPOINT ["mamba", "run", "--name", "RFAA", "python", "-m", "rf2aa.run_inference", "--config-name"]
+ENTRYPOINT ["/conda/bin/mamba", "run", "--name", "RFAA", "python", "-m", "rf2aa.run_inference", "--config-name"]
