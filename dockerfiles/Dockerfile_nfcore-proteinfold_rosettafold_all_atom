@@ -1,7 +1,7 @@
 FROM nvidia/cuda:12.6.0-cudnn-devel-ubuntu24.04
 
 LABEL Author="j.caley@unsw.edu.au" \
-    title="nfcore/proteinfold_alphafold2_standard" \
+    title="nfcore/proteinfold_rosettafold_all_atom" \
     Version="0.9.0" \
     description="Docker image containing all software requirements to run the RUN_ROSETTAFOLD_ALL_ATOM module using the nf-core/proteinfold pipeline"
 
@@ -14,7 +14,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-instal
     wget -q -P /tmp "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh" && \
     bash /tmp/Miniforge3-$(uname)-$(uname -m).sh -b -p /conda && \
     rm -rf /tmp/Miniforge3-$(uname)-$(uname -m).sh /var/lib/apt/lists/* && \
-    apt-get autoremove -y && apt-get clean -y 
+    apt-get autoremove -y && apt-get clean -y
 
 RUN git clone --single-branch --depth 1 https://github.com/Australian-Structural-Biology-Computing/RoseTTAFold-All-Atom.git /app/RoseTTAFold-All-Atom && \
     cd /app/RoseTTAFold-All-Atom && \
