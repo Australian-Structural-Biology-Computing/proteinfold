@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
+FROM nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
 
 LABEL Author="j.caley@unsw.edu.au" \
     title="nfcore/proteinfold_helixfold3" \
@@ -27,6 +27,8 @@ RUN git clone --single-branch --branch dev --depth 1 --no-checkout https://githu
 
 COPY hf3_environment.yaml /app/helixfold3/
 RUN /conda/bin/mamba env create --file=/app/helixfold3/hf3_environment.yaml && \
+    /conda/bin/mamba install -y -c bioconda aria2 hmmer==3.3.2 kalign2==2.04 hhsuite==3.3.0 -n helixfold && \
+    /conda/bin/mamba install -y -c conda-forge openbabel -n helixfold && \
     /conda/bin/mamba clean --all --force-pkgs-dirs -y && \
     rm -rf /root/.cache && \
     apt-get autoremove -y && apt-get remove --purge -y wget git && apt-get clean -y

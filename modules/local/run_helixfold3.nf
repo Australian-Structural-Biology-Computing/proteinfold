@@ -11,7 +11,7 @@ process RUN_HELIXFOLD3 {
         error("Local RUN_HELIXFOLD3 module does not support Conda. Please use Docker / Singularity / Podman / Apptainer instead.")
     }
 
-    container "/srv/scratch/sbf-pipelines/proteinfold/singularity/helixfold3.sif"
+    container "/srv/scratch/z5378336/apptainers/hf3_docker.sif"
 
     input:
     tuple val(meta), path(fasta)
@@ -43,19 +43,19 @@ process RUN_HELIXFOLD3 {
     """
     export MAXIT_SRC="./maxit_src"
     export RCSBROOT="\$MAXIT_SRC"
-    export PATH="\$MAXIT_SRC/bin:/opt/miniforge/envs/helixfold/bin:$PATH"
-    export OBABEL_BIN="/opt/miniforge/envs/helixfold/bin"
+    export PATH="\$MAXIT_SRC/bin:\$ENV_BIN:$PATH"
+    export OBABEL_BIN="\$ENV_BIN"
 
     ln -s /app/helixfold3/* .
 
-    /opt/miniforge/envs/helixfold/bin/python3.9 inference.py \
+    \$ENV_BIN/python3.9 inference.py \
         --maxit_binary "\$MAXIT_SRC/bin/maxit" \
-        --jackhmmer_binary_path "/opt/miniforge/envs/helixfold/bin/jackhmmer" \
-        --hhblits_binary_path "/opt/miniforge/envs/helixfold/bin/hhblits" \
-        --hhsearch_binary_path "/opt/miniforge/envs/helixfold/bin/hhsearch" \
-        --kalign_binary_path "/opt/miniforge/envs/helixfold/bin/kalign" \
-        --hmmsearch_binary_path "/opt/miniforge/envs/helixfold/bin/hmmsearch" \
-        --hmmbuild_binary_path "/opt/miniforge/envs/helixfold/bin/hmmbuild" \
+        --jackhmmer_binary_path "\$ENV_BIN/jackhmmer" \
+        --hhblits_binary_path "\$ENV_BIN/hhblits" \
+        --hhsearch_binary_path "\$ENV_BIN/hhsearch" \
+        --kalign_binary_path "\$ENV_BIN/kalign" \
+        --hmmsearch_binary_path "\$ENV_BIN/hmmsearch" \
+        --hmmbuild_binary_path "\$ENV_BIN/hmmbuild" \
         --preset='reduced_dbs' \
         --bfd_database_path="./bfd/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt" \
         --small_bfd_database_path="./small_bfd/bfd-first_non_consensus_sequences.fasta" \
