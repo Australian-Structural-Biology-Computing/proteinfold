@@ -1,26 +1,29 @@
-process MULTIFASTA_TO_CSV {
-    tag "$meta.id"
+process COMBINE_UNIPROT {
     label 'process_single'
 
-    conda "conda-forge::sed=4.7"
+    conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/ubuntu:20.04' :
         'nf-core/ubuntu:20.04' }"
 
     input:
-    tuple val(meta), path(fasta)
+    path uniprot_sprot
+    path uniprot_trembl
 
     output:
-    tuple val(meta), path("input.csv"), emit: input_csv
-    path "versions.yml", emit: versions
+    path ('uniprot.fasta'), emit: ch_db
+    path "versions.yml"   , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
+    def args = task.ext.args ?: ''
     """
-    awk '/^>/ {printf("\\n%s\\n",\$0);next; } { printf("%s",\$0);}  END {printf("\\n");}' ${fasta} > single_line.fasta
-    echo -e id,sequence'\\n'${meta.id},`awk '!/^>/ {print \$0}' single_line.fasta | tr '\\n' ':' | sed 's/:\$//' | sed 's/^://'` > input.csv
+    set -e
+
+    cat ${uniprot_sprot} >> ${uniprot_trembl}
+    mv ${uniprot_trembl} uniprot.fasta
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -30,11 +33,10 @@ process MULTIFASTA_TO_CSV {
 
     stub:
     """
-    touch input.csv
-
+    touch uniprot.fasta
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        sed: \$(echo \$(sed --version 2>&1) | sed 's/^.*GNU sed) //; s/ .*\$//')
+        awk: \$(gawk --version| head -1 | sed 's/GNU Awk //; s/, API:.*//')
     END_VERSIONS
     """
 }

@@ -27,6 +27,9 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
 RUN cd / \
     && wget https://raw.githubusercontent.com/YoshitakaMo/localcolabfold/07e87ed/install_colabbatch_linux.sh \
     && sed -i "/colabfold.download/d" install_colabbatch_linux.sh \
+    # Avoid error running on cpus
+    # https://github.com/YoshitakaMo/localcolabfold/issues/238#issuecomment-2203777538
+    && sed -i "/==0.4.28/d" install_colabbatch_linux.sh \
     && bash install_colabbatch_linux.sh
 
 ## Updated

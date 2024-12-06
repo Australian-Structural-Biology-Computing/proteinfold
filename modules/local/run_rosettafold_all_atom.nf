@@ -11,17 +11,18 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
         error("Local RUN_ROSETTAFOLD_ALL_ATOM module does not support Conda. Please use Docker / Singularity / Podman instead.")
     }
 
-    container "/srv/scratch/sbf/apptainers/RoseTTAFold_All_Atom.sif"
+    container "/srv/scratch/z5378336/apptainers/rfaa_docker.sif"
 
     input:
     tuple val(meta), path(fasta)
     path ('bfd/*')
     path ('UniRef30_2020_06/*')
     path ('pdb100_2021Mar03/*')
+    path ('*')
 
     output:
     path ("${fasta.baseName}*")
-    tuple val(meta), path ("${meta.id}_rosettafold_all_atom.pdb")   , emit: main_pdb
+    tuple val(meta), path ("${meta.id}_rosettafold_all_atom.pdb")   , emit: top_ranked_pdb
     tuple val(meta), path ("*pdb")                                  , emit: pdb
     tuple val(meta), path ("*_mqc.tsv")                             , emit: multiqc
     path "versions.yml", emit: versions
@@ -34,12 +35,11 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
     ln -s /app/RoseTTAFold-All-Atom/* .
 
     mamba run --name RFAA python -m rf2aa.run_inference \
-    checkpoint_path="/srv/scratch/sbf/rfaa/RFAA_paper_weights.pt" \
     --config-dir /app/RoseTTAFold-All-Atom/rf2aa/config/inference \
     --config-name "${fasta}"
 
     cp "${fasta.baseName}".pdb ./"${meta.id}"_rosettafold_all_atom.pdb
-    awk '{print \$6"\\t"\$11}' "${meta.id}"_rosettafold_all_atom.pdb | uniq > plddt.tsv
+    awk '{printf "%s\\t%.0f\\n", \$6, \$11 * 100}' "${meta.id}"_rosettafold_all_atom.pdb | uniq > plddt.tsv
     echo -e Positions"\\t""${meta.id}"_rosettafold_all_atom.pdb > header.tsv
     cat header.tsv plddt.tsv > "${meta.id}"_plddt_mqc.tsv
 

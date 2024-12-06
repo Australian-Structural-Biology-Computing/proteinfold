@@ -10,7 +10,7 @@ import re
 from Bio import PDB
 
 
-def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generate_tsv):
+def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generate_tsv, pdb):
     msa = []
     if in_type.lower() != "colabfold" and not msa_path.endswith("NO_FILE"):
         with open(msa_path, "r") as in_file:
@@ -95,7 +95,7 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
 
     fig = go.Figure()
     for idx, (model_name, value_plddt) in enumerate(plddt_per_model.items()):
-        rank_label = f"Ranked {idx}"
+        rank_label = os.path.splitext(pdb[idx])[0]
         fig.add_trace(
             go.Scatter(
                 x=list(range(len(value_plddt))),
@@ -120,7 +120,7 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
             linecolor="black",
             gridcolor="WhiteSmoke",
         ),
-        legend=dict(yanchor="bottom", y=0, xanchor="right", x=1.3),
+        legend=dict(yanchor="bottom", y=0.02, xanchor="right", x=1, bordercolor="Black", borderwidth=1),
         plot_bgcolor="white",
         width=600,
         height=600,
@@ -210,20 +210,41 @@ def generate_plots(msa_path, plddt_paths, name, out_dir):
         i += 1
 
 
+
 def align_structures(structures):
     parser = PDB.PDBParser(QUIET=True)
     structures = [
         parser.get_structure(f"Structure_{i}", pdb) for i, pdb in enumerate(structures)
     ]
-
     ref_structure = structures[0]
-    ref_atoms = [atom for atom in ref_structure.get_atoms()]
 
+    common_atoms = set(
+        f"{atom.get_parent().get_id()[1]}-{atom.name}"
+        for atom in ref_structure.get_atoms()
+    )
+    for i, structure in enumerate(structures[1:], start=1):
+        common_atoms = common_atoms.intersection(
+            set(
+                f"{atom.get_parent().get_id()[1]}-{atom.name}"
+                for atom in structure.get_atoms()
+            )
+        )
+
+    ref_atoms = [
+        atom
+        for atom in ref_structure.get_atoms()
+        if f"{atom.get_parent().get_id()[1]}-{atom.name}" in common_atoms
+    ]
+    # print(ref_atoms)
     super_imposer = PDB.Superimposer()
     aligned_structures = [structures[0]]  # Include the reference structure in the list
 
     for i, structure in enumerate(structures[1:], start=1):
-        target_atoms = [atom for atom in structure.get_atoms()]
+        target_atoms = [
+            atom
+            for atom in structure.get_atoms()
+            if f"{atom.get_parent().get_id()[1]}-{atom.name}" in common_atoms
+        ]
 
         super_imposer.set_atoms(ref_atoms, target_atoms)
         super_imposer.apply(structure.get_atoms())
@@ -286,6 +307,8 @@ model_name = {
     "esmfold": "ESMFold",
     "alphafold2": "AlphaFold2",
     "colabfold": "ColabFold",
+    "rosettafold_all_atom": "Rosettafold_All_Atom",
+    "helixfold3": "HelixFold3",
 }
 
 parser = argparse.ArgumentParser()
@@ -307,7 +330,7 @@ args = parser.parse_args()
 lddt_data, lddt_averages = pdb_to_lddt(args.pdb, args.generate_tsv)
 
 generate_output_images(
-    args.msa, lddt_data, args.name, args.output_dir, args.in_type, args.generate_tsv
+    args.msa, lddt_data, args.name, args.output_dir, args.in_type, args.generate_tsv, args.pdb
 )
 # generate_plots(args.msa, args.plddt, args.name, args.output_dir)
 

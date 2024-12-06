@@ -14,9 +14,9 @@ process RUN_ESMFOLD {
     val numRec
 
     output:
-    tuple val(meta), path ("${fasta.baseName}*.pdb")         , emit: pdb
-    tuple val(meta), path ("${fasta.baseName}_plddt_mqc.tsv"), emit: multiqc
-    path "versions.yml", emit: versions
+    tuple val(meta), path ("${meta.id}_esmfold.pdb")  , emit: pdb
+    tuple val(meta), path ("${meta.id}_plddt_mqc.tsv"), emit: multiqc
+    path "versions.yml"                               , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -33,11 +33,12 @@ process RUN_ESMFOLD {
         --num-recycles ${numRec} \
         $args
 
-    awk '{print \$2"\\t"\$3"\\t"\$4"\\t"\$6"\\t"\$11}' "${fasta.baseName}"*.pdb | grep -v 'N/A' | uniq > plddt.tsv
+    mv  *.pdb tmp.pdb
+    mv  tmp.pdb ${meta.id}_esmfold.pdb
+
+    awk '{print \$2"\\t"\$3"\\t"\$4"\\t"\$6"\\t"\$11}' ${meta.id}_esmfold.pdb | grep -v 'N/A' | uniq > plddt.tsv
     echo -e Atom_serial_number"\\t"Atom_name"\\t"Residue_name"\\t"Residue_sequence_number"\\t"pLDDT > header.tsv
-    cat header.tsv plddt.tsv > "${fasta.baseName}"_plddt_mqc.tsv
-    mv  "${fasta.baseName}"*.pdb tmp.pdb
-    mv  tmp.pdb ${fasta.baseName}.pdb
+    cat header.tsv plddt.tsv > ${meta.id}_plddt_mqc.tsv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -48,8 +49,8 @@ process RUN_ESMFOLD {
     stub:
     def VERSION = '1.0.3' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     """
-    touch ./"${fasta.baseName}".pdb
-    touch ./"${fasta.baseName}"_plddt_mqc.tsv
+    touch ./${meta.id}_esmfold.pdb
+    touch ./${meta.id}_plddt_mqc.tsv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

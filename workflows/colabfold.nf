@@ -17,19 +17,6 @@ include { MULTIFASTA_TO_CSV      } from '../modules/local/multifasta_to_csv'
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-//
-// MODULE: Installed directly from nf-core/modules
-//
-include { MULTIQC } from '../modules/nf-core/multiqc/main'
-
-//
-// SUBWORKFLOW: Consisting entirely of nf-core/modules
-//
-include { paramsSummaryMap       } from 'plugin/nf-schema'
-include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
-include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
-include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
-
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -48,7 +35,7 @@ workflow COLABFOLD {
     num_recycles           // int: Number of recycles for esmfold
 
     main:
-    ch_multiqc_files = Channel.empty()
+    ch_multiqc_report = Channel.empty()
 
     if (params.colabfold_server == 'webserver') {
         //
@@ -117,50 +104,52 @@ workflow COLABFOLD {
             ch_uniref30,
             num_recycles
         )
-        ch_versions = ch_versions.mix(COLABFOLD_BATCH.out.versions)
+        ch_versions    = ch_versions.mix(COLABFOLD_BATCH.out.versions)
     }
 
-    //
-    // Collate and save software versions
-    //
-    softwareVersionsToYAML(ch_versions)
-        .collectFile(storeDir: "${params.outdir}/pipeline_info", name: 'nf_core_proteinfold_software_mqc_colabfold_versions.yml', sort: true, newLine: true)
-        .set { ch_collated_versions }
-
-    //
-    // MODULE: MultiQC
-    //
-    ch_multiqc_report = Channel.empty()
-    if (!params.skip_multiqc) {
-        ch_multiqc_report        = Channel.empty()
-        ch_multiqc_config        = Channel.fromPath("$projectDir/assets/multiqc_config.yml", checkIfExists: true)
-        ch_multiqc_custom_config = params.multiqc_config ? Channel.fromPath( params.multiqc_config ) : Channel.empty()
-        ch_multiqc_logo          = params.multiqc_logo   ? Channel.fromPath( params.multiqc_logo )   : Channel.empty()
-        summary_params           = paramsSummaryMap(workflow, parameters_schema: "nextflow_schema.json")
-        ch_workflow_summary      = Channel.value(paramsSummaryMultiqc(summary_params))
-        ch_multiqc_custom_methods_description = params.multiqc_methods_description ? file(params.multiqc_methods_description, checkIfExists: true) : file("$projectDir/assets/methods_description_template.yml", checkIfExists: true)
-        ch_methods_description                = Channel.value(methodsDescriptionText(ch_multiqc_custom_methods_description))
-
-        ch_multiqc_files = Channel.empty()
-        ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
-        ch_multiqc_files = ch_multiqc_files.mix(ch_methods_description.collectFile(name: 'methods_description_mqc.yaml'))
-        ch_multiqc_files = ch_multiqc_files.mix(ch_collated_versions)
-        ch_multiqc_files = ch_multiqc_files.mix(COLABFOLD_BATCH.out.multiqc.map{it[1]}.collect())
-
-        MULTIQC (
-            ch_multiqc_files.collect(),
-            ch_multiqc_config.toList(),
-            ch_multiqc_custom_config.toList(),
-            ch_multiqc_logo.toList(),
-            [],
-            []
+    COLABFOLD_BATCH
+        .out
+        .top_ranked_pdb
+        .map { [ it[0]["id"], it[0], it[1] ] }
+        .join(
+            COLABFOLD_BATCH
+                .out
+                .msa
+                .map { [ it[0]["id"], it[1] ] },
+            remainder:true
         )
-        ch_multiqc_report = MULTIQC.out.report.toList()
-    }
+        .set { ch_top_ranked_pdb }
+
+    COLABFOLD_BATCH
+        .out
+        .pdb
+        .join(COLABFOLD_BATCH.out.msa)
+        .map {
+            it[0]["model"] = "colabfold"
+            it
+        }
+        .set { ch_pdb_msa }
+
+    COLABFOLD_BATCH
+        .out
+        .multiqc
+        .map { it[1] }
+        .toSortedList()
+        .map { [ [ "model":"colabfold"], it.flatten() ] }
+        .set { ch_multiqc_report  }
+
+    COLABFOLD_BATCH
+        .out
+        .multiqc
+
+    COLABFOLD_BATCH
+        .out
+        .multiqc
+        .collect()
 
     emit:
-    pdb = COLABFOLD_BATCH.out.pdb // channel: /path/to/*.pdb
-    msa = COLABFOLD_BATCH.out.msa // channel: /path/to/*_coverage.png
+    top_ranked_pdb = ch_top_ranked_pdb // channel: [ id, /path/to/*.pdb ]
+    pdb_msa        = ch_pdb_msa        // channel: [ meta, /path/to/*.pdb, /path/to/*_coverage.png ]
     multiqc_report = ch_multiqc_report // channel: /path/to/multiqc_report.html
     versions       = ch_versions       // channel: [ path(versions.yml) ]
 }
