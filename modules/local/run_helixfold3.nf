@@ -11,7 +11,7 @@ process RUN_HELIXFOLD3 {
         error("Local RUN_HELIXFOLD3 module does not support Conda. Please use Docker / Singularity / Podman / Apptainer instead.")
     }
 
-    container "jscrh/dev:add-helixfold3"
+    container "nf-core/proteinfold_helixfold3:dev"
 
     input:
     tuple val(meta), path(fasta)
