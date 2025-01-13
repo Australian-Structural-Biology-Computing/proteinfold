@@ -11,7 +11,7 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
         error("Local RUN_ROSETTAFOLD_ALL_ATOM module does not support Conda. Please use Docker / Singularity / Podman instead.")
     }
 
-    container "/srv/scratch/z5378336/apptainers/rfaa_docker.sif"
+    container "nf-core/proteinfold_rosettafold_all_atom:dev"
 
     input:
     tuple val(meta), path(fasta)
