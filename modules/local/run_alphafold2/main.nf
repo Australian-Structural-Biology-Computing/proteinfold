@@ -63,7 +63,6 @@ process RUN_ALPHAFOLD2 {
         --mgnify_database_path=./mgnify/mgy_clusters_2022_05.fa \
         --template_mmcif_dir=./pdb_mmcif/mmcif_files \
         --obsolete_pdbs_path=./pdb_mmcif/obsolete.dat \
-        --random_seed=53343 \
         $args
 
     cp "${fasta.baseName}"/ranked_0.pdb ./"${meta.id}"_alphafold2.pdb
