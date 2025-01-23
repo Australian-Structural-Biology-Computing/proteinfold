@@ -1,3 +1,0 @@
-task_id	hash	native_id	name	status	exit	submit	duration	realtime	%cpu	peak_rss	peak_vmem	rchar	wchar
-1	96/58a04d	1445890	NFCORE_PROTEINFOLD:ALPHAFOLD2:INPUT_CHECK:SAMPLESHEET_CHECK (samplesheet.csv)	COMPLETED	0	2024-07-29 17:09:01.045	6.6s	1s	13.3%	3.3 MB	26.8 MB	1.4 MB	445 B
-2	eb/81fd9d	1446739	NFCORE_PROTEINFOLD:ALPHAFOLD2:RUN_ALPHAFOLD2 (1L2Y_T1)	FAILED	1	2024-07-29 17:26:53.354	3.9s	3.2s	-	-	-	-	-
