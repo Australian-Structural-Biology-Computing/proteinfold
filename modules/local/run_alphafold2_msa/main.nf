@@ -21,6 +21,7 @@ process RUN_ALPHAFOLD2_MSA {
     path ('small_bfd/*')
     path ('mgnify/*')
     path ('pdb70/*')
+    path ('pdb_mmcif/mmcif_files/*')
     path ('pdb_mmcif/*')
     path ('uniref30/*')
     path ('uniref90/*')

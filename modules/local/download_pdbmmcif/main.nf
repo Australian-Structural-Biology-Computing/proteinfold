@@ -13,7 +13,6 @@ process DOWNLOAD_PDBMMCIF {
 
     input:
     val source_url_pdb_mmcif
-    val source_url_pdb_obsolete
 
     output:
     path ('*')         , emit: ch_db
@@ -54,14 +53,10 @@ process DOWNLOAD_PDBMMCIF {
     # Delete empty download directory structure.
     find ./raw -type d -empty -delete
 
-    aria2c \\
-        $source_url_pdb_obsolete
-
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         sed: \$(echo \$(sed --version 2>&1) | head -1 | sed 's/^.*GNU sed) //; s/ .*\$//')
         rsync: \$(rsync --version | head -1 | sed 's/^rsync  version //; s/  protocol version [[:digit:]]*//')
-        aria2c: \$( aria2c -v | head -1 | sed 's/aria2 version //' )
     END_VERSIONS
     """
 
