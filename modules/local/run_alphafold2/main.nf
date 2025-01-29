@@ -60,7 +60,6 @@ process RUN_ALPHAFOLD2 {
         --db_preset=${db_preset} \
         --output_dir=\$PWD \
         --data_dir=\$PWD \
-        --random_seed=\$RANDOM \
         --uniref90_database_path=./uniref90/uniref90.fasta \
         --mgnify_database_path=./mgnify/mgy_clusters_2022_05.fa \
         --template_mmcif_dir=./pdb_mmcif/mmcif_files \
