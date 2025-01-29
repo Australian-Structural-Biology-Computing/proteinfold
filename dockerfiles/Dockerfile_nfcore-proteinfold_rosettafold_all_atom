@@ -8,7 +8,7 @@ LABEL Author="j.caley@unsw.edu.au" \
 ENV PYTHONPATH="/app/RoseTTAFold-All-Atom" \
     PATH="/conda/bin:/app/RoseTTAFold-All-Atom:$PATH" \
     DGLBACKEND="pytorch" \
-    LD_LIBRARY_PATH="/opt/miniforge/lib:/usr/local/cuda-12.6/lib64:$LD_LIBRARY_PATH"
+    LD_LIBRARY_PATH="/conda/lib:/usr/local/cuda-12.6/lib64:$LD_LIBRARY_PATH"
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y wget git && \
     wget -q -P /tmp "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh" && \
