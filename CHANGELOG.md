@@ -3,11 +3,38 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [[1.1.1](https://github.com/nf-core/proteinfold/releases/tag/1.1.1)] - 2025-07-30
-
-- Minor patch release to fix multiqc report.
+## v1.2.0dev - [date]
 
 ### Enhancements & fixes
+
+- [[#177](https://github.com/nf-core/proteinfold/issues/177)] - Fix typo in some instances of model preset `alphafold2_ptm`.
+- [[PR #178](https://github.com/nf-core/proteinfold/pull/178)] - Enable running multiple modes in parallel.
+- [[#179](https://github.com/nf-core/proteinfold/issues/179)] - Produce an interactive html report for the predicted structures.
+- [[#180](https://github.com/nf-core/proteinfold/issues/180)] - Implement Fooldseek.
+- [[#188](https://github.com/nf-core/proteinfold/issues/188)] - Fix colabfold image to run in gpus.
+- [[PR ##205](https://github.com/nf-core/proteinfold/pull/205)] - Change input schema from `sequence,fasta` to `id,fasta`.
+- [[PR #210](https://github.com/nf-core/proteinfold/pull/210)] - Moving post-processing logic to a subworkflow, change wave images pointing to oras to point to https and refactor module to match nf-core folder structure.
+- [[#214](https://github.com/nf-core/proteinfold/issues/214)] - Fix colabfold image to run in cpus after [#188](https://github.com/nf-core/proteinfold/issues/188) fix.
+- [[PR ##223](https://github.com/nf-core/proteinfold/pull/223)] - Add HelixFold3 module.
+- [[#235](https://github.com/nf-core/proteinfold/issues/235)] - Update samplesheet to new version (switch from `sequence` column to `id`).
+- [[#240](https://github.com/nf-core/proteinfold/issues/240)] - Separate download and input of pdb `mmcif` files and `obsolete` database.
+
+### Parameters
+
+| Old parameter | New parameter         |
+| ------------- | --------------------- |
+|               | `--pdb_obsolete_path` |
+
+> **NB:** Parameter has been **updated** if both old and new parameter information is present.
+> **NB:** Parameter has been **added** if just the new parameter information is present.
+> **NB:** Parameter has been **removed** if parameter information is
+>>>>>>> upstream/dev
+
+## [[1.1.1](https://github.com/nf-core/proteinfold/releases/tag/1.1.1)] - 2025-07-30
+
+### Enhancements & fixes
+
+- Minor patch release to fix multiqc report.
 
 ## [[1.1.0](https://github.com/nf-core/proteinfold/releases/tag/1.1.0)] - 2025-06-25
 
@@ -92,6 +119,8 @@ Thank you to everyone else that has contributed by reporting bugs, enhancements 
 |                       | `--esm2_t36_3B_UR50D_contact_regression` |
 |                       | `--esmfold_params_path`                  |
 |                       | `--skip_multiqc`                         |
+|                       | `--rosettafold_all_atom_db`              |
+|                       | `--helixfold3_db`                        |
 
 > **NB:** Parameter has been **updated** if both old and new parameter information is present.
 > **NB:** Parameter has been **added** if just the new parameter information is present.

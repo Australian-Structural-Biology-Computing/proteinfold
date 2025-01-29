@@ -13,6 +13,8 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and predicts pr
 - [AlphaFold2](https://github.com/deepmind/alphafold)
 - [ColabFold](https://github.com/sokrypton/ColabFold) - MMseqs2 (API server or local search) followed by ColabFold
 - [ESMFold](https://github.com/facebookresearch/esm)
+- [RoseTTAFold-All-Atom](https://github.com/baker-laboratory/RoseTTAFold-All-Atom/)
+- [HelixFold3](https://github.com/PaddlePaddle/PaddleHelix/tree/dev/apps/protein_folding/helixfold3)
 
 See main [README.md](https://github.com/nf-core/proteinfold/blob/master/README.md) for a condensed overview of the steps in the pipeline, and the bioinformatics tools used at each step.
 
@@ -23,10 +25,8 @@ The directories listed below will be created in the output directory after the p
 <details markdown="1">
 <summary>Output files</summary>
 
-- `AlphaFold2/`
-  - `<SEQUENCE NAME>/` that contains the computed MSAs, unrelaxed structures, relaxed structures, ranked structures, raw model outputs, prediction metadata, and section timings
-  - `<SEQUENCE NAME>.alphafold.pdb` that is the structure with the highest pLDDT score (ranked first)
-  - `<SEQUENCE NAME>_plddt_mqc.tsv` that presents the pLDDT scores per residue for each of the 5 predicted models
+- `alphafold2/standard/` or `alphafold2/split_msa_prediction/` based on the selected mode. It contains the computed MSAs, unrelaxed structures, relaxed structures, ranked structures, raw model outputs, prediction metadata, and section timings. Specifically, `<SEQUENCE NAME>_plddt_mqc.tsv` presents the pLDDT scores per residue for each of the 5 predicted models.
+  - `top_ranked_structures/<SEQUENCE NAME>.pdb` that is the structure with the highest pLDDT score per input (ranked first)
 - `DBs/` that contains symbolic links to the downloaded database and parameter files
 
 </details>
@@ -91,7 +91,8 @@ Below you can find an indicative example of the TSV file with the pLDDT scores p
 <details markdown="1">
 <summary>Output files</summary>
 
-- `colabfold/webserver/` or `colabfold/local/` based on the selected mode that contains the computed MSAs, unrelaxed structures, relaxed structures, ranked structures, raw model outputs and scores, prediction metadata, logs and section timings
+- `colabfold/webserver/` or `colabfold/local/` based on the selected mode. It contains the computed MSAs, unrelaxed structures, relaxed structures, ranked structures, raw model outputs, prediction metadata, and section timings. Specifically, `<SEQUENCE NAME>_plddt_mqc.tsv` presents the pLDDT scores per residue for each of the 5 predicted models.
+  - `top_ranked_structures/<SEQUENCE NAME>.pdb` that is the structure with the highest pLDDT score per input (ranked first)
 - `DBs/` that contains symbolic links to the downloaded database and parameter files
 
 </details>
@@ -115,9 +116,9 @@ Below you can find some indicative examples of the output images produced by Col
 <details markdown="1">
 <summary>Output files</summary>
 
-- `esmfold/`
-  - `<SEQUENCE NAME>.pdb` that is the structure with the highest pLDDT score (ranked first)
-  - `<SEQUENCE NAME>_plddt_mqc.tsv` that presents the pLDDT scores per residue for each of the 5 predicted models
+- `esmfold/default`
+  contains the predicted structures. Specifically, `<SEQUENCE NAME>_plddt_mqc.tsv` presents the pLDDT scores per residue for each of the predicted models.
+  - `top_ranked_structures/<SEQUENCE NAME>.pdb` that is the structure with the highest pLDDT score per input (ranked first)
 - `DBs/` that contains symbolic links to the downloaded database and parameter files
 
 </details>
@@ -177,15 +178,40 @@ Below you can find an indicative example of the TSV file with the pLDDT scores p
 | 49                 | CB        | VAL          | 7                       | 52.74 |
 | 50                 | O         | VAL          | 7                       | 56.46 |
 
+### RoseTTAFold-All-Atom
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `run/`
+  - `<SEQUENCE NAME>_rosettafold_all_atom.pdb` that is the structure with the highest pLDDT score (ranked first)
+  - `<SEQUENCE NAME>_plddt_mqc.tsv` that presents the pLDDT scores per residue for the predicted model
+  - `<SEQUENCE NAME>_aux.pt` pytorch file with confidence metrics stored (can load with torch.load(file, map_location="cpu"))
+  - `<SEQUENCE NAME>/` that contains the computed MSAs, prediction metadata
+
+</details>
+
+### HelixFold3
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- 'run/'
+  - `<SEQUENCE NAME>_helixfold3.pdb` that is the structure with the highest pLDDT score (ranked first)
+  - `<SEQUENCE NAME>_plddt_mqc.tsv` that presents the pLDDT scores per residue for the predicted model
+  - `<SEQUENCE NAME>/` that contains the computed MSAs, prediction metadata, ranked structures, raw model outputs etc.
+
+</details>
+
 ### MultiQC report
 
 <details markdown="1">
 <summary>Output files</summary>
 
 - `multiqc`
-  - multiqc_report.html: A standalone HTML file that can be viewed in your web browser.
-  - multiqc_data/: Directory containing parsed statistics from the different tools used in the pipeline.
-  - multiqc_plots/: Directory containing static images from the report in various formats.
+  - `<MODE>_multiqc_report.html`: A standalone HTML file that can be viewed in your web browser.
+  - `<MODE>_multiqc_data/`: Directory containing parsed statistics from the different tools used in the pipeline.
+  - `<MODE>_multiqc_plots/`: Directory containing static images from the report in various formats.
 
 </details>
 
@@ -193,7 +219,7 @@ Below you can find an indicative example of the TSV file with the pLDDT scores p
 
 Results generated by MultiQC collate pipeline QC from AlphaFold2 or ColabFold.
 
-The pipeline has special steps which also allow the software versions to be reported in the MultiQC output for future traceability. For more information about how to use MultiQC reports, see http://multiqc.info.
+Results generated by MultiQC collate pipeline QC from supported tools e.g. FastQC. The pipeline has special steps which also allow the software versions to be reported in the MultiQC output for future traceability. For more information about how to use MultiQC reports, see <http://multiqc.info>.
 
 ### Pipeline information
 
