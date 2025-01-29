@@ -21,7 +21,8 @@ process RUN_ALPHAFOLD2 {
     path ('small_bfd/*')
     path ('mgnify/*')
     path ('pdb70/*')
-    path ('pdb_mmcif/*')
+    path ('mmcif_files/*')
+    path ('obsolete_pdb/*')
     path ('uniref30/*')
     path ('uniref90/*')
     path ('pdb_seqres/*')
@@ -61,8 +62,8 @@ process RUN_ALPHAFOLD2 {
         --data_dir=\$PWD \
         --uniref90_database_path=./uniref90/uniref90.fasta \
         --mgnify_database_path=./mgnify/mgy_clusters_2022_05.fa \
-        --template_mmcif_dir=./pdb_mmcif/mmcif_files \
-        --obsolete_pdbs_path=./pdb_mmcif/obsolete.dat \
+        --template_mmcif_dir=./mmcif_files \
+        --obsolete_pdbs_path=./obsolete_pdb/obsolete.dat \
         --random_seed=53343 \
         $args
 
