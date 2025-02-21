@@ -2,7 +2,7 @@ FROM nvidia/cuda:12.6.0-cudnn-devel-ubuntu24.04
 
 LABEL Author="j.caley@unsw.edu.au" \
     title="nfcore/proteinfold_rosettafold_all_atom" \
-    Version="1.2.0dev" \
+    Version="0.9.0" \
     description="Docker image containing all software requirements to run the RUN_ROSETTAFOLD_ALL_ATOM module using the nf-core/proteinfold pipeline"
 
 ENV PYTHONPATH="/app/RoseTTAFold-All-Atom" \

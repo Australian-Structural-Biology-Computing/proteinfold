@@ -69,18 +69,17 @@ workflow NFCORE_PROTEINFOLD {
     samplesheet // channel: samplesheet read in from --input
 
     main:
-    ch_samplesheet              = samplesheet
-    ch_alphafold_top_ranked_pdb = Channel.empty()
-    ch_colabfold_top_ranked_pdb = Channel.empty()
-    ch_esmfold_top_ranked_pdb   = Channel.empty()
-    ch_rosettafold_all_atom_top_ranked_pdb   = Channel.empty()
-    ch_helixfold3_top_ranked_pdb   = Channel.empty()
-    ch_multiqc                  = Channel.empty()
-    ch_versions                 = Channel.empty()
-    ch_report_input             = Channel.empty()
-    ch_foldseek_db              = Channel.empty()
-    requested_modes             = params.mode.toLowerCase().split(",")
-    requested_modes_size        = requested_modes.size()
+    ch_samplesheet                          = samplesheet
+    ch_alphafold_top_ranked_pdb             = Channel.empty()
+    ch_colabfold_top_ranked_pdb             = Channel.empty()
+    ch_esmfold_top_ranked_pdb               = Channel.empty()
+    ch_rosettafold_all_atom_top_ranked_pdb  = Channel.empty()
+    ch_multiqc                              = Channel.empty()
+    ch_versions                             = Channel.empty()
+    ch_report_input                         = Channel.empty()
+    ch_foldseek_db                          = Channel.empty()
+    requested_modes                         = params.mode.toLowerCase().split(",")
+    requested_modes_size                    = requested_modes.size()
 
     //
     // WORKFLOW: Run alphafold2
