@@ -62,8 +62,8 @@ process RUN_ALPHAFOLD2 {
         --data_dir=\$PWD \
         --uniref90_database_path=./uniref90/uniref90.fasta \
         --mgnify_database_path=./mgnify/mgy_clusters_2022_05.fa \
-        --template_mmcif_dir=./pdb_mmcif/mmcif_files \
-        --obsolete_pdbs_path=./pdb_mmcif/obsolete.dat \
+        --template_mmcif_dir=./mmcif_files \
+        --obsolete_pdbs_path=./obsolete_pdb/obsolete.dat \
         $args
 
     cp "${fasta.baseName}"/ranked_0.pdb ./"${meta.id}"_alphafold2.pdb

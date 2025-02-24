@@ -426,7 +426,7 @@ If you specify the `--esmfold_db <PATH>` parameter, the directory structure of y
     └── esmfold_3B_v1.pt
 ```
 
-HelixFold3 can be run using this command (note that HF3 requires .json files not .fasta):
+HelixFold3 can be run using this command (note that HF3 requires `.json` files not `.fasta`):
 
 ```console
 nextflow run nf-core/proteinfold \

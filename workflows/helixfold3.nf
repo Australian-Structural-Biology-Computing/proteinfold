@@ -7,7 +7,7 @@
 //
 // MODULE: Loaded from modules/local/
 //
-include { RUN_HELIXFOLD3      } from '../modules/local/run_helixfold3'
+include { RUN_HELIXFOLD3 } from '../modules/local/run_helixfold3'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -40,11 +40,11 @@ workflow HELIXFOLD3 {
     ch_helixfold3_maxit_src
 
     main:
-    ch_multiqc_files    = Channel.empty()
-    ch_pdb              = Channel.empty()
-    ch_top_ranked_pdb   = Channel.empty()
-    ch_msa              = Channel.empty()
-    ch_multiqc_report   = Channel.empty()
+    ch_multiqc_files  = Channel.empty()
+    ch_pdb            = Channel.empty()
+    ch_top_ranked_pdb = Channel.empty()
+    ch_msa            = Channel.empty()
+    ch_multiqc_report = Channel.empty()
 
     //
     // SUBWORKFLOW: Run helixfold3
@@ -75,7 +75,9 @@ workflow HELIXFOLD3 {
 
     ch_pdb            = ch_pdb.mix(RUN_HELIXFOLD3.out.pdb)
     ch_top_ranked_pdb = ch_top_ranked_pdb.mix(RUN_HELIXFOLD3.out.top_ranked_pdb)
+    ch_msa            = ch_msa.mix(RUN_HELIXFOLD3.out.msa)
     ch_versions       = ch_versions.mix(RUN_HELIXFOLD3.out.versions)
+
 
     ch_top_ranked_pdb
         .map { [ it[0]["id"], it[0], it[1] ] }
