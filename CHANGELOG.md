@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [[#177](https://github.com/nf-core/proteinfold/issues/177)] - Fix typo in some instances of model preset `alphafold2_ptm`.
 - [[PR #178](https://github.com/nf-core/proteinfold/pull/178)] - Enable running multiple modes in parallel.
 - [[#179](https://github.com/nf-core/proteinfold/issues/179)] - Produce an interactive html report for the predicted structures.
-- [[#180](https://github.com/nf-core/proteinfold/issues/180)] - Implement Fooldseek.
+- [[#180](https://github.com/nf-core/proteinfold/issues/180)] - Implement Foldseek.
 - [[#188](https://github.com/nf-core/proteinfold/issues/188)] - Fix colabfold image to run in gpus.
 - [[PR ##205](https://github.com/nf-core/proteinfold/pull/205)] - Change input schema from `sequence,fasta` to `id,fasta`.
 - [[PR #210](https://github.com/nf-core/proteinfold/pull/210)] - Moving post-processing logic to a subworkflow, change wave images pointing to oras to point to https and refactor module to match nf-core folder structure.
@@ -18,7 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [[PR ##220](https://github.com/nf-core/proteinfold/pull/220)] - Add RoseTTAFold-All-Atom module.
 - [[PR ##223](https://github.com/nf-core/proteinfold/pull/223)] - Add HelixFold3 module.
 - [[#235](https://github.com/nf-core/proteinfold/issues/235)] - Update samplesheet to new version (switch from `sequence` column to `id`).
+- [[#239](https://github.com/nf-core/proteinfold/issues/239)] - Update alphafold2 standard mode Dockerfile.
 - [[#240](https://github.com/nf-core/proteinfold/issues/240)] - Separate download and input of pdb `mmcif` files and `obsolete` database.
+- [[PR #249](https://github.com/nf-core/proteinfold/pull/249)] - Update pipeline template to [nf-core/tools 3.2.0](https://github.com/nf-core/tools/releases/tag/3.2.0).
 
 ### Parameters
 
