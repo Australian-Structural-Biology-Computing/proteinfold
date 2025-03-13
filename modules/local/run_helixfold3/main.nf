@@ -92,8 +92,6 @@ process RUN_HELIXFOLD3 {
     for i in 1 2 3 4
         do cp ""${meta.id}"-rank\$i/predicted_structure.pdb" ./ranked_\$i.pdb
     done
-    extract_output.py --name ${meta.id} \\
-        --pkls final_features.pkl
     cd ..
 
     cat <<-END_VERSIONS > versions.yml
