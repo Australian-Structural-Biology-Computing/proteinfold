@@ -19,7 +19,7 @@ dependencies:
   - hhsuite==3.3.0
   - openbabel
   - pip:
-      - paddlepaddle-gpu==2.6.1 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
+      - paddlepaddle-gpu==2.6
       - absl-py==0.13.0
       - biopython==1.79
       - chex==0.0.7
