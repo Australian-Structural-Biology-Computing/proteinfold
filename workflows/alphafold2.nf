@@ -50,15 +50,16 @@ workflow ALPHAFOLD2 {
     ch_msa            = Channel.empty()
     ch_multiqc_report = Channel.empty()
 
-    if (alphafold2_model_preset != 'multimer') {
-        ch_samplesheet
-            .map {
-                meta, fasta ->
-                [ meta, fasta.splitFasta(file:true) ]
-            }
-            .transpose()
-            .set { ch_samplesheet }
-    }
+    // TESTING: Why isn't meta set for each?
+   // if (alphafold2_model_preset != 'multimer') {
+      ch_samplesheet
+          .map {
+              meta, fasta ->
+              [ meta, fasta.splitFasta(file:true) ]
+          }
+          .transpose()
+          .set { ch_samplesheet }
+   // }
 
     if (alphafold2_mode == 'standard') {
         //
