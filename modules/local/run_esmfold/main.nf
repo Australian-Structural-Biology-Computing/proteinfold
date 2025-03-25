@@ -33,12 +33,9 @@ process RUN_ESMFOLD {
         --num-recycles ${numRec} \
         $args
 
-    mv  *.pdb tmp.pdb
-    mv  tmp.pdb ${meta.id}_esmfold.pdb
-
-    awk '{print \$2"\\t"\$3"\\t"\$4"\\t"\$6"\\t"\$11}' ${meta.id}_esmfold.pdb | grep -v 'N/A' | uniq > plddt.tsv
-    echo -e Atom_serial_number"\\t"Atom_name"\\t"Residue_name"\\t"Residue_sequence_number"\\t"pLDDT > header.tsv
-    cat header.tsv plddt.tsv > ${meta.id}_plddt_mqc.tsv
+    extract_output.py --name ${meta.id} \\
+      --pkls features.pkl \\
+      --structs *.pdb
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
