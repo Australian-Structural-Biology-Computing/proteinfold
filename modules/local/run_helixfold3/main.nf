@@ -80,8 +80,8 @@ process RUN_HELIXFOLD3 {
         $args
 
     extract_output.py --name ${meta.id} \\
-      --pkls features.pkl \\
-      --structs *.pdb
+      --pkls "./msas/protein_A/features.pkl" \\
+      --structs "${meta.id}"/"${meta.id}"-rank*/predicted_structure.pdb 
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
