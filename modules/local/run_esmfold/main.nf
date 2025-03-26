@@ -25,6 +25,7 @@ process RUN_ESMFOLD {
     def args = task.ext.args ?: ''
     def VERSION = '1.0.3' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
 
+    // KR - note: why the *.pdb to tmp.pdb. Why not just take directly?
     """
     esm-fold \
         -i ${fasta} \
@@ -32,6 +33,9 @@ process RUN_ESMFOLD {
         -m \$PWD \
         --num-recycles ${numRec} \
         $args
+  
+    mv  *.pdb tmp.pdb  
+    mv  tmp.pdb ${meta.id}_esmfold.pdb  
 
     extract_output.py --name ${meta.id} \\
       --pkls features.pkl \\

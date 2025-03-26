@@ -1,0 +1,2 @@
+- GENERATE_REPORT is in post_processing.nf where it takes in top_ranked_pdb
+- I need to keep all the named pdb files in modules/local/${meta.id}_method.pdb/main.nf since those are in emit: top_ranked_pdb

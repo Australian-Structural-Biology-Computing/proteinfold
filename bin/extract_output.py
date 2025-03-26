@@ -100,13 +100,15 @@ def read_pkl(id, pkl_files):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--pkls", dest="pkls", required=True, nargs="+")
-parser.add_argument("--structs", dest="structs", required=True, nargs="+")
+parser.add_argument("--pkls", dest="pkls", required=False, nargs="+") # TO DO: want to have whatever the format of msas are
+parser.add_argument("--structs", dest="structs", required=False, nargs="+")
 parser.add_argument("--name", dest="name") # might need a --name $meta.id 
 parser.add_argument("--output_dir", dest="output_dir")
 parser.set_defaults(output_dir="")
 parser.set_defaults(name="")
 args = parser.parse_args()
 
-read_pkl(args.name, args.pkls)
-extract_struct_pLDDT_to_tsv(args.name, args.structs)
+if args.pkls is not None:
+    read_pkl(args.name, args.pkls)
+if args.structs is not None:
+    extract_struct_pLDDT_to_tsv(args.name, args.structs)

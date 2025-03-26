@@ -52,11 +52,9 @@ process RUN_ALPHAFOLD2_PRED {
         --msa_path=${msa} \
         $args
 
-
-
     cp "${fasta.baseName}"/ranked_0.pdb ./"${meta.id}"_alphafold2.pdb
     cd "${fasta.baseName}"
-    
+   
     extract_output.py --name ${meta.id} \\
         --pkls ${msa} \\
         --structs *.pdb 

@@ -72,6 +72,7 @@ process RUN_ALPHAFOLD2 {
     extract_output.py --name ${meta.id} \\
         --pkls features.pkl \\
         --structs *.pdb
+
     cd ..
 
     cat <<-END_VERSIONS > versions.yml
