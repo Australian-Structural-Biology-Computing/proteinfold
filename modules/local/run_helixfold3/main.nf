@@ -10,7 +10,7 @@ process RUN_HELIXFOLD3 {
         error("Local RUN_HELIXFOLD3 module does not support Conda. Please use Docker / Singularity / Podman / Apptainer instead.")
     }
 
-    container "nf-core/proteinfold_helixfold3:dev"
+    container "jscrh/helixfold3:slim"
 
     input:
     tuple val(meta), path(fasta)
@@ -28,12 +28,12 @@ process RUN_HELIXFOLD3 {
     path ('maxit_src')
 
     output:
-    path ("${fasta.baseName}*")
-    tuple val(meta), path ("${fasta.baseName}_helixfold3.pdb") , emit: top_ranked_pdb
-    tuple val(meta), path ("${fasta.baseName}/ranked*pdb")     , emit: pdb
-    tuple val(meta), path ("*_mqc.tsv")                        , emit: multiqc
-    tuple val(meta), path ("${fasta.baseName}_helixfold3.cif") , emit: main_cif
-    path ("versions.yml")                                      , emit: versions
+    path ("${meta.id}*")
+    tuple val(meta), path ("${meta.id}_helixfold3.pdb") , emit: top_ranked_pdb
+    tuple val(meta), path ("${meta.id}/ranked*pdb")     , emit: pdb
+    tuple val(meta), path ("*_mqc.tsv")                 , emit: multiqc
+    tuple val(meta), path ("${meta.id}_helixfold3.cif") , emit: main_cif
+    path ("versions.yml")                               , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -41,22 +41,16 @@ process RUN_HELIXFOLD3 {
     script:
     def args = task.ext.args ?: ''
     """
-    export MAXIT_SRC="./maxit_src"
-    export RCSBROOT="\$MAXIT_SRC"
-    export PATH="\$MAXIT_SRC/bin:\$ENV_BIN:$PATH"
-    export OBABEL_BIN="\$ENV_BIN"
-
     ln -s /app/helixfold3/* .
 
-    \$ENV_BIN/python3.9 inference.py \
-        --maxit_binary "\$MAXIT_SRC/bin/maxit" \
-        --jackhmmer_binary_path "\$ENV_BIN/jackhmmer" \
-        --hhblits_binary_path "\$ENV_BIN/hhblits" \
-        --hhsearch_binary_path "\$ENV_BIN/hhsearch" \
-        --kalign_binary_path "\$ENV_BIN/kalign" \
-        --hmmsearch_binary_path "\$ENV_BIN/hmmsearch" \
-        --hmmbuild_binary_path "\$ENV_BIN/hmmbuild" \
-        --preset='reduced_dbs' \
+    mamba run --name helixfold python3.9 inference.py \
+        --maxit_binary "./maxit_src/bin/maxit" \
+        --jackhmmer_binary_path "jackhmmer" \
+        --hhblits_binary_path "hhblits" \
+        --hhsearch_binary_path "hhsearch" \
+        --kalign_binary_path "kalign" \
+        --hmmsearch_binary_path "hmmsearch" \
+        --hmmbuild_binary_path "hmmbuild" \
         --bfd_database_path="./bfd/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt" \
         --small_bfd_database_path="./small_bfd/bfd-first_non_consensus_sequences.fasta" \
         --uniclust30_database_path="./uniclust30/uniclust30_2018_08" \
@@ -68,28 +62,22 @@ process RUN_HELIXFOLD3 {
         --ccd_preprocessed_path="./ccd_preprocessed_etkdg.pkl.gz" \
         --uniref90_database_path "./uniref90/uniref90.fasta" \
         --mgnify_database_path "./mgnify/mgy_clusters_2018_12.fa" \
-        --max_template_date=2024-08-14 \
         --input_json="${fasta}" \
         --output_dir="\$PWD" \
-        --model_name allatom_demo \
-        --init_model "./init_models/HelixFold3-240814.pdparams" \
-        --infer_times 4 \
-        --logging_level "ERROR" \
-        --precision "bf16" \
         $args
 
-    cp "${fasta.baseName}"/"${fasta.baseName}"-rank1/predicted_structure.pdb ./"${fasta.baseName}"_helixfold3.pdb
-    cp "${fasta.baseName}"/"${fasta.baseName}"-rank1/predicted_structure.cif ./"${fasta.baseName}"_helixfold3.cif
-    cd "${fasta.baseName}"
-    awk '{print \$6"\\t"\$11}' "${fasta.baseName}"-rank1/predicted_structure.pdb > ranked_1_plddt.tsv
+    cp "${meta.id}"/"${meta.id}"-rank1/predicted_structure.pdb ./"${meta.id}"_helixfold3.pdb
+    cp "${meta.id}"/"${meta.id}"-rank1/predicted_structure.cif ./"${meta.id}"_helixfold3.cif
+    cd "${meta.id}"
+    awk '{print \$6"\\t"\$11}' "${meta.id}"-rank1/predicted_structure.pdb > ranked_1_plddt.tsv
     for i in 2 3 4
-        do awk '{print \$6"\\t"\$11}' "${fasta.baseName}"-rank\$i/predicted_structure.pdb | awk '{print \$2}' > ranked_"\$i"_plddt.tsv
+        do awk '{print \$6"\\t"\$11}' "${meta.id}"-rank\$i/predicted_structure.pdb | awk '{print \$2}' > ranked_"\$i"_plddt.tsv
     done
     paste ranked_1_plddt.tsv ranked_2_plddt.tsv ranked_3_plddt.tsv ranked_4_plddt.tsv > plddt.tsv
     echo -e Positions"\\t"rank_1"\\t"rank_2"\\t"rank_3"\\t"rank_4 > header.tsv
-    cat header.tsv plddt.tsv > ../"${fasta.baseName}"_plddt_mqc.tsv
+    cat header.tsv plddt.tsv > ../"${meta.id}"_plddt_mqc.tsv
     for i in 1 2 3 4
-        do cp ""${fasta.baseName}"-rank\$i/predicted_structure.pdb" ./ranked_\$i.pdb
+        do cp ""${meta.id}"-rank\$i/predicted_structure.pdb" ./ranked_\$i.pdb
     done
     cd ..
 
@@ -101,14 +89,14 @@ process RUN_HELIXFOLD3 {
 
     stub:
     """
-    touch ./"${fasta.baseName}"_helixfold3.cif
-    touch ./"${fasta.baseName}"_helixfold3.pdb
-    touch ./"${fasta.baseName}"_plddt_mqc.tsv
-    mkdir ./"${fasta.baseName}"
-    touch "${fasta.baseName}/ranked_1.pdb"
-    touch "${fasta.baseName}/ranked_2.pdb"
-    touch "${fasta.baseName}/ranked_3.pdb"
-    touch "${fasta.baseName}/ranked_4.pdb"
+    touch ./"${meta.id}"_helixfold3.cif
+    touch ./"${meta.id}"_helixfold3.pdb
+    touch ./"${meta.id}"_plddt_mqc.tsv
+    mkdir ./"${meta.id}"
+    touch "${meta.id}/ranked_1.pdb"
+    touch "${meta.id}/ranked_2.pdb"
+    touch "${meta.id}/ranked_3.pdb"
+    touch "${meta.id}/ranked_4.pdb"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
