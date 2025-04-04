@@ -1,10 +1,10 @@
-ARG CUDA=12.1.1
-FROM nvidia/cuda:${CUDA}-cudnn8-devel-ubuntu22.04 AS builder
+ARG CUDA=12.8.1
+FROM nvidia/cuda:${CUDA}-cudnn-devel-ubuntu22.04 AS builder
 # FROM directive resets ARGS, so we specify again (the value is retained if
 # previously set).
 ARG CUDA
 
-LABEL Author="j.caley@unsw.edu.au" \
+LABEL Author="j.caley@unsw.edu.au, Jose Espinosa-Carrasco" \
     title="nfcore/proteinfold_helixfold3" \
     Version="1.2.0dev" \
     description="Docker image containing all software requirements to run the RUN_HELIXFOLD3 module using the nf-core/proteinfold pipeline"
@@ -31,7 +31,7 @@ RUN mamba env create --file=/app/helixfold3/environment.yaml && \
     mamba clean --all --force-pkgs-dirs -y && \
     rm -rf /root/.cache
 
-FROM nvidia/cuda:${CUDA}-cudnn8-devel-ubuntu22.04
+FROM nvidia/cuda:${CUDA}-cudnn-devel-ubuntu22.04
 # FROM directive resets ARGS, so we specify again (the value is retained if
 # previously set).
 ARG CUDA
