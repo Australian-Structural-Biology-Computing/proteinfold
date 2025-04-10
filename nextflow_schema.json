@@ -567,7 +567,7 @@
                     "type": "string",
                     "description": "Path to the PDB mmCIF database",
                     "fa_icon": "fas fa-folder-open",
-                    "default": "null/pdb_mmcif/mmcif_files/*"
+                    "default": "null/pdb_mmcif/mmcif_files"
                 },
                 "pdb_obsolete_path": {
                     "type": "string",

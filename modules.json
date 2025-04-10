@@ -24,7 +24,7 @@
                     },
                     "mmseqs/createindex": {
                         "branch": "master",
-                        "git_sha": "151460db852d636979d9ff3ee631e2268060d4c3",
+                        "git_sha": "05954dab2ff481bcb999f24455da29a5828af08d",
                         "installed_by": ["modules"]
                     },
                     "mmseqs/tsv2exprofiledb": {

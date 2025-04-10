@@ -5,12 +5,7 @@ process RUN_HELIXFOLD3 {
     tag "$meta.id"
     label 'process_medium'
 
-    // Exit if running this module with -profile conda / -profile mamba
-    if (workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1) {
-        error("Local RUN_HELIXFOLD3 module does not support Conda. Please use Docker / Singularity / Podman / Apptainer instead.")
-    }
-
-    container "jscrh/helixfold3:slim"
+    container "nf-core/proteinfold_helixfold3:dev"
 
     input:
     tuple val(meta), path(fasta)
@@ -39,6 +34,10 @@ process RUN_HELIXFOLD3 {
     task.ext.when == null || task.ext.when
 
     script:
+    // Exit if running this module with -profile conda / -profile mamba
+    if (workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1) {
+        error("Local RUN_HELIXFOLD3 module does not support Conda. Please use Docker / Singularity / Podman / Apptainer instead.")
+    }
     def args = task.ext.args ?: ''
     """
     ln -s /app/helixfold3/* .

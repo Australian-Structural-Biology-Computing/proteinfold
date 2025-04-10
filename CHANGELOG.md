@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [[#276](https://github.com/nf-core/proteinfold/issues/276)] - Update helixfold3 dockerfile to make it compatible with H100 gpus.
 - [[#259](https://github.com/nf-core/proteinfold/issues/259)] - Fix `esmfold` docker image to make it compatible with hopper GPU architecture.
 - [[#281](https://github.com/nf-core/proteinfold/issues/281)] - Fix how argument `--nv` is passed to apptainer and singularity in the config.
+- [[PR #283](https://github.com/nf-core/proteinfold/pull/283)] - Fixes to meet language server requirements and update link of the helixfold3 image.
+- [[PR #287](https://github.com/nf-core/proteinfold/pull/287)] - Fixes symlinking of every mmcif file causing excess I/O.
 
 ### Parameters
 
