@@ -34,7 +34,7 @@
                 },
                 "helixfold3_max_template_date": {
                     "type": "string",
-                    "default": "2024-08-14"
+                    "default": "2038-01-19"
                 }
             }
         },
@@ -216,7 +216,7 @@
             "properties": {
                 "max_template_date": {
                     "type": "string",
-                    "default": "2020-05-14",
+                    "default": "2038-01-19",
                     "description": "Maximum date of the PDB templates used by 'AlphaFold2' mode",
                     "fa_icon": "fas fa-calendar-check"
                 },
