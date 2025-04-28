@@ -2,6 +2,7 @@
 import pickle
 import os
 import argparse
+import numpy as np
 from Bio import PDB
 import csv
 
@@ -89,7 +90,7 @@ def read_pkl(id, pkl_files):
         if pkl_file.endswith("final_features.pkl"): #HelixFold3
             with open(f"{id}_msa.tsv", "w") as out_f:
                 for val in dict_data["feat"]["msa"]:
-                    out_f.write("\t".join([str(x) for x in val]) + "\n")
+                    out_f.write("\t".join([str(x) for x in val]) + "\n")  # TO DO: take this out as a line
         elif pkl_file.endswith("features.pkl"):  #AlphaFold2.3
             with open(f"{id}_msa.tsv", "w") as out_f:
                 for val in dict_data["msa"]:
@@ -103,9 +104,52 @@ def read_pkl(id, pkl_files):
             with open(f"{id}_lddt_{model_id}.tsv", "w") as out_f:
                 out_f.write("\t".join([str(x) for x in dict_data["plddt"]]) + "\n")
 
+def a3m_to_int(a3m_file):  # For the RosettaFold-All-Atom .a3m. Written with GitHub Copilot
+    """
+    Convert an A3M MSA representation into an integer representation (0-21).
+
+    Args:
+        msa (str): A string containing A3M MSA sequences.
+
+    Returns:
+        list of lists: A list of sequences, where each sequence is represented as a list of integers.
+    """
+    # Mapping of characters to integers
+    aa_to_int = {
+        "A": 0, "C": 1, "D": 2, "E": 3, "F": 4, "G": 5, "H": 6, "I": 7, "K": 8, "L": 9,
+        "M": 10, "N": 11, "P": 12, "Q": 13, "R": 14, "S": 15, "T": 16, "V": 17, "W": 18, "Y": 19,
+        "-": 21, ".": 21
+    }
+
+    with open(a3m_file, "r") as f:
+        msa = f.read()
+
+    # Convert each sequence in the MSA
+    int_sequences = []
+    for line in msa.splitlines():
+        if not line.startswith(">"):  # Ignore header lines
+            int_sequence = [aa_to_int.get(char.upper(), 20) for char in line]
+            int_sequences.append(int_sequence)
+
+    int_sequences_array = np.array(int_sequences, dtype=object)
+
+
+    return int_sequences_array
+
+def read_a3m(id, a3m_files):
+    for a3m_file in a3m_files:
+        int_seqs = a3m_to_int(a3m_file)
+        with open(f"{id}_msa.tsv", "w") as out_f:
+                for row in int_seqs:
+                    out_f.write("\t".join(map(str, row)) + "\n")
+
+
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--pkls", dest="pkls", required=False, nargs="+") # TO DO: want to have whatever the format of msas are
+parser.add_argument("--npzs", dest="npzs", required=False, nargs="+") # For reading the Boltz-1 MSA formats
+parser.add_argument("--a3ms", dest="a3ms", required=False, nargs="+") # For reading the RosettaFold-All-Atom MSA formats
 parser.add_argument("--structs", dest="structs", required=False, nargs="+")
 parser.add_argument("--name", dest="name") # might need a --name $meta.id
 parser.add_argument("--output_dir", dest="output_dir")
@@ -115,5 +159,7 @@ args = parser.parse_args()
 
 if args.pkls is not None:
     read_pkl(args.name, args.pkls)
+if args.a3ms is not None:
+    read_a3m(args.name, args.a3ms)
 if args.structs is not None:
     extract_struct_pLDDT_to_tsv(args.name, args.structs)
