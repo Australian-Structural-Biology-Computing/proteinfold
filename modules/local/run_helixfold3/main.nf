@@ -78,9 +78,11 @@ process RUN_HELIXFOLD3 {
         --logging_level "ERROR" \
         --precision "bf16" \
         $args
+    
+    cp "${meta.id}"/"${meta.id}"-rank1/predicted_structure.pdb ./"${meta.id}"_helixfold3.pdb
 
     extract_output.py --name ${meta.id} \\
-      --pkls "./msas/protein_A/features.pkl" \\
+      --pkls "${meta.id}/final_features.pkl" \\
       --structs "${meta.id}"/"${meta.id}"-rank*/predicted_structure.pdb 
 
     cat <<-END_VERSIONS > versions.yml
