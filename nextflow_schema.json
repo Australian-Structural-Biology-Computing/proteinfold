@@ -5,6 +5,155 @@
     "description": "Protein 3D structure prediction pipeline",
     "type": "object",
     "$defs": {
+        "helixfold3_options": {
+            "title": "helixfold3 options",
+            "type": "object",
+            "description": "HelixFold3 options",
+            "default": "",
+            "properties": {
+                "helixfold3_db": {
+                    "type": "string"
+                },
+                "model_name": {
+                    "type": "string"
+                },
+                "preset": {
+                    "type": "string"
+                },
+                "init_model": {
+                    "type": "string"
+                },
+                "logging_level": {
+                    "type": "string"
+                },
+                "precision": {
+                    "type": "string"
+                },
+                "infer_times": {
+                    "type": "string"
+                },
+                "helixfold3_max_template_date": {
+                    "type": "string",
+                    "default": "2038-01-19"
+                }
+            }
+        },
+        "helixfold3_dbs_and_parameters_paths_options": {
+            "title": "helixfold3 dbs and parameters paths options",
+            "type": "object",
+            "description": "Parameters used to provide the paths to the DBs and parameters for HelixFold3.",
+            "default": "",
+            "properties": {
+                "helixfold3_init_models_path": {
+                    "type": "string",
+                    "default": "null/HelixFold3-240814.pdparams"
+                },
+                "helixfold3_uniclust30_path": {
+                    "type": "string",
+                    "default": "null/uniclust30/*"
+                },
+                "helixfold3_ccd_preprocessed_path": {
+                    "type": "string",
+                    "default": "null/ccd_preprocessed_etkdg.pkl.gz"
+                },
+                "helixfold3_rfam_path": {
+                    "type": "string",
+                    "default": "null/Rfam-14.9_rep_seq.fasta"
+                },
+                "helixfold3_bfd_path": {
+                    "type": "string",
+                    "default": "null/bfd/*"
+                },
+                "helixfold3_small_bfd_path": {
+                    "type": "string",
+                    "default": "null/small_bfd/*"
+                },
+                "helixfold3_uniprot_path": {
+                    "type": "string",
+                    "default": "null/uniprot/*"
+                },
+                "helixfold3_pdb_seqres_path": {
+                    "type": "string",
+                    "default": "null/pdb_seqres/*"
+                },
+                "helixfold3_uniref90_path": {
+                    "type": "string",
+                    "default": "null/uniref90/*"
+                },
+                "helixfold3_mgnify_path": {
+                    "type": "string",
+                    "default": "null/mgnify/*"
+                },
+                "helixfold3_pdb_mmcif_path": {
+                    "type": "string",
+                    "default": "null/pdb_mmcif/*"
+                },
+                "helixfold3_maxit_src_path": {
+                    "type": "string",
+                    "default": "null/maxit-v11.200-prod-src"
+                }
+            }
+        },
+        "helixfold3_dbs_and_parameters_link_options": {
+            "title": "helixfold3 dbs and parameters link options",
+            "type": "object",
+            "description": "Parameters used to provide the links to the parameters public resources to HelixFold3.",
+            "default": "",
+            "properties": {
+                "helixfold3_init_models_link": {
+                    "type": "string",
+                    "default": "https://paddlehelix.bd.bcebos.com/HelixFold3/params/HelixFold3-params-240814.zip"
+                },
+                "helixfold3_uniclust30_link": {
+                    "type": "string",
+                    "default": "https://storage.googleapis.com/alphafold-databases/casp14_versions/uniclust30_2018_08_hhsuite.tar.gz"
+                },
+                "helixfold3_ccd_preprocessed_link": {
+                    "type": "string",
+                    "default": "https://paddlehelix.bd.bcebos.com/HelixFold3/CCD/ccd_preprocessed_etkdg.pkl.gz"
+                },
+                "helixfold3_rfam_link": {
+                    "type": "string",
+                    "default": "https://paddlehelix.bd.bcebos.com/HelixFold3/MSA/Rfam-14.9_rep_seq.fasta"
+                },
+                "helixfold3_bfd_link": {
+                    "type": "string",
+                    "default": "https://storage.googleapis.com/alphafold-databases/casp14_versions/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt.tar.gz"
+                },
+                "helixfold3_small_bfd_link": {
+                    "type": "string",
+                    "default": "https://storage.googleapis.com/alphafold-databases/reduced_dbs/bfd-first_non_consensus_sequences.fasta.gz"
+                },
+                "helixfold3_pdb_seqres_link": {
+                    "type": "string",
+                    "default": "https://files.wwpdb.org/pub/pdb/derived_data/pdb_seqres.txt"
+                },
+                "helixfold3_uniref90_link": {
+                    "type": "string",
+                    "default": "ftp://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref90/uniref90.fasta.gz"
+                },
+                "helixfold3_mgnify_link": {
+                    "type": "string",
+                    "default": "https://storage.googleapis.com/alphafold-databases/casp14_versions/mgy_clusters_2018_12.fa.gz"
+                },
+                "helixfold3_pdb_mmcif_link": {
+                    "type": "string",
+                    "default": "rsync.rcsb.org::ftp_data/structures/divided/mmCIF/"
+                },
+                "helixfold3_uniprot_sprot_link": {
+                    "type": "string",
+                    "default": "ftp://ftp.ebi.ac.uk/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz"
+                },
+                "helixfold3_uniprot_trembl_link": {
+                    "type": "string",
+                    "default": "ftp://ftp.ebi.ac.uk/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_trembl.fasta.gz"
+                },
+                "helixfold3_pdb_obsolete_link": {
+                    "type": "string",
+                    "default": "ftp://ftp.wwpdb.org/pub/pdb/data/status/obsolete.dat"
+                }
+            }
+        },
         "input_output_options": {
             "title": "Global options",
             "type": "object",
@@ -67,7 +216,7 @@
             "properties": {
                 "max_template_date": {
                     "type": "string",
-                    "default": "2020-05-14",
+                    "default": "2038-01-19",
                     "description": "Maximum date of the PDB templates used by 'AlphaFold2' mode",
                     "fa_icon": "fas fa-calendar-check"
                 },
@@ -96,6 +245,9 @@
                     "description": "Model preset for 'AlphaFold2' mode",
                     "enum": ["monomer", "monomer_casp14", "monomer_ptm", "multimer"],
                     "fa_icon": "fas fa-stream"
+                },
+                "random_seed": {
+                    "type": "string"
                 }
             }
         },
@@ -207,7 +359,6 @@
                 "foldseek_search": {
                     "type": "string",
                     "enum": [null, "easysearch"],
-                    "default": null,
                     "description": "Specifies the mode of foldseek search.",
                     "fa_icon": "fas fa-search"
                 },
@@ -416,12 +567,13 @@
                     "type": "string",
                     "description": "Path to the PDB mmCIF database",
                     "fa_icon": "fas fa-folder-open",
-                    "default": "null/pdb_mmcif/*"
+                    "default": "null/pdb_mmcif/mmcif_files"
                 },
                 "pdb_obsolete_path": {
                     "type": "string",
                     "description": "Path to the PDB obsolete file",
-                    "fa_icon": "fas fa-folder-open"
+                    "fa_icon": "fas fa-folder-open",
+                    "default": "null/pdb_mmcif/obsolete.dat"
                 },
                 "uniref30_alphafold2_path": {
                     "type": "string",
@@ -648,9 +800,77 @@
                     "hidden": true
                 }
             }
+        },
+        "rosettafold_all_atom_options": {
+            "title": "RoseTTAFold All Atom options",
+            "type": "object",
+            "description": "RoseTTAFold All Atom options.",
+            "default": "",
+            "properties": {
+                "rosettafold_all_atom_db": {
+                    "type": "string"
+                }
+            }
+        },
+        "rosettafold_all_atom_dbs_and_parameters_links_options": {
+            "title": "RoseTTAFold All Atom DBs and parameters links options",
+            "type": "object",
+            "description": "Parameters used to provide the paths to the DBs and parameters for RoseTTAFold All Atom.",
+            "default": "",
+            "properties": {
+                "uniref30_rosettafold_all_atom_link": {
+                    "type": "string",
+                    "default": "http://wwwuser.gwdg.de/~compbiol/uniclust/2020_06/UniRef30_2020_06_hhsuite.tar.gz"
+                },
+                "bfd_rosettafold_all_atom_link": {
+                    "type": "string",
+                    "default": "https://bfd.mmseqs.com/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt.tar.gz"
+                },
+                "pdb100_rosettafold_all_atom_link": {
+                    "type": "string",
+                    "default": "https://files.ipd.uw.edu/pub/RoseTTAFold/pdb100_2021Mar03.tar.gz"
+                },
+                "rfaa_paper_weights_link": {
+                    "type": "string",
+                    "default": "http://files.ipd.uw.edu/pub/RF-All-Atom/weights/RFAA_paper_weights.pt"
+                }
+            }
+        },
+        "rosettafold_all_atom_dbs_and_parameters_paths_options": {
+            "title": "RoseTTAFold All Atom DBs and parameters paths options",
+            "type": "object",
+            "description": "Parameters used to provide the paths to the DBs and parameters for RoseTTAFold All Atom.",
+            "default": "",
+            "properties": {
+                "uniref30_rosettafold_all_atom_path": {
+                    "type": "string",
+                    "default": "null/uniref30/UniRef30_2020_06/*"
+                },
+                "bfd_rosettafold_all_atom_path": {
+                    "type": "string",
+                    "default": "null/bfd/*"
+                },
+                "pdb100_rosettafold_all_atom_path": {
+                    "type": "string",
+                    "default": "null/pdb100_2021Mar03/*"
+                },
+                "rfaa_paper_weights_path": {
+                    "type": "string",
+                    "default": "null/RFAA_paper_weights.pt"
+                }
+            }
         }
     },
     "allOf": [
+        {
+            "$ref": "#/$defs/helixfold3_options"
+        },
+        {
+            "$ref": "#/$defs/helixfold3_dbs_and_parameters_paths_options"
+        },
+        {
+            "$ref": "#/$defs/helixfold3_dbs_and_parameters_link_options"
+        },
         {
             "$ref": "#/$defs/input_output_options"
         },
@@ -692,146 +912,15 @@
         },
         {
             "$ref": "#/$defs/generic_options"
+        },
+        {
+            "$ref": "#/$defs/rosettafold_all_atom_options"
+        },
+        {
+            "$ref": "#/$defs/rosettafold_all_atom_dbs_and_parameters_links_options"
+        },
+        {
+            "$ref": "#/$defs/rosettafold_all_atom_dbs_and_parameters_paths_options"
         }
-    ],
-    "properties": {
-        "helixfold3_init_models_link": {
-            "type": "string",
-            "default": "https://paddlehelix.bd.bcebos.com/HelixFold3/params/HelixFold3-params-240814.zip"
-        },
-        "helixfold3_init_models_path": {
-            "type": "string",
-            "default": "null/HelixFold3-240814.pdparams"
-        },
-        "helixfold3_db": {
-            "type": "string"
-        },
-        "helixfold3_uniclust30_link": {
-            "type": "string",
-            "default": "https://storage.googleapis.com/alphafold-databases/casp14_versions/uniclust30_2018_08_hhsuite.tar.gz"
-        },
-        "helixfold3_ccd_preprocessed_link": {
-            "type": "string",
-            "default": "https://paddlehelix.bd.bcebos.com/HelixFold3/CCD/ccd_preprocessed_etkdg.pkl.gz"
-        },
-        "helixfold3_rfam_link": {
-            "type": "string",
-            "default": "https://paddlehelix.bd.bcebos.com/HelixFold3/MSA/Rfam-14.9_rep_seq.fasta"
-        },
-        "helixfold3_bfd_link": {
-            "type": "string",
-            "default": "https://storage.googleapis.com/alphafold-databases/casp14_versions/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt.tar.gz"
-        },
-        "helixfold3_small_bfd_link": {
-            "type": "string",
-            "default": "https://storage.googleapis.com/alphafold-databases/reduced_dbs/bfd-first_non_consensus_sequences.fasta.gz"
-        },
-        "helixfold3_pdb_seqres_link": {
-            "type": "string",
-            "default": "https://files.wwpdb.org/pub/pdb/derived_data/pdb_seqres.txt"
-        },
-        "helixfold3_uniref90_link": {
-            "type": "string",
-            "default": "ftp://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref90/uniref90.fasta.gz"
-        },
-        "helixfold3_mgnify_link": {
-            "type": "string",
-            "default": "https://storage.googleapis.com/alphafold-databases/casp14_versions/mgy_clusters_2018_12.fa.gz"
-        },
-        "helixfold3_pdb_mmcif_link": {
-            "type": "string",
-            "default": "rsync.rcsb.org::ftp_data/structures/divided/mmCIF/"
-        },
-        "helixfold3_uniclust30_path": {
-            "type": "string",
-            "default": "null/uniclust30/*"
-        },
-        "helixfold3_ccd_preprocessed_path": {
-            "type": "string",
-            "default": "null/ccd_preprocessed_etkdg.pkl.gz"
-        },
-        "helixfold3_rfam_path": {
-            "type": "string",
-            "default": "null/Rfam-14.9_rep_seq.fasta"
-        },
-        "helixfold3_bfd_path": {
-            "type": "string",
-            "default": "null/bfd/*"
-        },
-        "helixfold3_small_bfd_path": {
-            "type": "string",
-            "default": "null/small_bfd/*"
-        },
-        "helixfold3_uniprot_path": {
-            "type": "string",
-            "default": "null/uniprot/*"
-        },
-        "helixfold3_pdb_seqres_path": {
-            "type": "string",
-            "default": "null/pdb_seqres/*"
-        },
-        "helixfold3_uniref90_path": {
-            "type": "string",
-            "default": "null/uniref90/*"
-        },
-        "helixfold3_mgnify_path": {
-            "type": "string",
-            "default": "null/mgnify/*"
-        },
-        "helixfold3_pdb_mmcif_path": {
-            "type": "string",
-            "default": "null/pdb_mmcif/*"
-        },
-        "helixfold3_uniprot_sprot_link": {
-            "type": "string",
-            "default": "ftp://ftp.ebi.ac.uk/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz"
-        },
-        "helixfold3_uniprot_trembl_link": {
-            "type": "string",
-            "default": "ftp://ftp.ebi.ac.uk/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_trembl.fasta.gz"
-        },
-        "helixfold3_pdb_obsolete_link": {
-            "type": "string",
-            "default": "ftp://ftp.wwpdb.org/pub/pdb/data/status/obsolete.dat"
-        },
-        "helixfold3_maxit_src_path": {
-            "type": "string",
-            "default": "null/maxit-v11.200-prod-src"
-        },
-        "rosettafold_all_atom_db": {
-            "type": "string"
-        },
-        "uniref30_rosettafold_all_atom_link": {
-            "type": "string",
-            "default": "http://wwwuser.gwdg.de/~compbiol/uniclust/2020_06/UniRef30_2020_06_hhsuite.tar.gz"
-        },
-        "pdb100_rosettafold_all_atom_link": {
-            "type": "string",
-            "default": "https://files.ipd.uw.edu/pub/RoseTTAFold/pdb100_2021Mar03.tar.gz"
-        },
-        "bfd_rosettafold_all_atom_path": {
-            "type": "string",
-            "default": "null/bfd/*"
-        },
-        "rfaa_paper_weights_link": {
-            "type": "string",
-            "default": "http://files.ipd.uw.edu/pub/RF-All-Atom/weights/RFAA_paper_weights.pt"
-        },
-        "uniref30_rosettafold_all_atom_path": {
-            "type": "string",
-            "default": "null/uniref30/UniRef30_2020_06/*"
-        },
-        "pdb100_rosettafold_all_atom_path": {
-            "type": "string",
-            "default": "null/pdb100_2021Mar03/*"
-        },
-        "rfaa_paper_weights_path": {
-            "type": "string",
-            "default": "null/RFAA_paper_weights.pt"
-        },
-        "bfd_rosettafold_all_atom_link": {
-            "type": "string",
-            "default": "https://bfd.mmseqs.com/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt.tar.gz"
-        }
-    }
+    ]
 }

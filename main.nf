@@ -69,18 +69,18 @@ workflow NFCORE_PROTEINFOLD {
     samplesheet // channel: samplesheet read in from --input
 
     main:
-    ch_samplesheet              = samplesheet
-    ch_alphafold_top_ranked_pdb = Channel.empty()
-    ch_colabfold_top_ranked_pdb = Channel.empty()
-    ch_esmfold_top_ranked_pdb   = Channel.empty()
-    ch_rosettafold_all_atom_top_ranked_pdb   = Channel.empty()
-    ch_helixfold3_top_ranked_pdb   = Channel.empty()
-    ch_multiqc                  = Channel.empty()
-    ch_versions                 = Channel.empty()
-    ch_report_input             = Channel.empty()
-    ch_foldseek_db              = Channel.empty()
-    requested_modes             = params.mode.toLowerCase().split(",")
-    requested_modes_size        = requested_modes.size()
+    ch_samplesheet                          = samplesheet
+    ch_alphafold_top_ranked_pdb             = Channel.empty()
+    ch_colabfold_top_ranked_pdb             = Channel.empty()
+    ch_esmfold_top_ranked_pdb               = Channel.empty()
+    ch_rosettafold_all_atom_top_ranked_pdb  = Channel.empty()
+    ch_helixfold3_top_ranked_pdb            = Channel.empty()
+    ch_multiqc                              = Channel.empty()
+    ch_versions                             = Channel.empty()
+    ch_report_input                         = Channel.empty()
+    ch_foldseek_db                          = Channel.empty()
+    requested_modes                         = params.mode.toLowerCase().split(",")
+    requested_modes_size                    = requested_modes.size()
 
     //
     // WORKFLOW: Run alphafold2
@@ -128,8 +128,8 @@ workflow NFCORE_PROTEINFOLD {
             params.alphafold2_mode,
             params.alphafold2_model_preset,
             PREPARE_ALPHAFOLD2_DBS.out.params,
-            PREPARE_ALPHAFOLD2_DBS.out.bfd.ifEmpty([]).first(),
-            PREPARE_ALPHAFOLD2_DBS.out.small_bfd.ifEmpty([]).first(),
+            PREPARE_ALPHAFOLD2_DBS.out.bfd.ifEmpty([]),
+            PREPARE_ALPHAFOLD2_DBS.out.small_bfd.ifEmpty([]),
             PREPARE_ALPHAFOLD2_DBS.out.mgnify,
             PREPARE_ALPHAFOLD2_DBS.out.pdb70,
             PREPARE_ALPHAFOLD2_DBS.out.pdb_mmcif,
@@ -311,10 +311,10 @@ workflow NFCORE_PROTEINFOLD {
             PREPARE_HELIXFOLD3_DBS.out.helixfold3_init_models,
             PREPARE_HELIXFOLD3_DBS.out.helixfold3_maxit_src
         )
-        ch_helixfold3_top_ranked_pdb    = HELIXFOLD3.out.top_ranked_pdb
-        ch_multiqc                      = ch_multiqc.mix(HELIXFOLD3.out.multiqc_report.collect())
-        ch_versions                     = ch_versions.mix(HELIXFOLD3.out.versions)
-        ch_report_input                 = ch_report_input.mix(HELIXFOLD3.out.pdb_msa)
+        ch_helixfold3_top_ranked_pdb = HELIXFOLD3.out.top_ranked_pdb
+        ch_multiqc                   = ch_multiqc.mix(HELIXFOLD3.out.multiqc_report.collect())
+        ch_versions                  = ch_versions.mix(HELIXFOLD3.out.versions)
+        ch_report_input              = ch_report_input.mix(HELIXFOLD3.out.pdb_msa)
     }
 
     //

@@ -4,16 +4,16 @@ FROM nvidia/cuda:${CUDA}-cudnn8-runtime-ubuntu20.04
 # previously set).
 ARG CUDA
 
-LABEL authors="Athanasios Baltzis, Jose Espinosa-Carrasco, Leila Mansouri" \
+LABEL authors="Athanasios Baltzis, Jose Espinosa-Carrasco, Leila Mansouri Joshua Caley" \
     title="nfcore/proteinfold_alphafold2_standard" \
-    Version="dev" \
+    Version="1.2.0dev" \
     description="Docker image containing all software requirements to run the RUN_ALPHAFOLD2 module using the nf-core/proteinfold pipeline"
 
 # Use bash to support string substitution.
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Add env variables
-ENV LD_LIBRARY_PATH="/usr/local/cuda-12.2/lib64:$LD_LIBRARY_PATH"
+ENV LD_LIBRARY_PATH="/usr/local/cuda-$(cut -f1,2 -d. <<< ${CUDA})/lib64:$LD_LIBRARY_PATH"
 
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A4B469963BF863CC
 RUN apt-get update --quiet \
@@ -54,10 +54,13 @@ RUN wget -q -P /tmp \
 # Install Conda packages.
 ENV PATH="/opt/conda/bin:$PATH"
 ENV LD_LIBRARY_PATH="/opt/conda/lib:$LD_LIBRARY_PATH"
-RUN conda install --quiet --yes conda==24.11.1 pip python=3.11 \
+RUN conda install --quiet --yes conda==24.11.1 pip python=3.11 mamba \
     && conda install --quiet --yes --channel nvidia cuda=${CUDA_VERSION} \
     && conda install --quiet --yes --channel conda-forge openmm=8.0.0 pdbfixer \
     && conda clean --all --force-pkgs-dirs --yes
+
+RUN mamba install --quiet --yes cuda-toolkit=${CUDA} \
+    && mamba clean --all --force-pkgs-dirs --yes
 
 RUN wget -q -P /app/alphafold/alphafold/common/ \
     https://git.scicore.unibas.ch/schwede/openstructure/-/raw/7102c63615b64735c4941278d92b554ec94415f8/modules/mol/alg/src/stereo_chemical_props.txt
@@ -66,9 +69,9 @@ RUN wget -q -P /app/alphafold/alphafold/common/ \
 RUN pip3 install --upgrade pip --no-cache-dir \
     && pip3 install -r /app/alphafold/requirements.txt --no-cache-dir \
     && pip3 install --upgrade --no-cache-dir \
-      jax==0.4.26 \
-      jaxlib==0.4.26+cuda12.cudnn89 \
-      -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+    jax==0.4.23 \
+    jaxlib==0.4.23+cuda12.cudnn89 \
+    -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 
 RUN sed -i "s|alphafold/common/stereo_chemical_props.txt|/app/alphafold/alphafold/common/stereo_chemical_props.txt|g" /app/alphafold/alphafold/common/residue_constants.py
 
@@ -87,5 +90,5 @@ WORKDIR /app/alphafold
 RUN echo $'#!/bin/bash\n\
 ldconfig\n\
 python /app/alphafold/run_alphafold.py "$@"' > /app/run_alphafold.sh \
-  && chmod +x /app/run_alphafold.sh
+    && chmod +x /app/run_alphafold.sh
 ENTRYPOINT ["/app/run_alphafold.sh"]

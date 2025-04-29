@@ -7,7 +7,7 @@
 //
 // MODULE: Loaded from modules/local/
 //
-include { RUN_HELIXFOLD3      } from '../modules/local/run_helixfold3'
+include { RUN_HELIXFOLD3 } from '../modules/local/run_helixfold3'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -40,11 +40,11 @@ workflow HELIXFOLD3 {
     ch_helixfold3_maxit_src
 
     main:
-    ch_multiqc_files    = Channel.empty()
-    ch_pdb              = Channel.empty()
-    ch_top_ranked_pdb   = Channel.empty()
-    ch_msa              = Channel.empty()
-    ch_multiqc_report   = Channel.empty()
+    ch_multiqc_files  = Channel.empty()
+    ch_pdb            = Channel.empty()
+    ch_top_ranked_pdb = Channel.empty()
+    ch_msa            = Channel.empty()
+    ch_multiqc_report = Channel.empty()
 
     //
     // SUBWORKFLOW: Run helixfold3

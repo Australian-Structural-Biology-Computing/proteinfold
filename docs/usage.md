@@ -69,6 +69,7 @@ nextflow run nf-core/proteinfold \
       --full_dbs <true/false> \
       --alphafold2_model_preset monomer \
       --use_gpu <true/false> \
+      --random_seed 53343 \
       -profile <docker/singularity/.../institute>
 ```
 
@@ -426,9 +427,9 @@ If you specify the `--esmfold_db <PATH>` parameter, the directory structure of y
     └── esmfold_3B_v1.pt
 ```
 
-HelixFold3 can be run using this command (note that HF3 requires .json files not .fasta):
+HelixFold3 can be run using this command (note that HF3 requires `.json` files not `.fasta`):
 
-```console
+```bash
 nextflow run nf-core/proteinfold \
       --input samplesheet.csv \
       --outdir <OUTDIR> \
@@ -438,9 +439,20 @@ nextflow run nf-core/proteinfold \
       -profile <docker>
 ```
 
+```console
+## Optional parameters with default values:
+    --helixfold3_max_template_date=2038-01-19
+    --model_name allatom_demo
+    --preset 'reduced_dbs'
+    --init_model './init_models/HelixFold3-240814.pdparams'
+    --logging_level 'ERROR'
+    --precision 'bf16'
+    --infer_times 4
+```
+
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
 
-AlphaFold2 regular can be run using this command:
+RoseTTAFold All-Atom can be run using this command:
 
 ```bash
 nextflow run nf-core/proteinfold \
