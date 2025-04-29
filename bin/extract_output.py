@@ -2,9 +2,18 @@
 import pickle
 import os
 import argparse
+import json
 import numpy as np
 from Bio import PDB
 import csv
+
+
+# Mapping of characters to integers
+AA_to_int = {
+    "A": 0, "C": 1, "D": 2, "E": 3, "F": 4, "G": 5, "H": 6, "I": 7, "K": 8, "L": 9,
+    "M": 10, "N": 11, "P": 12, "Q": 13, "R": 14, "S": 15, "T": 16, "V": 17, "W": 18, "Y": 19,
+    "-": 21, ".": 21
+}
 
 def extract_struct_pLDDT_to_tsv(id, struct_files):
     """
@@ -114,13 +123,6 @@ def a3m_to_int(a3m_file):  # For the RosettaFold-All-Atom .a3m. Written with Git
     Returns:
         list of lists: A list of sequences, where each sequence is represented as a list of integers.
     """
-    # Mapping of characters to integers
-    aa_to_int = {
-        "A": 0, "C": 1, "D": 2, "E": 3, "F": 4, "G": 5, "H": 6, "I": 7, "K": 8, "L": 9,
-        "M": 10, "N": 11, "P": 12, "Q": 13, "R": 14, "S": 15, "T": 16, "V": 17, "W": 18, "Y": 19,
-        "-": 21, ".": 21
-    }
-
     with open(a3m_file, "r") as f:
         msa = f.read()
 
@@ -128,7 +130,7 @@ def a3m_to_int(a3m_file):  # For the RosettaFold-All-Atom .a3m. Written with Git
     int_sequences = []
     for line in msa.splitlines():
         if not line.startswith(">"):  # Ignore header lines
-            int_sequence = [aa_to_int.get(char.upper(), 20) for char in line]
+            int_sequence = [AA_to_int.get(char.upper(), 20) for char in line]
             int_sequences.append(int_sequence)
 
     int_sequences_array = np.array(int_sequences, dtype=object)
@@ -158,10 +160,28 @@ def read_a3m(id, a3m_files):
 #           for val in data["sequences"]:
 #               out_f.write("\t".join([str(x) for x in val]) + "\n") # TO DO - this has a single line for each entry, fix it up
 
+
+def read_json(id, json_files):
+
+    for json_file in json_files:
+        with open(json_file, 'r') as f:
+            data = json.load(f)
+            unpaired_MSAs = data['sequences'][0]['protein']['unpairedMsa']
+
+            msa_lines = [line for line in unpaired_MSAs.split("\n") if not line.startswith(">") and line.strip()]
+
+            int_seqs = [[AA_to_int.get(residue, 20) for residue in line] for line in msa_lines]
+
+            with open(f"{id}_msa.tsv", "w") as out_f:
+                    for row in int_seqs:
+                        out_f.write("\t".join(map(str, row)) + "\n")
+
+
 parser = argparse.ArgumentParser()
-parser.add_argument("--pkls", dest="pkls", required=False, nargs="+") # TO DO: want to have whatever the format of msas are
-parser.add_argument("--npzs", dest="npzs", required=False, nargs="+") # For reading the Boltz-1 MSA formats
+parser.add_argument("--pkls", dest="pkls", required=False, nargs="+") # For reading both HelixFold3 and AlphaFold2 MSA formats
+#parser.add_argument("--npzs", dest="npzs", required=False, nargs="+") # For reading the Boltz-1 MSA formats
 parser.add_argument("--a3ms", dest="a3ms", required=False, nargs="+") # For reading the RosettaFold-All-Atom MSA formats
+parser.add_argument("--jsons", dest="jsons", required=False, nargs="+") # For reading the AF3 MSA form
 parser.add_argument("--structs", dest="structs", required=False, nargs="+")
 parser.add_argument("--name", dest="name") # might need a --name $meta.id
 parser.add_argument("--output_dir", dest="output_dir")
@@ -175,5 +195,7 @@ if args.a3ms is not None:
     read_a3m(args.name, args.a3ms)
 #if args.npzs is not None:
 #    read_npz(args.name, args.npzs)
+if args.jsons is not None:
+    read_json(args.name, args.jsons)
 if args.structs is not None:
     extract_struct_pLDDT_to_tsv(args.name, args.structs)
