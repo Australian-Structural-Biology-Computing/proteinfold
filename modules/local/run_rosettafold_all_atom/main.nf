@@ -43,8 +43,8 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
     cp "${fasta.baseName}".pdb ./"${meta.id}"_rosettafold_all_atom.pdb
 
     extract_output.py --name ${meta.id} \\
-        --pkls features.pkl \\
-        --structs "${meta.id}_rosettafold_all_atom.pdb" 
+        --a3ms "${fasta.baseName}/A/t000_.msa0.a3m" \\
+        --structs "${meta.id}_rosettafold_all_atom.pdb"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
