@@ -143,14 +143,20 @@ def read_a3m(id, a3m_files):
                 for row in int_seqs:
                     out_f.write("\t".join(map(str, row)) + "\n")
 
-def read_npz(id, npz_files):
-    for npz_file in npz_files:
-        data = np.load(npz_file)
-        msa = data["residues"]  # TO DO - dump these intio to a row seperate MSA like the others
+#def read_npz(id, npz_files):
+#   for npz_file in npz_files:
+#       data = np.load(npz_file)
 
-        with open(f"{id}_msa.tsv", "w") as out_f:
-            for val in data["residues"]:
-                out_f.write("\t".join([str(x) for x in val]) + "\n") # TO DO - this has a single line for each entry, fix it up
+#MSA data is here: https://github.com/jwohlwend/boltz/blob/1f7acb18f279858bc292a8a0f9fbb5d96d6491f1/src/boltz/data/types.py#L298-L315  it looks like with  ("res_type", np.dtype("i1")) it's an undending list,  and you need "sequences" to get start and end indices
+
+#       msa = data["residues"]  # TO DO - dump these intio to a row seperate MSA like the others
+#       msa_2 = data["sequences"]  #sequences just seems to list length
+#       print(msa)
+#       print(msa_2)
+
+#       with open(f"{id}_msa.tsv", "w") as out_f:
+#           for val in data["sequences"]:
+#               out_f.write("\t".join([str(x) for x in val]) + "\n") # TO DO - this has a single line for each entry, fix it up
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--pkls", dest="pkls", required=False, nargs="+") # TO DO: want to have whatever the format of msas are
@@ -167,7 +173,7 @@ if args.pkls is not None:
     read_pkl(args.name, args.pkls)
 if args.a3ms is not None:
     read_a3m(args.name, args.a3ms)
-if args.npzs is not None:
-    read_npz(args.name, args.npzs)
+#if args.npzs is not None:
+#    read_npz(args.name, args.npzs)
 if args.structs is not None:
     extract_struct_pLDDT_to_tsv(args.name, args.structs)
