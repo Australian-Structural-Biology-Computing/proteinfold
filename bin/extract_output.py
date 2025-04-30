@@ -184,7 +184,16 @@ def read_json(id, json_files):
 
                 with open(f"{id}_pae.tsv", "w") as out_f:
                     for row in PAE:
-                        out_f.write('\t'.join([str(x) for x in row]) + '\n')  #tsv since the other metrics are .tsv in proteinfold
+                        out_f.write('\t'.join([str(round(x,4)) for x in row]) + '\n')  #tsv since the other metrics are .tsv in proteinfold
+
+        if json_file.endswith("all_results.json"): # HF3 pae data. TO DO: Need to make sure the workflow points to [protein]/[protein]_rank1/all_results.json
+            with open(json_file, 'r') as f:
+                data = json.load(f)
+                PAE = data['pae']
+
+                with open(f"{id}_pae.tsv", "w") as out_f:
+                    for row in PAE:
+                        out_f.write('\t'.join([str(round(x,4)) for x in row]) + '\n')  # Don't want to carry around 15 d.p. of PAE vals for the report
 
 
 
@@ -192,7 +201,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--pkls", dest="pkls", required=False, nargs="+") # For reading both HelixFold3 and AlphaFold2 MSA formats
 #parser.add_argument("--npzs", dest="npzs", required=False, nargs="+") # For reading the Boltz-1 MSA formats
 parser.add_argument("--a3ms", dest="a3ms", required=False, nargs="+") # For reading the RosettaFold-All-Atom MSA formats
-parser.add_argument("--jsons", dest="jsons", required=False, nargs="+") # For reading the AF3 MSA form
+parser.add_argument("--jsons", dest="jsons", required=False, nargs="+") # For reading the AF3 MSA & PAE, HF3 PAE
 parser.add_argument("--structs", dest="structs", required=False, nargs="+")
 parser.add_argument("--name", dest="name") # might need a --name $meta.id
 parser.add_argument("--output_dir", dest="output_dir")
