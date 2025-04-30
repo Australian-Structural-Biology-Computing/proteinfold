@@ -100,12 +100,12 @@ def read_pkl(id, pkl_files):
         if pkl_file.endswith("final_features.pkl"): #HelixFold3
             with open(f"{id}_msa.tsv", "w") as out_f:
                 for val in data["feat"]["msa"]:
-                    out_f.write("\t".join([str(x) for x in val]) + "\n")  # TO DO: take this out as a line
+                    out_f.write("\t".join([str(x) for x in val]) + "\n")  # TODO: take this out as a line
         elif pkl_file.endswith("features.pkl"):  #AlphaFold2.3
             with open(f"{id}_msa.tsv", "w") as out_f:
                 for val in data["msa"]:
                     out_f.write("\t".join([str(x) for x in val]) + "\n")
-        else:  #AlphaFold2.3 non-summary. TO DO: Need to either read in ranking_debug.json to get the ranking order, or do it later in the workflow.
+        else:  #AlphaFold2.3 non-summary. TODO: Need to either read in ranking_debug.json to get the ranking order, or do it later in the workflow.
             model_id = (
                 os.path.basename(pkl_file)
                 .replace("result_model_", "")
@@ -169,14 +169,14 @@ def read_npz(id, npz_files):
 
 #MSA data is here: https://github.com/jwohlwend/boltz/blob/1f7acb18f279858bc292a8a0f9fbb5d96d6491f1/src/boltz/data/types.py#L298-L315  it looks like with  ("res_type", np.dtype("i1")) it's an undending list,  and you need "sequences" to get start and end indices
 
-#       msa = data["residues"]  # TO DO - dump these intio to a row seperate MSA like the others
+#       msa = data["residues"]  # TODO - dump these intio to a row seperate MSA like the others
 #       msa_2 = data["sequences"]  #sequences just seems to list length
 #       print(msa)
 #       print(msa_2)
 
 #       with open(f"{id}_msa.tsv", "w") as out_f:
 #           for val in data["sequences"]:
-#               out_f.write("\t".join([str(x) for x in val]) + "\n") # TO DO - this has a single line for each entry, fix it up
+#               out_f.write("\t".join([str(x) for x in val]) + "\n") # TODO - this has a single line for each entry, fix it up
 
 
 def read_json(id, json_files):
@@ -194,7 +194,7 @@ def read_json(id, json_files):
                         for row in int_seqs:
                             out_f.write("\t".join(map(str, row)) + "\n")
 
-        if json_file.endswith("_confidences.json") or json_file.endswith('all_results.json'): #AF3 output with PAE info, or HF3 PAE data. TO DO: Need to make sure the workflow points to [protein]/[protein]_rank1/all_results.json
+        if json_file.endswith("_confidences.json") or json_file.endswith('all_results.json'): #AF3 output with PAE info, or HF3 PAE data. TODO: Need to make sure the workflow points to [protein]/[protein]_rank1/all_results.json
             with open(json_file, 'r') as f:
                 data = json.load(f)
                 PAE = data['pae']
@@ -205,7 +205,7 @@ def read_json(id, json_files):
 
 def read_pt(id, pt_files):
     for pt_file in pt_files:
-            with open(pt_file, 'rb') as f:   # TO DO: point to [protein]_aux.pt
+            with open(pt_file, 'rb') as f:   # TODO: point to [protein]_aux.pt
                 data = torch.load(f, map_location="cpu")
                 PAE = data['pae']
 
