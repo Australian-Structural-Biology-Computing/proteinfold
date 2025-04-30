@@ -146,9 +146,16 @@ def read_a3m(id, a3m_files):
                 for row in int_seqs:
                     out_f.write("\t".join(map(str, row)) + "\n")
 
-#def read_npz(id, npz_files):
-#   for npz_file in npz_files:
-#       data = np.load(npz_file)
+def read_npz(id, npz_files):
+   for npz_file in npz_files:
+       if npz_file.split('/')[-1].startswith('pae') and npz_file.endswith('.npz'): #Boltz PAE files if --write_full_pae is used
+            data = np.load(npz_file)  # using a with open()
+            PAE = data['pae']
+            print(PAE)
+            with open(f"{id}_pae.tsv", "w") as out_f:
+                for row in PAE:
+                    rounded_row = [f"{num:.4f}" for num in row]
+                    out_f.write('\t'.join(rounded_row) + '\n')
 
 #MSA data is here: https://github.com/jwohlwend/boltz/blob/1f7acb18f279858bc292a8a0f9fbb5d96d6491f1/src/boltz/data/types.py#L298-L315  it looks like with  ("res_type", np.dtype("i1")) it's an undending list,  and you need "sequences" to get start and end indices
 
@@ -184,7 +191,7 @@ def read_json(id, json_files):
 
                 with open(f"{id}_pae.tsv", "w") as out_f:
                     for row in PAE:
-                        out_f.write('\t'.join([str(round(x,2)) for x in row]) + '\n')  #tsv since the other metrics are .tsv in proteinfold
+                        out_f.write('\t'.join([str(round(x,4)) for x in row]) + '\n')  #tsv since the other metrics are .tsv in proteinfold
 
 def read_pt(id, pt_files):
     for pt_file in pt_files:
@@ -195,14 +202,14 @@ def read_pt(id, pt_files):
                 with open(f"{id}_pae.tsv", "w") as out_f:
                     for tensor in PAE.tolist():
                         for row in tensor:
-                            rounded_row = [f"{num:.2f}" for num in row]
+                            rounded_row = [f"{num:.4f}" for num in row]
                             out_f.write('\t'.join(rounded_row) + '\n')
                         #out_f.write('\t'.join(map(str, row.tolist())) + '\n')  # Tensor has a cast to list function
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--pkls", dest="pkls", required=False, nargs="+") # For reading both HelixFold3 and AlphaFold2 MSA formats
-#parser.add_argument("--npzs", dest="npzs", required=False, nargs="+") # For reading the Boltz-1 MSA formats
-parser.add_argument("--a3ms", dest="a3ms", required=False, nargs="+") # For reading the RosettaFold-All-Atom MSA formats
+parser.add_argument("--npzs", dest="npzs", required=False, nargs="+") # For reading the Boltz-1 PAE formats, Boltz-1 MSA not implemented (go straight to .a3m file)
+parser.add_argument("--a3ms", dest="a3ms", required=False, nargs="+") # For reading the RosettaFold-All-Atom and Boltz-1 MSA formats
 parser.add_argument("--jsons", dest="jsons", required=False, nargs="+") # For reading the AF3 MSA & PAE, HF3 PAE
 parser.add_argument("--pts", dest="pts", required=False, nargs="+") # For read RFAA pytorch model to get PAE data
 parser.add_argument("--structs", dest="structs", required=False, nargs="+")
@@ -216,8 +223,8 @@ if args.pkls is not None:
     read_pkl(args.name, args.pkls)
 if args.a3ms is not None:
     read_a3m(args.name, args.a3ms)
-#if args.npzs is not None:
-#    read_npz(args.name, args.npzs)
+if args.npzs is not None:
+    read_npz(args.name, args.npzs)
 if args.jsons is not None:
     read_json(args.name, args.jsons)
 if args.pts is not None:
