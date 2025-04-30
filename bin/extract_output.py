@@ -3,6 +3,7 @@ import pickle
 import os
 import argparse
 import json
+import torch
 import numpy as np
 from Bio import PDB
 import csv
@@ -162,7 +163,6 @@ def read_a3m(id, a3m_files):
 
 
 def read_json(id, json_files):
-
     for json_file in json_files:
         if json_file.endswith("_data.json"): #AF3 output with MSA info
             with open(json_file, 'r') as f:
@@ -184,14 +184,27 @@ def read_json(id, json_files):
 
                 with open(f"{id}_pae.tsv", "w") as out_f:
                     for row in PAE:
-                        out_f.write('\t'.join([str(round(x,1)) for x in row]) + '\n')  #tsv since the other metrics are .tsv in proteinfold
+                        out_f.write('\t'.join([str(round(x,2)) for x in row]) + '\n')  #tsv since the other metrics are .tsv in proteinfold
 
+def read_pt(id, pt_files):
+    for pt_file in pt_files:
+            with open(pt_file, 'rb') as f:   # TO DO: point to [protein]_aux.pt
+                data = torch.load(f, map_location="cpu")
+                PAE = data['pae']
+
+                with open(f"{id}_pae.tsv", "w") as out_f:
+                    for tensor in PAE.tolist():
+                        for row in tensor:
+                            rounded_row = [f"{num:.2f}" for num in row]
+                            out_f.write('\t'.join(rounded_row) + '\n')
+                        #out_f.write('\t'.join(map(str, row.tolist())) + '\n')  # Tensor has a cast to list function
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--pkls", dest="pkls", required=False, nargs="+") # For reading both HelixFold3 and AlphaFold2 MSA formats
 #parser.add_argument("--npzs", dest="npzs", required=False, nargs="+") # For reading the Boltz-1 MSA formats
 parser.add_argument("--a3ms", dest="a3ms", required=False, nargs="+") # For reading the RosettaFold-All-Atom MSA formats
 parser.add_argument("--jsons", dest="jsons", required=False, nargs="+") # For reading the AF3 MSA & PAE, HF3 PAE
+parser.add_argument("--pts", dest="pts", required=False, nargs="+") # For read RFAA pytorch model to get PAE data
 parser.add_argument("--structs", dest="structs", required=False, nargs="+")
 parser.add_argument("--name", dest="name") # might need a --name $meta.id
 parser.add_argument("--output_dir", dest="output_dir")
@@ -207,5 +220,7 @@ if args.a3ms is not None:
 #    read_npz(args.name, args.npzs)
 if args.jsons is not None:
     read_json(args.name, args.jsons)
+if args.pts is not None:
+    read_pt(args.name, args.pts)
 if args.structs is not None:
     extract_struct_pLDDT_to_tsv(args.name, args.structs)
