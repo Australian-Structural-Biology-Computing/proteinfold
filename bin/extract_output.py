@@ -96,23 +96,33 @@ def extract_struct_pLDDT_to_tsv(id, struct_files):
 def read_pkl(id, pkl_files):
     for pkl_file in pkl_files:
         print(pkl_file)
-        dict_data = pickle.load(open(pkl_file, "rb"))
+        data = pickle.load(open(pkl_file, "rb"))
         if pkl_file.endswith("final_features.pkl"): #HelixFold3
             with open(f"{id}_msa.tsv", "w") as out_f:
-                for val in dict_data["feat"]["msa"]:
+                for val in data["feat"]["msa"]:
                     out_f.write("\t".join([str(x) for x in val]) + "\n")  # TO DO: take this out as a line
         elif pkl_file.endswith("features.pkl"):  #AlphaFold2.3
             with open(f"{id}_msa.tsv", "w") as out_f:
-                for val in dict_data["msa"]:
+                for val in data["msa"]:
                     out_f.write("\t".join([str(x) for x in val]) + "\n")
-        else:  #AlphaFold2.3 non-summary
+        else:  #AlphaFold2.3 non-summary. TO DO: Need to either read in ranking_debug.json to get the ranking order, or do it later in the workflow.
             model_id = (
                 os.path.basename(pkl_file)
                 .replace("result_model_", "")
-                .replace("_pred_0.pkl", "")
+                .replace(".pkl", "")
             )
             with open(f"{id}_lddt_{model_id}.tsv", "w") as out_f:
-                out_f.write("\t".join([str(x) for x in dict_data["plddt"]]) + "\n")
+                out_f.write("\t".join([str(x) for x in data["plddt"]]) + "\n")
+
+            # Full credit to Cam Hyde @ QCIF/Galaxy who I lifted this from: https://github.com/usegalaxy-au/tools-au/blob/de94df520c8dc7b8652aedb92e90f6ebb312f95f/tools/alphafold/scripts/outputs.py
+            if 'predicted_aligned_error' not in data.keys():
+                print(f"No PAE output in {pkl_file}, it was likely a monomer calculation")
+            else:
+                with open(f"{id}_pae_{model_id}.tsv", "w") as out_f:
+                    PAE = data["predicted_aligned_error"]
+                    for row in PAE:
+                        rounded_row = [f"{num:.4f}" for num in row]
+                        out_f.write('\t'.join(rounded_row) + '\n')
 
 def a3m_to_int(a3m_file):  # For the RosettaFold-All-Atom .a3m. Written with GitHub Copilot
     """
@@ -204,7 +214,6 @@ def read_pt(id, pt_files):
                         for row in tensor:
                             rounded_row = [f"{num:.4f}" for num in row]
                             out_f.write('\t'.join(rounded_row) + '\n')
-                        #out_f.write('\t'.join(map(str, row.tolist())) + '\n')  # Tensor has a cast to list function
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--pkls", dest="pkls", required=False, nargs="+") # For reading both HelixFold3 and AlphaFold2 MSA formats
