@@ -177,24 +177,14 @@ def read_json(id, json_files):
                         for row in int_seqs:
                             out_f.write("\t".join(map(str, row)) + "\n")
 
-        if json_file.endswith("_confidences.json"): #AF3 output with PAE info
+        if json_file.endswith("_confidences.json") or json_file.endswith('all_results.json'): #AF3 output with PAE info, or HF3 PAE data. TO DO: Need to make sure the workflow points to [protein]/[protein]_rank1/all_results.json
             with open(json_file, 'r') as f:
                 data = json.load(f)
                 PAE = data['pae']
 
                 with open(f"{id}_pae.tsv", "w") as out_f:
                     for row in PAE:
-                        out_f.write('\t'.join([str(round(x,4)) for x in row]) + '\n')  #tsv since the other metrics are .tsv in proteinfold
-
-        if json_file.endswith("all_results.json"): # HF3 pae data. TO DO: Need to make sure the workflow points to [protein]/[protein]_rank1/all_results.json
-            with open(json_file, 'r') as f:
-                data = json.load(f)
-                PAE = data['pae']
-
-                with open(f"{id}_pae.tsv", "w") as out_f:
-                    for row in PAE:
-                        out_f.write('\t'.join([str(round(x,4)) for x in row]) + '\n')  # Don't want to carry around 15 d.p. of PAE vals for the report
-
+                        out_f.write('\t'.join([str(round(x,1)) for x in row]) + '\n')  #tsv since the other metrics are .tsv in proteinfold
 
 
 parser = argparse.ArgumentParser()
