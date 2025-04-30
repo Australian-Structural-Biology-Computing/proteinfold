@@ -76,13 +76,13 @@ def extract_struct_pLDDT_to_tsv(id, struct_files):
         pLDDT_cols.append(res_pLDDTs)
 
     # Check all structures have the same number of resiudes
-    if all(x == res_counts[0] for x in res_counts) == False:
+    if not all(x == res_counts[0] for x in res_counts):
         print("Not all structures have the same number of residues!")
     else:
         res_id_col = list(range(len(res_list)))
 
     # Check the pLDDT cols are the same size before combining
-    if (len(set(len(col) for col in pLDDT_cols)) == 1) == False:
+    if not (len(set(len(col) for col in pLDDT_cols)) == 1):
         print("Not all pLDDT columns have the same number of values!")
 
     pLDDT_rows = zip(res_id_col, *pLDDT_cols) #combine lists column-wise to make rows
