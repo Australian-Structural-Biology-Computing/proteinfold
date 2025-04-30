@@ -164,17 +164,28 @@ def read_a3m(id, a3m_files):
 def read_json(id, json_files):
 
     for json_file in json_files:
-        with open(json_file, 'r') as f:
-            data = json.load(f)
-            unpaired_MSAs = data['sequences'][0]['protein']['unpairedMsa']
+        if json_file.endswith("_data.json"): #AF3 output with MSA info
+            with open(json_file, 'r') as f:
+                data = json.load(f)
+                unpaired_MSAs = data['sequences'][0]['protein']['unpairedMsa']
 
-            msa_lines = [line for line in unpaired_MSAs.split("\n") if not line.startswith(">") and line.strip()]
+                msa_lines = [line for line in unpaired_MSAs.split("\n") if not line.startswith(">") and line.strip()]
 
-            int_seqs = [[AA_to_int.get(residue, 20) for residue in line] for line in msa_lines]
+                int_seqs = [[AA_to_int.get(residue, 20) for residue in line] for line in msa_lines]
 
-            with open(f"{id}_msa.tsv", "w") as out_f:
-                    for row in int_seqs:
-                        out_f.write("\t".join(map(str, row)) + "\n")
+                with open(f"{id}_msa.tsv", "w") as out_f:
+                        for row in int_seqs:
+                            out_f.write("\t".join(map(str, row)) + "\n")
+
+        if json_file.endswith("_confidences.json"): #AF3 output with PAE info
+            with open(json_file, 'r') as f:
+                data = json.load(f)
+                PAE = data['pae']
+
+                with open(f"{id}_pae.tsv", "w") as out_f:
+                    for row in PAE:
+                        out_f.write('\t'.join([str(x) for x in row]) + '\n')  #tsv since the other metrics are .tsv in proteinfold
+
 
 
 parser = argparse.ArgumentParser()
