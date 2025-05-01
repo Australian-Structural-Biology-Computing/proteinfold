@@ -94,6 +94,10 @@ def extract_struct_pLDDT_to_tsv(id, struct_files):
 
 
 def read_pkl(id, pkl_files):
+    """
+    Adapted from the Galaxy AlphaFold tool (https://github.com/usegalaxy-au/tools-au/blob/de94df520c8dc7b8652aedb92e90f6ebb312f95f/tools/alphafold/scripts/outputs.py), originally authored by @neoformit and @graceahall and funded by Australian Biocommons and QCIF Australia.
+    """
+
     for pkl_file in pkl_files:
         print(pkl_file)
         data = pickle.load(open(pkl_file, "rb"))
