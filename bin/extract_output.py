@@ -78,6 +78,7 @@ def extract_struct_pLDDT_to_tsv(id, struct_files):
     # Check all structures have the same number of resiudes
     if not all(x == res_counts[0] for x in res_counts):
         print("Not all structures have the same number of residues!")
+        return
     else:
         res_id_col = list(range(len(res_list)))
 
