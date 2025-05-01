@@ -165,7 +165,6 @@ def read_npz(id, npz_files):
        if npz_file.split('/')[-1].startswith('pae') and npz_file.endswith('.npz'): #Boltz PAE files if --write_full_pae is used
             data = np.load(npz_file)  # using a with open()
             PAE = data['pae']
-            print(PAE)
             with open(f"{id}_pae.tsv", "w") as out_f:
                 for row in PAE:
                     rounded_row = [f"{num:.4f}" for num in row]
@@ -221,7 +220,7 @@ def read_pt(id, pt_files):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--pkls", dest="pkls", required=False, nargs="+") # For reading both HelixFold3 and AlphaFold2 MSA formats
-parser.add_argument("--npzs", dest="npzs", required=False, nargs="+") # For reading the Boltz-1 PAE formats, Boltz-1 MSA not implemented (go straight to .a3m file)
+parser.add_argument("--npzs", dest="npzs", required=False, nargs="+") # For reading the Boltz-1 PAE formats. TODO: Boltz-1 MSA not implemented (go straight to .a3m file), implement 
 parser.add_argument("--a3ms", dest="a3ms", required=False, nargs="+") # For reading the RosettaFold-All-Atom and Boltz-1 MSA formats
 parser.add_argument("--jsons", dest="jsons", required=False, nargs="+") # For reading the AF3 MSA & PAE, HF3 PAE
 parser.add_argument("--pts", dest="pts", required=False, nargs="+") # For read RFAA pytorch model to get PAE data
