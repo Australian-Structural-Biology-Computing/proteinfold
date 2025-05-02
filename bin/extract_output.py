@@ -113,7 +113,8 @@ def read_pkl(id, pkl_files):
             with open(f"{id}_msa.tsv", "w") as out_f:
                 for val in data["feat"]["msa"]:
                     out_f.write("\t".join([str(x) for x in val]) + "\n")  # TODO: take this out as a line
-        elif pkl_file.endswith("features.pkl"):  #AlphaFold2.3
+        
+    elif pkl_file.endswith("features.pkl"):  #AlphaFold2.3
             with open(f"{id}_msa.tsv", "w") as out_f:
                 for val in data["msa"]:
                     out_f.write("\t".join([str(x) for x in val]) + "\n")
@@ -144,8 +145,13 @@ def a3m_to_int(a3m_file):  # For the RosettaFold-All-Atom .a3m. Written with Git
         msa (str): A string containing A3M MSA sequences.
 
     Returns:
-        list of lists: A list of sequences, where each sequence is represented as a list of integers.
+        list of lists: A list of sequences, where each sequence is represented as a list of integers    
     """
+
+    # TODO: problem, the a3m aren't aligned to the original query, so we don't have a same dimensional array with appropriate gaps than generate_report() expects  
+   
+
+ 
     with open(a3m_file, "r") as f:
         msa = f.read()
 

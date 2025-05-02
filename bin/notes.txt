@@ -1,0 +1,12 @@
+Broken conversions.
+
+LDDT: 
+  - RFAA  - It's not extract_ouput.py that's failing, but generate_report.py because of the fraction .pdb b-factor column 
+
+Sequence coverage: 
+  - RFAA monomer  - this is because the MSA array values aren't the same length. Can I fix? See if there's a better way from RFAA 
+  # the msa_m.sh script comes straight from hhblits, and does not re-align to the same length as the query which is what generate_report.py() expects
+
+ 
+  - AF2 monomer? How so, that shouldn't be broken
+ 

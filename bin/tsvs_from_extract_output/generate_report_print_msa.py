@@ -17,6 +17,7 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
             for line in in_file:
                 msa.append([int(x) for x in line.strip().split()])
 
+        #print(f"msa \n: {msa}") 
 
         seqid = []
         for sequence in msa:
@@ -45,6 +46,10 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
                 ]
             )
 
+        print(f"final shape: {final.shape}")
+
+        #print(f"final \n: {final}")
+
         # ##################################################################
         plt.figure(figsize=(14, 14), dpi=100)
         # ##################################################################
@@ -62,11 +67,11 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
         column_counts = [0] * len(msa[0])
         for col in range(len(msa[0])):
             for row in msa:
-                print(f"row {row}")
+                #print(f"row {row}")
                 if row[col] != 21:
 
                     column_counts[col] += 1
-            print(f"msa[0] {msa[0]}")
+            #print(f"msa[0] {msa[0]}")
                 
         plt.plot(column_counts, color="black")
         plt.xlim(-0.5, len(msa[0]) - 0.5)
@@ -212,6 +217,8 @@ def generate_plots(msa_path, plddt_paths, name, out_dir):
         fig.update_layout(title="Predicted LDDT per Position")
         fig.savefig(f"{out_dir}/{name+('_' if name else '')}coverage_LDDT_{i}.png")
         i += 1
+
+
 
 def align_structures(structures):
     parser = PDB.PDBParser(QUIET=True)

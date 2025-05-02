@@ -1,0 +1,3 @@
+Generating the report goes something like this:
+
+python3 ../generate_report.py --generate_tsv y --msa ../tsvs_from_extract_output/AF2_monomer_msa.tsv --pdb /srv/scratch/sbf/proteinfold_output_examples/AF2/alphafold2_monomers/standard/G3-3a_Loki-Asv2_1_prot-1_103-143.1/ranked_0.pdb --name AF2_monomer --output_dir ../reports_from_tsvs/ --html_template ../../assets/report_template.html
