@@ -69,8 +69,6 @@ def extract_struct_pLDDT_to_tsv(id, struct_files):
                     res_pLDDTs.append(res_pLDDT)
                     pLDDT_tot += res_pLDDT
 
-                    print(f"res pLDDT {res_pLDDT}") 
-
         num_res = len(res_list)
         res_counts.append(num_res)
         pLDDT_mean = pLDDT_tot / num_res
