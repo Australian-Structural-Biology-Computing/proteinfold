@@ -62,13 +62,22 @@ def extract_struct_pLDDT_to_tsv(id, struct_files):
                         res_pLDDT_tot += atom_pLDDT
 
                     res_pLDDT = round(float(res_pLDDT_tot / num_atoms),2)
+               
+                    if (res_pLDDT < 1):  # RFAA the multiplication of mean isn't failing. Anyway covering to a [0,100] range for any structure file1 
+                        res_pLDDT *= 100
+                        
                     res_pLDDTs.append(res_pLDDT)
                     pLDDT_tot += res_pLDDT
 
+                    print(f"res pLDDT {res_pLDDT}") 
 
         num_res = len(res_list)
         res_counts.append(num_res)
         pLDDT_mean = pLDDT_tot / num_res
+       
+        print(f"res pLDDT_mean {pLDDT_mean}")           
+ 
+        # Why isn't this triggering when RFAA has PLDDTs < 1?        
 
         if (pLDDT_mean < 1):  # Quirk of some programs is they report pLDDTs in decimals, but <1 pLDDTs are highly improbable, so let's just convert to percentage
             pLDDT_mean *= 100
