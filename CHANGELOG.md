@@ -21,6 +21,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [[#239](https://github.com/nf-core/proteinfold/issues/239)] - Update alphafold2 standard mode Dockerfile.
 - [[#240](https://github.com/nf-core/proteinfold/issues/240)] - Separate download and input of pdb `mmcif` files and `obsolete` database.
 - [[PR #249](https://github.com/nf-core/proteinfold/pull/249)] - Update pipeline template to [nf-core/tools 3.2.0](https://github.com/nf-core/tools/releases/tag/3.2.0).
+- [[PR #271](https://github.com/nf-core/proteinfold/pull/271)] - Update RFAA and HF3 dockerfiles for quicker building and reduction in image size.
+- [[PR #274](https://github.com/nf-core/proteinfold/pull/274)] - Simplify run_helixfold3 module and move arguments to `modules.config`.
+- [[#276](https://github.com/nf-core/proteinfold/issues/276)] - Update helixfold3 dockerfile to make it compatible with H100 gpus.
+- [[#259](https://github.com/nf-core/proteinfold/issues/259)] - Fix `esmfold` docker image to make it compatible with hopper GPU architecture.
+- [[#281](https://github.com/nf-core/proteinfold/issues/281)] - Fix how argument `--nv` is passed to apptainer and singularity in the config.
+- [[PR #283](https://github.com/nf-core/proteinfold/pull/283)] - Fixes to meet language server requirements and update link of the helixfold3 image.
+- [[PR #287](https://github.com/nf-core/proteinfold/pull/287)] - Fixes symlinking of every mmcif file causing excess I/O.
+- [[#293](https://github.com/nf-core/proteinfold/issues/293)] - Add back `alphafold2_model_preset` input to the call to `run_alphafold2_pred`.
+- [[PR #294](https://github.com/nf-core/proteinfold/pull/294)] - Temporary downgrade of schema for passing CI tests with Nextflow edge version.
+- [[#272](https://github.com/nf-core/proteinfold/issues/272)] - Colouring scheme conforming to AlphaFold2 confidence bands in html report.
+- [[PR #297](https://github.com/nf-core/proteinfold/pull/297)] - Update pipeline template to [nf-core/tools 3.2.1](https://github.com/nf-core/tools/releases/tag/3.2.1).
 
 ### Parameters
 

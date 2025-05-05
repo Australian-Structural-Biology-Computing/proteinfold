@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 
-import os
+import os # I'd love to replace os with pathlib, but leaving for now
 import argparse
 from matplotlib import pyplot as plt
+import numpy as np
 from collections import OrderedDict
 import base64
 import plotly.graph_objects as go
 import re
 from Bio import PDB
 
-
-def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generate_tsv, pdb):
+def generate_output_images(msa_path, plddt_header,  plddt_data, name, out_dir, in_type, generate_tsv, pdb):
     msa = []
     if in_type.lower() != "colabfold" and not msa_path.endswith("NO_FILE"):
         with open(msa_path, "r") as in_file:
@@ -65,7 +65,7 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
                 if row[col] != 21:
 
                     column_counts[col] += 1
-                
+
         plt.plot(column_counts, color="black")
         plt.xlim(-0.5, len(msa[0]) - 0.5)
         plt.ylim(-0.5, len(msa) - 0.5)
@@ -81,33 +81,56 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
 
         # ##################################################################
 
-    plddt_per_model = OrderedDict()
-    output_data = plddt_data
-
-    if generate_tsv == "y":
-        for plddt_path in output_data:
-            with open(plddt_path, "r") as in_file:
-                plddt_per_model[os.path.basename(plddt_path)[:-4]] = [
-                    float(x) for x in in_file.read().strip().split()
-                ]
-    else:
-        for i, plddt_values_str in enumerate(output_data):
-            plddt_per_model[i] = []
-            plddt_per_model[i] = [float(x) for x in plddt_values_str.strip().split()]
+#   plddt_per_model = OrderedDict()
+#   output_data = plddt_data
 
     fig = go.Figure()
-    for idx, (model_name, value_plddt) in enumerate(plddt_per_model.items()):
-        rank_label = os.path.splitext(pdb[idx])[0]
-        fig.add_trace(
-            go.Scatter(
-                x=list(range(len(value_plddt))),
-                y=value_plddt,
-                mode="lines",
-                name=rank_label,
-                text=[f"({i}, {value:.2f})" for i, value in enumerate(value_plddt)],
-                hoverinfo="text",
-            )
-        )
+
+   # Rank comes from the _mqc.tsv file
+
+    for idx, value_plddt range(len(plddt_header-1)):
+        rank_label = plddt_header[idx]
+       fig.add_trace(
+           go.Scatter(
+               x=list(range(len(value_plddt))),
+               y=value_plddt,
+               mode="lines",
+               name=rank_label,
+               text=[f"({i}, {value:.2f})" for i, value in enumerate(value_plddt)],
+               hoverinfo="text",
+           )
+       )
+
+#   plddt_per_model = OrderedDict()
+#   output_data = plddt_data
+
+#   if generate_tsv == "y":
+#       for plddt_path in output_data:
+#           with open(plddt_path, "r") as in_file:
+#               plddt_per_model[os.path.basename(plddt_path)[:-4]] = [
+#                   float(x) for x in in_file.read().strip().split()
+#               ]
+#   else:
+#       for i, plddt_values_str in enumerate(output_data):
+#           plddt_per_model[i] = []
+#           plddt_per_model[i] = [float(x) for x in plddt_values_str.strip().split()]
+
+#   fig = go.Figure()
+
+#   # Rank comes from the _mqc.tsv file
+
+#   for idx, (model_name, value_plddt) in enumerate(plddt_per_model.items()):
+#       rank_label = os.path.splitext(pdb[idx])[0]
+#       fig.add_trace(
+#           go.Scatter(
+#               x=list(range(len(value_plddt))),
+#               y=value_plddt,
+#               mode="lines",
+#               name=rank_label,
+#               text=[f"({i}, {value:.2f})" for i, value in enumerate(value_plddt)],
+#               hoverinfo="text",
+#           )
+#       )
     fig.update_layout(
         title=dict(text="Predicted LDDT per position", x=0.5, xanchor="center"),
         xaxis=dict(
@@ -258,36 +281,28 @@ def align_structures(structures):
     return aligned_structures
 
 
-def pdb_to_lddt(struct_files, generate_tsv):
-    struct_files_sorted = struct_files
-    struct_files_sorted.sort()
+def pdb_to_lddt(pdb_files, generate_tsv):
+    pdb_files_sorted = pdb_files
+    pdb_files_sorted.sort()
 
     output_lddt = []
     averages = []
 
-    for struct_file in struct_files_sorted:
+    for pdb_file in pdb_files_sorted:
         plddt_values = []
-
-        if struct_file.endswith('.pdb'):
-            parser = PDB.PDBParser(QUIET=True)
-            suffix = ".pdb"
-        elif struct_file.endswith('.cif'):
-            parser = PDB.MMCIFParser(QUIET=True)
-            suffix = ".cif"
-        else:
-            raise NotImplementedError("Reporting only supported for .pdb and .cif filetypes")
-        structure = parser.get_structure("", struct_file)
-
-        for residue in structure.get_residues():
-            res_pLDDT_tot = 0
-            res_atom_count = 0
-
-            for atom in residue.get_atoms():
-                res_atom_count +=1
-                res_pLDDT_tot += atom.get_bfactor()
-
-            plddt_values.append(res_pLDDT_tot/res_atom_count) #residue-level mean for ESMfold atom-level pLDDT
-
+        current_resd = []
+        last = None
+        with open(pdb_file, "r") as infile:
+            for line in infile:
+                columns = line.split()
+                if len(columns) >= 11:
+                    if last and last != columns[5]:
+                        plddt_values.append(sum(current_resd) / len(current_resd))
+                        current_resd = []
+                    current_resd.append(float(columns[10]))
+                    last = columns[5]
+            if len(current_resd) > 0:
+                plddt_values.append(sum(current_resd) / len(current_resd))
 
         # Calculate the average PLDDT value for the current file
         if plddt_values:
@@ -297,7 +312,7 @@ def pdb_to_lddt(struct_files, generate_tsv):
             averages.append(0.0)
 
         if generate_tsv == "y":
-            output_file = f"{struct_file.replace(suffix, '')}_plddt.tsv"
+            output_file = f"{pdb_file.replace('.pdb', '')}_plddt.tsv"
             with open(output_file, "w") as outfile:
                 outfile.write(" ".join(map(str, plddt_values)) + "\n")
             output_lddt.append(output_file)
@@ -326,6 +341,7 @@ parser.add_argument(
 )
 parser.add_argument("--msa", dest="msa", default="NO_FILE")
 parser.add_argument("--pdb", dest="pdb", required=True, nargs="+")
+parser.add_argument("--plddt_tsv", dest="plddt_tsv", required=True)  # from ${name}_monomer_plddt_mqc.tsv. I want to check the file extension, but in argparse that means a lambda
 parser.add_argument("--name", dest="name")
 parser.add_argument("--output_dir", dest="output_dir")
 parser.add_argument("--html_template", dest="html_template")
@@ -335,12 +351,15 @@ parser.set_defaults(in_type="esmfold")
 parser.set_defaults(name="")
 args = parser.parse_args()
 
-lddt_data, lddt_averages = pdb_to_lddt(args.pdb, args.generate_tsv)
+with open(args.plddt_tsv, 'r') as f:
+    plddt_header_line = f.readline.strip()
+    plddt_header = header_line.split("\t")  # turn into a list
+
+plddt_data = np.genfromtxt(args.plddt_tsv, delimiter="\t", skip_header=1)
 
 generate_output_images(
-    args.msa, lddt_data, args.name, args.output_dir, args.in_type, args.generate_tsv, args.pdb
+    args.msa, plddt_header, plddt_data, args.name, args.output_dir, args.in_type, args.generate_tsv, args.pdb
 )
-# generate_plots(args.msa, args.plddt, args.name, args.output_dir)
 
 print("generating html report...")
 structures = args.pdb

@@ -6,14 +6,14 @@ ARG CUDA
 
 LABEL authors="Athanasios Baltzis, Jose Espinosa-Carrasco, Leila Mansouri Joshua Caley" \
     title="nfcore/proteinfold_alphafold2_standard" \
-    Version="dev" \
+    Version="1.2.0dev" \
     description="Docker image containing all software requirements to run the RUN_ALPHAFOLD2 module using the nf-core/proteinfold pipeline"
 
 # Use bash to support string substitution.
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Add env variables
-ENV LD_LIBRARY_PATH="/usr/local/cuda-12.2/lib64:$LD_LIBRARY_PATH"
+ENV LD_LIBRARY_PATH="/usr/local/cuda-$(cut -f1,2 -d. <<< ${CUDA})/lib64:$LD_LIBRARY_PATH"
 
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A4B469963BF863CC
 RUN apt-get update --quiet \
