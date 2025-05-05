@@ -8,15 +8,14 @@ import base64
 import plotly.graph_objects as go
 import re
 from Bio import PDB
+from utils import pLDDT_from_struct_b_factor
 
-
-def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generate_tsv, pdb):
+def generate_output_images(msa_path, structures, name, out_dir, in_type):
     msa = []
     if in_type.lower() != "colabfold" and not msa_path.endswith("NO_FILE"):
         with open(msa_path, "r") as in_file:
             for line in in_file:
                 msa.append([int(x) for x in line.strip().split()])
-
 
         seqid = []
         for sequence in msa:
@@ -65,7 +64,7 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
                 if row[col] != 21:
 
                     column_counts[col] += 1
-                
+
         plt.plot(column_counts, color="black")
         plt.xlim(-0.5, len(msa[0]) - 0.5)
         plt.ylim(-0.5, len(msa) - 0.5)
@@ -81,30 +80,22 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
 
         # ##################################################################
 
-    plddt_per_model = OrderedDict()
-    output_data = plddt_data
+    plddt_per_struct = OrderedDict()
 
-    if generate_tsv == "y":
-        for plddt_path in output_data:
-            with open(plddt_path, "r") as in_file:
-                plddt_per_model[os.path.basename(plddt_path)[:-4]] = [
-                    float(x) for x in in_file.read().strip().split()
-                ]
-    else:
-        for i, plddt_values_str in enumerate(output_data):
-            plddt_per_model[i] = []
-            plddt_per_model[i] = [float(x) for x in plddt_values_str.strip().split()]
+    for struct in args.structs:
+        plddt_per_struct[struct] = pLDDT_from_struct_b_factor(struct)
 
     fig = go.Figure()
-    for idx, (model_name, value_plddt) in enumerate(plddt_per_model.items()):
-        rank_label = os.path.splitext(pdb[idx])[0]
+
+    for idx, (struct, plddts) in enumerate(plddt_per_struct.items()):
+        rank_label = f'rank_label{idx}'
         fig.add_trace(
             go.Scatter(
-                x=list(range(len(value_plddt))),
-                y=value_plddt,
+                x=list(range(len(plddts))),
+                y=plddts,
                 mode="lines",
                 name=rank_label,
-                text=[f"({i}, {value:.2f})" for i, value in enumerate(value_plddt)],
+                text=[f"({idx}, {value:.2f})" for idx, value in enumerate(plddts)],
                 hoverinfo="text",
             )
         )
@@ -188,28 +179,23 @@ def generate_plots(msa_path, plddt_paths, name, out_dir):
     fig.savefig(f"{out_dir}/{name+('_' if name else '')}seq_coverage.png")
 
     # Plotting Predicted LDDT per position using Plotly
-    plddt_per_model = OrderedDict()
-    plddt_paths.sort()
-    for plddt_path in plddt_paths:
-        with open(plddt_path, "r") as in_file:
-            plddt_per_model[os.path.basename(plddt_path)[:-4]] = [
-                float(x) for x in in_file.read().strip().split()
-            ]
+    plddt_per_struct = OrderedDict()
 
-    i = 0
-    for model_name, value_plddt in plddt_per_model.items():
+    for struct in args.structs:
+        plddt_per_struct[struct] = pLDDT_from_struct_b_factor(struct)
+
+    for idx, (struct, plddts) in enumerate(plddt_per_struct.item()):
         fig = go.Figure()
         fig.add_trace(
             go.Scatter(
-                x=list(range(len(value_plddt))),
-                y=value_plddt,
+                x=list(range(len(plddts))),
+                y=plddts,
                 mode="lines",
-                name=model_name,
+                name=struct,
             )
         )
         fig.update_layout(title="Predicted LDDT per Position")
-        fig.savefig(f"{out_dir}/{name+('_' if name else '')}coverage_LDDT_{i}.png")
-        i += 1
+        fig.savefig(f"{out_dir}/{name+('_' if name else '')}coverage_LDDT_{idx}.png")
 
 def align_structures(structures):
     parser = PDB.PDBParser(QUIET=True)
@@ -257,57 +243,6 @@ def align_structures(structures):
 
     return aligned_structures
 
-
-def pdb_to_lddt(struct_files, generate_tsv):
-    struct_files_sorted = struct_files
-    struct_files_sorted.sort()
-
-    output_lddt = []
-    averages = []
-
-    for struct_file in struct_files_sorted:
-        plddt_values = []
-
-        if struct_file.endswith('.pdb'):
-            parser = PDB.PDBParser(QUIET=True)
-            suffix = ".pdb"
-        elif struct_file.endswith('.cif'):
-            parser = PDB.MMCIFParser(QUIET=True)
-            suffix = ".cif"
-        else:
-            raise NotImplementedError("Reporting only supported for .pdb and .cif filetypes")
-        structure = parser.get_structure("", struct_file)
-
-        for residue in structure.get_residues():
-            res_pLDDT_tot = 0
-            res_atom_count = 0
-
-            for atom in residue.get_atoms():
-                res_atom_count +=1
-                res_pLDDT_tot += atom.get_bfactor()
-
-            plddt_values.append(res_pLDDT_tot/res_atom_count) #residue-level mean for ESMfold atom-level pLDDT
-
-
-        # Calculate the average PLDDT value for the current file
-        if plddt_values:
-            avg_plddt = sum(plddt_values) / len(plddt_values)
-            averages.append(round(avg_plddt, 3))
-        else:
-            averages.append(0.0)
-
-        if generate_tsv == "y":
-            output_file = f"{struct_file.replace(suffix, '')}_plddt.tsv"
-            with open(output_file, "w") as outfile:
-                outfile.write(" ".join(map(str, plddt_values)) + "\n")
-            output_lddt.append(output_file)
-        else:
-            plddt_values_string = " ".join(map(str, plddt_values))
-            output_lddt.append(plddt_values_string)
-
-    return output_lddt, averages
-
-
 print("Starting...")
 
 version = "1.0.0"
@@ -321,11 +256,8 @@ model_name = {
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--type", dest="in_type")
-parser.add_argument(
-    "--generate_tsv", choices=["y", "n"], default="n", dest="generate_tsv"
-)
 parser.add_argument("--msa", dest="msa", default="NO_FILE")
-parser.add_argument("--pdb", dest="pdb", required=True, nargs="+")
+parser.add_argument("--structs", dest="structs", required=True, nargs="+")
 parser.add_argument("--name", dest="name")
 parser.add_argument("--output_dir", dest="output_dir")
 parser.add_argument("--html_template", dest="html_template")
@@ -335,15 +267,10 @@ parser.set_defaults(in_type="esmfold")
 parser.set_defaults(name="")
 args = parser.parse_args()
 
-lddt_data, lddt_averages = pdb_to_lddt(args.pdb, args.generate_tsv)
-
-generate_output_images(
-    args.msa, lddt_data, args.name, args.output_dir, args.in_type, args.generate_tsv, args.pdb
-)
-# generate_plots(args.msa, args.plddt, args.name, args.output_dir)
+generate_output_images(args.msa, args.structs, args.name, args.output_dir, args.in_type)
 
 print("generating html report...")
-structures = args.pdb
+structures = args.structs
 structures.sort()
 aligned_structures = align_structures(structures)
 
@@ -367,17 +294,17 @@ proteinfold_template = re.sub(
     flags=re.DOTALL,
 )
 
-averages_js_array = f"const LDDT_AVERAGES = {lddt_averages};"
+plddts = pLDDT_from_struct_b_factor(args.structs[0])
+
+averages_js_array = f"const LDDT_AVERAGES = { plddts.mean() };"
 proteinfold_template = proteinfold_template.replace(
     "const LDDT_AVERAGES = [];", averages_js_array
 )
 
-i = 0
-for structure in aligned_structures:
+for idx, structure in enumerate(aligned_structures):
     proteinfold_template = proteinfold_template.replace(
-        f"*_data_ranked_{i}.pdb*", open(structure, "r").read().replace("\n", "\\n")
+        f"*_data_ranked_{idx}.pdb*", open(structure, "r").read().replace("\n", "\\n")
     )
-    i += 1
 
 if not args.msa.endswith("NO_FILE"):
     image_path = (
