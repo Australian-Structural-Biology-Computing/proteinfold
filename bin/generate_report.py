@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 import re
 from Bio import PDB
 from utils import pLDDT_from_struct_b_factor
+from utils import generate_plddt_plot
 
 def generate_output_images(msa_path, structures, name, out_dir, in_type):
     msa = []
@@ -80,44 +81,7 @@ def generate_output_images(msa_path, structures, name, out_dir, in_type):
 
         # ##################################################################
 
-    plddt_per_struct = OrderedDict()
-
-    for struct in structures:
-        plddt_per_struct[struct] = pLDDT_from_struct_b_factor(struct)
-
-    fig = go.Figure()
-
-    for idx, (struct, plddts) in enumerate(plddt_per_struct.items()):
-        fig.add_trace(
-            go.Scatter(
-                x=list(range(len(plddts))),
-                y=plddts,
-                mode="lines",
-                name=f"rank-{idx}",
-                text=[f"({idx}, {value:.2f})" for idx, value in enumerate(plddts)],
-                hoverinfo="text",
-            )
-        )
-    fig.update_layout(
-        title=dict(text="Predicted LDDT per position", x=0.5, xanchor="center"),
-        xaxis=dict(
-            title="Positions", showline=True, linecolor="black", gridcolor="WhiteSmoke"
-        ),
-        yaxis=dict(
-            title="Predicted LDDT",
-            range=[0, 100],
-            minallowed=0,
-            maxallowed=100,
-            showline=True,
-            linecolor="black",
-            gridcolor="WhiteSmoke",
-        ),
-        legend=dict(yanchor="bottom", y=0.02, xanchor="right", x=1, bordercolor="Black", borderwidth=1),
-        plot_bgcolor="white",
-        width=600,
-        height=600,
-        modebar_remove=["toImage", "zoomIn", "zoomOut"],
-    )
+    fig = generate_plddt_plot(structures)
     html_content = fig.to_html(
         full_html=False,
         include_plotlyjs="cdn",
@@ -177,24 +141,9 @@ def generate_plots(msa_path, plddt_paths, name, out_dir):
     # Save as interactive HTML instead of an image
     fig.savefig(f"{out_dir}/{name+('_' if name else '')}seq_coverage.png")
 
-    # Plotting Predicted LDDT per position using Plotly
-    plddt_per_struct = OrderedDict()
-
-    for struct in args.structs:
-        plddt_per_struct[struct] = pLDDT_from_struct_b_factor(struct)
-
-    for idx, (struct, plddts) in enumerate(plddt_per_struct.item()):
-        fig = go.Figure()
-        fig.add_trace(
-            go.Scatter(
-                x=list(range(len(plddts))),
-                y=plddts,
-                mode="lines",
-                name=struct,
-            )
-        )
-        fig.update_layout(title="Predicted LDDT per Position")
-        fig.savefig(f"{out_dir}/{name+('_' if name else '')}coverage_LDDT_{idx}.png")
+    # Save pLDDT plot
+    fig = generate_plddt_plot(structures)
+    fig.savefig(f"{out_dir}/{name+('_' if name else '')}coverage_LDDT_{idx}.png")
 
 def align_structures(structures):
     parser = PDB.PDBParser(QUIET=True)
