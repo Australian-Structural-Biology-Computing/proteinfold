@@ -6,6 +6,7 @@ from collections import OrderedDict
 import base64
 import plotly.graph_objects as go
 from Bio import PDB
+from utils import pLDDT_from_struct_b_factor
 
 def reset_residue_numbers(input_pdb, output_pdb):
     """
@@ -46,20 +47,8 @@ def reset_residue_numbers(input_pdb, output_pdb):
                 # Write non-ATOM/HETATM lines (e.g., TER, PARENT) without changes
                 outfile.write(line)
 
-def generate_output(plddt_data, name, out_dir, generate_tsv, pdb):
-    plddt_per_model = OrderedDict()
-    output_data = plddt_data
-
-    if generate_tsv == "y":
-        for plddt_path in output_data:
-            with open(plddt_path, "r") as in_file:
-                plddt_per_model[os.path.basename(plddt_path)[:-4]] = [
-                    float(x) for x in in_file.read().strip().split()
-                ]
-    else:
-        for i, plddt_values_str in enumerate(output_data):
-            plddt_per_model[i] = []
-            plddt_per_model[i] = [float(x) for x in plddt_values_str.strip().split()]
+# TODO: why is this in 3 different places?
+def generate_output(name, out_dir, structs):
 
     fig = go.Figure()
     for idx, (model_name, value_plddt) in enumerate(plddt_per_model.items()):
@@ -179,66 +168,13 @@ def align_structures(structures):
 
     return aligned_structures
 
-def pdb_to_lddt(struct_files, generate_tsv):
-    struct_files_sorted = struct_files
-    struct_files_sorted.sort()
-
-    output_lddt = []
-    averages = []
-
-    for struct_file in struct_files_sorted:
-        plddt_values = []
-
-        if struct_file.endswith('.pdb'):
-            parser = PDB.PDBParser(QUIET=True)
-            suffix = ".pdb"
-        elif struct_file.endswith('.cif'):
-            parser = PDB.MMCIFParser(QUIET=True)
-            suffix = ".cif"
-        else:
-            raise NotImplementedError("Reporting only supported for .pdb and .cif filetypes")
-
-        structure = parser.get_structure("", struct_file)
-
-        for residue in structure.get_residues():
-            res_pLDDT_tot = 0
-            res_atom_count = 0
-
-            for atom in residue.get_atoms():
-                res_atom_count +=1
-                res_pLDDT_tot += atom.get_bfactor()
-
-            plddt_values.append(res_pLDDT_tot/res_atom_count) #residue-level mean for ESMfold atom-level pLDDT
-
-        # Calculate the average PLDDT value for the current file
-        if plddt_values:
-            avg_plddt = sum(plddt_values) / len(plddt_values)
-            averages.append(round(avg_plddt, 3))
-        else:
-            averages.append(0.0)
-
-        if generate_tsv == "y":
-            output_file = f"{pdb_file.replace('.pdb', '')}_plddt.tsv"
-            with open(output_file, "w") as outfile:
-                outfile.write(" ".join(map(str, plddt_values)) + "\n")
-            output_lddt.append(output_file)
-        else:
-            plddt_values_string = " ".join(map(str, plddt_values))
-            output_lddt.append(plddt_values_string)
-
-    return output_lddt, averages
-
-
 print("Starting...")
 
 version = "1.0.0"
 parser = argparse.ArgumentParser()
 parser.add_argument("--type", dest="in_type")
-parser.add_argument(
-    "--generate_tsv", choices=["y", "n"], default="n", dest="generate_tsv"
-)
 parser.add_argument("--msa", dest="msa", required=True, nargs="+")
-parser.add_argument("--pdb", dest="pdb", required=True, nargs="+")
+parser.add_argument("--structs", dest="structs", required=True, nargs="+")
 parser.add_argument("--name", dest="name")
 parser.add_argument("--output_dir", dest="output_dir")
 parser.add_argument("--html_template", dest="html_template")
@@ -248,9 +184,10 @@ parser.set_defaults(in_type="comparison")
 parser.set_defaults(name="")
 args = parser.parse_args()
 
-lddt_data, lddt_averages = pdb_to_lddt(args.pdb, args.generate_tsv)
+lddt_data = pLDDT_from_struct_b_factor(args.pdb)
+lddt_averages = lddt_data.mean()
 
-generate_output(lddt_data, args.name, args.output_dir, args.generate_tsv, args.pdb)
+generate_output(args.name, args.output_dir, args.structs)
 
 print("generating html report...")
 
@@ -306,12 +243,10 @@ alphafold_template = alphafold_template.replace(
     "const LDDT_AVERAGES = [];", averages_js_array
 )
 
-i = 0
-for structure in aligned_structures:
+for idx, structure in enumerate(aligned_structures):
     alphafold_template = alphafold_template.replace(
-        f"*_data_ranked_{i}.pdb*", open(structure, "r").read().replace("\n", "\\n")
+        f"*_data_ranked_{idx}.pdb*", open(structure, "r").read().replace("\n", "\\n")
     )
-    i += 1
 
 with open(
     f"{args.output_dir}/{args.name + ('_' if args.name else '')}coverage_LDDT.html",

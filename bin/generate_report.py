@@ -82,19 +82,18 @@ def generate_output_images(msa_path, structures, name, out_dir, in_type):
 
     plddt_per_struct = OrderedDict()
 
-    for struct in args.structs:
+    for struct in structures:
         plddt_per_struct[struct] = pLDDT_from_struct_b_factor(struct)
 
     fig = go.Figure()
 
     for idx, (struct, plddts) in enumerate(plddt_per_struct.items()):
-        rank_label = f'rank_label{idx}'
         fig.add_trace(
             go.Scatter(
                 x=list(range(len(plddts))),
                 y=plddts,
                 mode="lines",
-                name=rank_label,
+                name=f"rank-{idx}",
                 text=[f"({idx}, {value:.2f})" for idx, value in enumerate(plddts)],
                 hoverinfo="text",
             )
