@@ -65,7 +65,7 @@ def extract_struct_pLDDT_to_tsv(id, struct_files):
                
                     if (res_pLDDT < 1):  # RFAA the multiplication of mean isn't failing. Anyway covering to a [0,100] range for any structure file1 
                         res_pLDDT *= 100
-                        
+                    print(res_pLDDT)                  
                     res_pLDDTs.append(res_pLDDT)
                     pLDDT_tot += res_pLDDT
 
@@ -73,7 +73,7 @@ def extract_struct_pLDDT_to_tsv(id, struct_files):
         res_counts.append(num_res)
         pLDDT_mean = pLDDT_tot / num_res
        
-        print(f"res pLDDT_mean {pLDDT_mean}")           
+        #print(f"res pLDDT_mean {pLDDT_mean}")           
  
         # Why isn't this triggering when RFAA has PLDDTs < 1?        
 
@@ -113,11 +113,10 @@ def read_pkl(id, pkl_files):
             with open(f"{id}_msa.tsv", "w") as out_f:
                 for val in data["feat"]["msa"]:
                     out_f.write("\t".join([str(x) for x in val]) + "\n")  # TODO: take this out as a line
-        
-    elif pkl_file.endswith("features.pkl"):  #AlphaFold2.3
-            with open(f"{id}_msa.tsv", "w") as out_f:
-                for val in data["msa"]:
-                    out_f.write("\t".join([str(x) for x in val]) + "\n")
+        elif pkl_file.endswith("features.pkl"):  #AlphaFold2.3
+                with open(f"{id}_msa.tsv", "w") as out_f:
+                    for val in data["msa"]:
+                        out_f.write("\t".join([str(x) for x in val]) + "\n")
         else:  #AlphaFold2.3 non-summary. TODO: Need to either read in ranking_debug.json to get the ranking order, or do it later in the workflow.
             model_id = (
                 os.path.basename(pkl_file)
@@ -148,9 +147,7 @@ def a3m_to_int(a3m_file):  # For the RosettaFold-All-Atom .a3m. Written with Git
         list of lists: A list of sequences, where each sequence is represented as a list of integers    
     """
 
-    # TODO: problem, the a3m aren't aligned to the original query, so we don't have a same dimensional array with appropriate gaps than generate_report() expects  
-   
-
+    # Tom Litfin gave me format run-down, the lowercase are just insertions 
  
     with open(a3m_file, "r") as f:
         msa = f.read()
@@ -159,7 +156,8 @@ def a3m_to_int(a3m_file):  # For the RosettaFold-All-Atom .a3m. Written with Git
     int_sequences = []
     for line in msa.splitlines():
         if not line.startswith(">"):  # Ignore header lines
-            int_sequence = [AA_to_int.get(char.upper(), 20) for char in line]
+            filtered_line = ''.join(char for char in line if not char.islower()) # Remove inserts (lower-case chars) in a3m
+            int_sequence = [AA_to_int.get(char.upper(), 20) for char in filtered_line]
             int_sequences.append(int_sequence)
 
     int_sequences_array = np.array(int_sequences, dtype=object)
@@ -248,7 +246,7 @@ args = parser.parse_args()
 if args.pkls is not None:
     read_pkl(args.name, args.pkls)
 if args.a3ms is not None:
-    read_a3m(args.name, args.a3ms)
+    read_a3m(args.name, args.a3ms)  
 if args.npzs is not None:
     read_npz(args.name, args.npzs)
 if args.jsons is not None:

@@ -62,11 +62,9 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
         column_counts = [0] * len(msa[0])
         for col in range(len(msa[0])):
             for row in msa:
-                print(f"row {row}")
                 if row[col] != 21:
 
                     column_counts[col] += 1
-            print(f"msa[0] {msa[0]}")
                 
         plt.plot(column_counts, color="black")
         plt.xlim(-0.5, len(msa[0]) - 0.5)
