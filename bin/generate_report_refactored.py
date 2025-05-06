@@ -33,12 +33,29 @@ def generate_report(name, out_dir, structures, msa_files=None, type="standard", 
         # Replace structures with aligned versions
         structures = aligned_structures
 
-    in_type = "NOT_COLABFOLD" # TODO: change args so that in_type can be disttinguished from report type 
+    in_type = "NOT_COLABFOLD" # TODO: change args so that in_type can be disttinguished from report type
     # Generate the sequence coverage plot
     if msa_files:
+        seq_cov_figs = []
+        seq_cov_img_paths = []
           for msa_file in msa_files:
             if msa_file and not msa_file.endswith("NO_FILE"):
-                generate_sequence_coverage_plot(msa_file, out_dir, name, in_type)
+                seq_cov_fig, image_path = generate_sequence_coverage_plot(msa_file, out_dir, name, in_type, save_image=True)
+                seq_cov_figs.append(seq_cov_fig)
+                seq_cov_img_paths.append(image_path)
+
+    # Copying the encoding images approach
+    seq_cov_imgs = []
+    for image_path in seq_cov_img_paths:
+        with open(image_path, "rb") as in_file:
+            encoded_image = base64.b64encode(in_file.read()).decode("utf-8")
+            seq_cov_imgs.append(f"data:image/png;base64,{encoded_image}")
+
+    if type == "comparison":
+        args_msa_array_js = (f"""const SEQ_COV_IMGS = [{", ".join([f'"{fig}"' for fig in seq_cov_imgs])}];""")
+        template = template.replace("const SEQ_COV_IMGS = [];", args_msa_array_js)
+    else:
+        template = template.replace("seq_coverage.png", f"data:image/png;base64,{seq_cov_imgs[0]}")
 
     # Generate the pLDDT plot
     fig = generate_plddt_plot(structures)
@@ -60,18 +77,6 @@ def generate_report(name, out_dir, structures, msa_files=None, type="standard", 
             "const MODELS = [" + ",\n".join([f'"{model}"' for model in structures]) + "];"
         )
         template = template.replace("const MODELS = [];", args_pdb_array_js)
-
-    if msa_files:
-        seq_cov_imgs = []
-        for msa_file in msa_files:
-            if msa_file:
-                with open(msa_file, "rb") as in_file:
-                    encoded_image = base64.b64encode(in_file.read()).decode("utf-8")
-                    seq_cov_imgs.append(f"data:image/png;base64,{encoded_image}")
-        args_msa_array_js = (
-            f"""const SEQ_COV_IMGS = [{", ".join([f'"{img}"' for img in seq_cov_imgs])}];"""
-        )
-        template = template.replace("const SEQ_COV_IMGS = [];", args_msa_array_js)
 
     with open(f"{out_dir}/{name}_coverage_LDDT.html", "r") as lddt_file:
         lddt_html = lddt_file.read()
