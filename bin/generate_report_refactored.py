@@ -3,6 +3,7 @@ import os
 import base64
 from Bio import PDB
 import argparse
+from io import BytesIO
 
 def generate_report(name, out_dir, structures, msa_files=None, type="standard", html_template=None):
     """
@@ -33,23 +34,23 @@ def generate_report(name, out_dir, structures, msa_files=None, type="standard", 
         # Replace structures with aligned versions
         structures = aligned_structures
 
-    in_type = "NOT_COLABFOLD" # TODO: change args so that in_type can be disttinguished from report type
-    # Generate the sequence coverage plot
-    if msa_files:
-        seq_cov_figs = []
-        seq_cov_img_paths = []
-          for msa_file in msa_files:
-            if msa_file and not msa_file.endswith("NO_FILE"):
-                seq_cov_fig, image_path = generate_sequence_coverage_plot(msa_file, out_dir, name, in_type, save_image=True)
-                seq_cov_figs.append(seq_cov_fig)
-                seq_cov_img_paths.append(image_path)
+    template = open(html_template, "r").read()
+    template = template.replace("*sample_name*", name)
+    template = template.replace("*prog_name*", type)
 
-    # Copying the encoding images approach
+    in_type = "NOT_COLABFOLD" # TODO: change args so that in_type can be distinguished from report type
+    # Generate the sequence coverage plot and encode directly as base64 image rather than reading externally
     seq_cov_imgs = []
-    for image_path in seq_cov_img_paths:
-        with open(image_path, "rb") as in_file:
-            encoded_image = base64.b64encode(in_file.read()).decode("utf-8")
-            seq_cov_imgs.append(f"data:image/png;base64,{encoded_image}")
+    if msa_files:
+        for msa_file in msa_files:
+            if msa_file and not msa_file.endswith("NO_FILE"):
+                seq_cov_fig, _ = generate_sequence_coverage_plot(msa_file, out_dir, name, in_type, save_image=True)
+                buf = BytesIO()
+                seq_cov_fig.write_image(buf, format="png")
+                buf.seek(0)
+                encoded_image = base64.b64encode(buf.read()).decode("utf-8")
+                seq_cov_img = f"data:image/png;base64,{encoded_image}"
+                seq_cov_imgs.append(seq_cov_img)
 
     if type == "comparison":
         args_msa_array_js = (f"""const SEQ_COV_IMGS = [{", ".join([f'"{fig}"' for fig in seq_cov_imgs])}];""")
@@ -66,10 +67,6 @@ def generate_report(name, out_dir, structures, msa_files=None, type="standard", 
     )
     with open(f"{out_dir}/{name}_coverage_LDDT.html", "w") as out_file:
         out_file.write(html_content)
-
-    template = open(html_template, "r").read()
-    template = template.replace("*sample_name*", name)
-    template = template.replace("*prog_name*", type)
 
     if type == "comparison":
         # Add aligned structures
