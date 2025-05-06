@@ -1,6 +1,7 @@
 from collections import OrderedDict
 import plotly.graph_objects as go
 from Bio import PDB
+import matplotlib.pyplot as plt
 import numpy as np
 
 def reset_residue_numbers(input_pdb, output_pdb):  #TODO: use PDBIO instead of file I/O
@@ -183,19 +184,7 @@ def generate_plddt_plot(structures):
 
     return fig
 
-def generate_sequence_coverage_plot(msa_path, out_dir, name, in_type="standard"):
-    """
-    Generate a sequence coverage plot from an MSA file.
-
-    Args:
-        msa_path (str): Path to the MSA file.
-        out_dir (str): Output directory for saving the plot.
-        name (str): Name of the output file.
-        in_type (str): Type of input (e.g., "colabfold"). Defaults to "standard".
-
-    Returns:
-        None
-    """
+def generate_sequence_coverage_plot(msa_path, out_dir, name, in_type="standard", save_image=True):
     msa = []
     if in_type.lower() != "colabfold" and not msa_path.endswith("NO_FILE"):
         with open(msa_path, "r") as in_file:
@@ -229,51 +218,67 @@ def generate_sequence_coverage_plot(msa_path, out_dir, name, in_type="standard")
                 ]
             )
 
+        # TODO: don't have a seperate save iamge plot and a plotly ploy
         # Plot the sequence coverage and save as image
         # ##################################################################
-        plt.figure(figsize=(14, 14), dpi=100)
-        plt.title("Sequence coverage", fontsize=30, pad=36)
-        plt.imshow(
-            final,
-            interpolation="nearest",
-            aspect="auto",
-            cmap="rainbow_r",
-            vmin=0,
-            vmax=1,
-            origin="lower",
-        )
+        if save_image:
+            image_path = f"{out_dir}/{name+('_' if name else '')}seq_coverage.png"
+            plt.figure(figsize=(14, 14), dpi=100)
+            plt.title("Sequence coverage", fontsize=30, pad=36)
+            plt.imshow(
+                final,
+                interpolation="nearest",
+                aspect="auto",
+                cmap="rainbow_r",
+                vmin=0,
+                vmax=1,
+                origin="lower",
+            )
 
-        column_counts = [0] * len(msa[0])
-        for col in range(len(msa[0])):
-            for row in msa:
-                if row[col] != 21:
-                    column_counts[col] += 1
+            column_counts = [0] * len(msa[0])
+            for col in range(len(msa[0])):
+                for row in msa:
+                    if row[col] != 21:
+                        column_counts[col] += 1
 
-        plt.plot(column_counts, color="black")
-        plt.xlim(-0.5, len(msa[0]) - 0.5)
-        plt.ylim(-0.5, len(msa) - 0.5)
+            plt.plot(column_counts, color="black")
+            plt.xlim(-0.5, len(msa[0]) - 0.5)
+            plt.ylim(-0.5, len(msa) - 0.5)
 
-        plt.tick_params(axis="both", which="both", labelsize=18)
+            plt.tick_params(axis="both", which="both", labelsize=18)
 
-        cbar = plt.colorbar()
-        cbar.set_label("Sequence identity to query", fontsize=24, labelpad=24)
-        cbar.ax.tick_params(labelsize=18)
-        plt.xlabel("Positions", fontsize=24, labelpad=24)
-        plt.ylabel("Sequences", fontsize=24, labelpad=36)
-        plt.savefig(f"{out_dir}/{name+('_' if name else '')}seq_coverage.png")
+            cbar = plt.colorbar()
+            cbar.set_label("Sequence identity to query", fontsize=24, labelpad=24)
+            cbar.ax.tick_params(labelsize=18)
+            plt.xlabel("Positions", fontsize=24, labelpad=24)
+            plt.ylabel("Sequences", fontsize=24, labelpad=36)
+            plt.savefig(image_path)
 
         # Interactive plot of sequence coverage
         fig = go.Figure()
         fig.add_trace(
             go.Heatmap(
                 z=final,
-                colorscale="Rainbow",
+                colorscale="Rainbow_r",
                 zmin=0,
                 zmax=1,
+                colorbar=dict({"title" : "Sequence identity to query"}, title_side="right"),
+                orientation="v",
+            )
+        )
+        # Add black line for sequence coverage depth
+        fig.add_trace(
+            go.Scatter(
+                x=list(range(len(column_counts))),
+                y=column_counts,
+                mode="lines",
+                line=dict(color="black", width=2),
+                name="Coverage Depth",
             )
         )
         fig.update_layout(
-            title="Sequence coverage", xaxis_title="Positions", yaxis_title="Sequences"
+            title=dict(text="Sequence coverage", xanchor="center"),
+            xaxis_title="Positions", yaxis_title="Sequences",
         )
 
     return fig
