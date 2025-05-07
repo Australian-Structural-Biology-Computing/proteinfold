@@ -12,6 +12,7 @@ def generate_report(name, out_dir, structures, num_structs_limit=5, msa_files=No
     if len(structures) > num_structs_limit:
         print(f"Warning: More than {num_structs_limit} structures provided. Sorting and using only the first {num_structs_limit} structures.")
         # Sort structures by name and limit to num_structs_limit
+
         # TODO: this only wokrs on AF2.3 structures. Need a sort util, things like HF3 only have 'predicted_structure' with rank in dir.
         # E.g. colabfold is [name]_(un)relaxed_rank_{i}_alphafold2_ptm_model_{i}_seed_000.pdb
         structures = sorted(structures, key=lambda x: int(os.path.basename(x).replace('ranked_', '').split('.')[0]))
@@ -24,7 +25,8 @@ def generate_report(name, out_dir, structures, num_structs_limit=5, msa_files=No
 
     print("Structures:", structures)
 
-    #TODO: should really use a proper HTML parse for this, like BeautifulSoup or html5lib. strings prone to failure
+    #TODO: should really use a proper HTML parser for this, like BeautifulSoup or html5lib. strings prone to failure
+    #However, most replacements are simple and this is faster
     template = open(html_template, "r").read()
     template = template.replace("*sample_name*", name)
     template = template.replace("*prog_name*", prog)
@@ -84,18 +86,18 @@ def generate_report(name, out_dir, structures, num_structs_limit=5, msa_files=No
         template = template.replace('<div id="pae_placeholder"></div>', pae_html)
     # TODO: need logic to keep PAEs in sync with structure upon click
     else:
-        # Remove the PAE div if no PAE files are provided
-        pae_section_text = """
-      <div class="flex-1 max-w-[720px]">
-        <div id="pae-title" class="text-4xl font-bold tracking-tight mb-6">PAE</div>
-        <div class="p-6 bg-white shadow-md rounded">
-          <div id="pae_container" class="w-[660px] min-h-[600px] flex justify-center items-center mx-auto">
-            <div id="pae_placeholder"></div>
-          </div>
-        </div>
-      </div>
-        """
-        template = template.replace(pae_section_text.strip(), "")
+        template = template.replace('<div id="pae_placeholder"></div>', "")
+        # TODO: Remove the PAE div if no PAE files are provided.
+        # The below approach will remove the div but needs dynamic resizing in the report
+        # pae_section_text = """
+        # <div id="pae-title" class="text-4xl font-bold tracking-tight mb-6">PAE</div>
+        # <div class="p-6 bg-white shadow-md rounded">
+        #   <div id="pae_container" class="w-[660px] min-h-[600px] flex justify-center items-center mx-auto">
+            # <div id="pae_placeholder"></div>
+        #   </div>
+        # </div>
+        # """
+        # template = template.replace(pae_section_text.strip(), "")
 
     if write_htmls:
         with open(f"{out_dir}/{name}_coverage_pLDDT.html", "w") as out_file:
@@ -103,10 +105,7 @@ def generate_report(name, out_dir, structures, num_structs_limit=5, msa_files=No
         with open(f"{out_dir}/{name}_coverage_MSA.html", "w") as out_file:
             out_file.write(seq_cov_html)
 
-    # if type == "comparison":
-      #  args_msa_array_js = (f"""const SEQ_COV_IMGS = [{", ".join([f'"{fig}"' for fig in seq_cov_figs])}];""")
-      #  template = template.replace("const SEQ_COV_IMGS = [];", args_msa_array_js)
-
+    # Write the final HTML report
     with open(f"{out_dir}/{name}_{type}_report.html", "w") as out_file:
         out_file.write(template)
 
@@ -117,13 +116,22 @@ def main():
     parser.add_argument("--structs", required=True, nargs="+", help="List of structure file paths.")
     parser.add_argument("--msa", nargs="+", default=None, help="List of MSA file paths (optional).")
     parser.add_argument("--pae", nargs="+", default=None, help="List of PAE file paths (optional).")
+    parser.add_argument("--prog", default=None, choices=["AlphaFold2", "ESMFold", "ColabFold", "RoseTTAFold-All-Atom", "HelixFold-3", "Boltz-1"], help="The program used to generate the structures, can be called in the workflow")
     parser.add_argument("--type", default="standard", choices=["standard", "comparison"], help="The type of report file generated .") # TODO: change to --type with options in case there are other reports
+    #TODO: remove --html_template as this is already determined by the type
     parser.add_argument("--html_template", default=None, help="Path to the HTML template for comparison (optional).")
     parser.add_argument("--write_htmls", default=True, help="Write out seperate files for each html plot (optional).")
 
     args = parser.parse_args()
 
     print("Generating report.....")
+
+    if args.type == "comparison":
+        html_template = "../assests/comparison_template.html"
+    elif args.type == "standard":
+        html_template = "../assests/report_template.html"
+    else:
+        html_template = args.html_template
 
     generate_report(
         name=args.name,
@@ -132,8 +140,9 @@ def main():
         num_structs_limit=5,
         msa_files=args.msa,
         pae_files=args.pae,
+        prog=args.prog,
         type=args.type,
-        html_template=args.html_template,
+        html_template=html_template,
         write_htmls=args.write_htmls,
         seq_cov_as_html=False,
     )
