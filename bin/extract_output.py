@@ -5,9 +5,8 @@ import argparse
 import json
 import torch
 import numpy as np
-from Bio import PDB
 import csv
-
+from utils import plddt_from_struct_b_factor
 
 # Mapping of characters to integers
 AA_to_int = {
@@ -16,10 +15,10 @@ AA_to_int = {
     "-": 21, ".": 21
 }
 
-def extract_struct_pLDDT_to_tsv(id, struct_files):
+def extract_structs_plddt_to_tsv(id, struct_files):
     """
-    Uses the BioPython PDB package to extract residue pLDDT values from the b-factor column. Iterates over PDB objects rather than processes raw file
     Write out a tsv file for reading by MultiQC in nf-core/proteinfold
+    Uses utils function with BioPython PDB package to extract residue pLDDT values from the b-factor column.
     """
 
     # Set up headers
@@ -34,71 +33,26 @@ def extract_struct_pLDDT_to_tsv(id, struct_files):
     pLDDT_cols = []
 
     for struct_file in struct_files:
+        plddts = plddt_from_struct_b_factor(struct_file)
+        res_counts.append(len(plddts))
+        plddt_cols.append(plddts)
 
-        if str(struct_file).endswith(".pdb"):
-            parser = PDB.PDBParser(QUIET=True)
-            structure = parser.get_structure(id=id, file=struct_file)
-        elif str(struct_file).endswith(".cif"):
-            parser = PDB.MMCIFParser(QUIET=True)
-            structure = parser.get_structure(structure_id=id, filename=struct_file)
-        else:
-            print(f"{struct_file} is neither a PDB or mmCIF file!")
-
-
-        res_list = []
-        res_pLDDTs = [] # should probably use a numpy array
-        pLDDT_tot = 0
-
-        for model in structure:
-            for chain in model:
-                chain_res_list = chain.get_unpacked_list()
-                res_list.extend(chain_res_list)
-                for residue in chain:
-                    atom_list = residue.get_unpacked_list()
-                    num_atoms = len(atom_list)
-                    res_pLDDT_tot = 0
-                    for atom in residue:  # ESMFold and others have separate atom-wise values, so doing atom-wise to cover that and residue-wise
-                        atom_pLDDT = round(float(atom.get_bfactor()),2)
-                        res_pLDDT_tot += atom_pLDDT
-
-                    res_pLDDT = round(float(res_pLDDT_tot / num_atoms),2)
-               
-                    if (res_pLDDT < 1):  # RFAA the multiplication of mean isn't failing. Anyway covering to a [0,100] range for any structure file1 
-                        res_pLDDT *= 100
-                    print(res_pLDDT)                  
-                    res_pLDDTs.append(res_pLDDT)
-                    pLDDT_tot += res_pLDDT
-
-        num_res = len(res_list)
-        res_counts.append(num_res)
-        pLDDT_mean = pLDDT_tot / num_res
-       
-        #print(f"res pLDDT_mean {pLDDT_mean}")           
- 
-        # Why isn't this triggering when RFAA has PLDDTs < 1?        
-
-        if (pLDDT_mean < 1):  # Quirk of some programs is they report pLDDTs in decimals, but <1 pLDDTs are highly improbable, so let's just convert to percentage
-            pLDDT_mean *= 100
-
-        pLDDT_cols.append(res_pLDDTs)
-
-    # Check all structures have the same number of resiudes
     if not all(x == res_counts[0] for x in res_counts):
         print("Not all structures have the same number of residues!")
         return
     else:
-        res_id_col = list(range(len(res_list)))
+        res_id_col = list(range(len(plddts)))
 
     # Check the pLDDT cols are the same size before combining
-    if not (len(set(len(col) for col in pLDDT_cols)) == 1):
+    if not (len(set(len(col) for col in plddt_cols)) == 1):
         print("Not all pLDDT columns have the same number of values!")
 
-    pLDDT_rows = zip(res_id_col, *pLDDT_cols) #combine lists column-wise to make rows
+    plddt_rows = zip(res_id_col, *plddt_cols) #combine lists column-wise to make rows
 
     with open(id + '_plddt_mqc.tsv', 'a') as multiqc_tsv:
         writer = csv.writer(multiqc_tsv, delimiter='\t')
-        for pLDDT_row in pLDDT_rows:
-            writer.writerow(pLDDT_row)
+        for plddt_row in plddt_rows:
+            writer.writerow(plddt_row)
 
 
 def read_pkl(id, pkl_files):
@@ -139,16 +93,9 @@ def read_pkl(id, pkl_files):
 def a3m_to_int(a3m_file):  # For the RosettaFold-All-Atom .a3m. Written with GitHub Copilot
     """
     Convert an A3M MSA representation into an integer representation (0-21).
-
-    Args:
-        msa (str): A string containing A3M MSA sequences.
-
-    Returns:
-        list of lists: A list of sequences, where each sequence is represented as a list of integers    
     """
+    # Tom Litfin gave me format run-down, the lowercase are just insertions
 
-    # Tom Litfin gave me format run-down, the lowercase are just insertions 
- 
     with open(a3m_file, "r") as f:
         msa = f.read()
 
@@ -209,7 +156,7 @@ def read_json(id, json_files):
                         for row in int_seqs:
                             out_f.write("\t".join(map(str, row)) + "\n")
 
-        if json_file.endswith("_confidences.json") or json_file.endswith('all_results.json'): #AF3 output with PAE info, or HF3 PAE data. TODO: Need to make sure the workflow points to [protein]/[protein]_rank1/all_results.json
+        elif json_file.endswith("_confidences.json") or json_file.endswith('all_results.json'): #AF3 output with PAE info, or HF3 PAE data. TODO: Need to make sure the workflow points to [protein]/[protein]_rank1/all_results.json
             with open(json_file, 'r') as f:
                 data = json.load(f)
                 PAE = data['pae']
@@ -217,6 +164,16 @@ def read_json(id, json_files):
                 with open(f"{id}_pae.tsv", "w") as out_f:
                     for row in PAE:
                         out_f.write('\t'.join([str(round(x,4)) for x in row]) + '\n')  #tsv since the other metrics are .tsv in proteinfold
+
+        elif json_file.endswith("predicted_aligned_error_v1.json"): #ColabFold file
+            with open(json_file, 'r') as f:
+                data = json.load(f)
+                PAE = data['predicted_aligned_error']
+
+                with open(f"{id}_pae.tsv", "w") as out_f:
+                    for row in PAE:
+                        rounded_row = [f"{num:.4f}" for num in row]
+                        out_f.write('\t'.join(rounded_row) + '\n')
 
 def read_pt(id, pt_files):
     for pt_file in pt_files:
@@ -232,21 +189,19 @@ def read_pt(id, pt_files):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--pkls", dest="pkls", required=False, nargs="+") # For reading both HelixFold3 and AlphaFold2 MSA formats
-parser.add_argument("--npzs", dest="npzs", required=False, nargs="+") # For reading the Boltz-1 PAE formats. TODO: Boltz-1 MSA not implemented (go straight to .a3m file), implement 
-parser.add_argument("--a3ms", dest="a3ms", required=False, nargs="+") # For reading the RosettaFold-All-Atom and Boltz-1 MSA formats
+parser.add_argument("--npzs", dest="npzs", required=False, nargs="+") # For reading the Boltz-1 PAE formats. TODO: Boltz-1 MSA not implemented (go straight to .a3m file), implement
+parser.add_argument("--a3ms", dest="a3ms", required=False, nargs="+") # For reading the RosettaFold-All-Atom, ColabFold, and Boltz-1 MSA formats
 parser.add_argument("--jsons", dest="jsons", required=False, nargs="+") # For reading the AF3 MSA & PAE, HF3 PAE
 parser.add_argument("--pts", dest="pts", required=False, nargs="+") # For read RFAA pytorch model to get PAE data
 parser.add_argument("--structs", dest="structs", required=False, nargs="+")
-parser.add_argument("--name", dest="name") # might need a --name $meta.id
-parser.add_argument("--output_dir", dest="output_dir")
-parser.set_defaults(output_dir="")
-parser.set_defaults(name="")
+parser.add_argument("--name", default="untitled", dest="name") # might need a --name $meta.id
+parser.add_argument("--output_dir", default=".", dest="output_dir")
 args = parser.parse_args()
 
 if args.pkls is not None:
     read_pkl(args.name, args.pkls)
 if args.a3ms is not None:
-    read_a3m(args.name, args.a3ms)  
+    read_a3m(args.name, args.a3ms)
 if args.npzs is not None:
     read_npz(args.name, args.npzs)
 if args.jsons is not None:
@@ -254,4 +209,4 @@ if args.jsons is not None:
 if args.pts is not None:
     read_pt(args.name, args.pts)
 if args.structs is not None:
-    extract_struct_pLDDT_to_tsv(args.name, args.structs)
+    extract_structs_plddt_to_tsv(args.name, args.structs)
