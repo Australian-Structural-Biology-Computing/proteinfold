@@ -11,14 +11,15 @@ import os
 import base64
 import argparse
 
+# TODO: Barcelona team to implement AF3
 prog_name_mapping = {
     "proteinfold": "ProteinFold",
     "alphafold2": "AlphaFold2",
     "esmfold": "ESMFold",
     "colabfold": "ColabFold",
     "rosettafold-all-atom": "RoseTTAFold-All-Atom",
-    "helixfold-3": "HelixFold-3",
-    "boltz-1": "Boltz-1",
+    "helixfold3": "HelixFold3",
+    "boltz1": "Boltz1",
 }
 
 def generate_report(name, out_dir, structures, num_structs_limit=5, msa_files=None, pae_files=None, prog="ProteinFold", type="standard", html_template=None, write_htmls=True, seq_cov_as_html=False):
@@ -55,10 +56,11 @@ def generate_report(name, out_dir, structures, num_structs_limit=5, msa_files=No
     averages_js_array = f"const LDDT_AVERAGES = {lddt_averages};"
     template = template.replace("const LDDT_AVERAGES = [];", averages_js_array)
 
-    # Populate MODELS into the HTML template
-    model_names = [os.path.basename(structure).replace('.pdb','') for structure in structures]
-    models_js = ("const MODELS = [" + ",\n".join([f'"{model_name}"' for model_name in model_names]) + "];")
-    template = template.replace("const MODELS = [];", models_js)
+    # Populate MODELS into the HTML templat
+    rank_names = [f"Rank {idx+1}" for idx, _ in enumerate(structures)]
+    model_names_js = ("const MODELS = [" + ",\n".join([f'"{model}"' for model in rank_names]) + "];")
+    template = template.replace("const MODELS = [];", model_names_js)
+
     # Populate MODELS_DATA with the content of the PDB files
     pdb_strings = [open(structure, "r").read().replace("\n", "\\n") for structure in structures]
     models_data = ",\n".join([f'"{pdb_string}"' for pdb_string in pdb_strings])
@@ -104,7 +106,7 @@ def generate_report(name, out_dir, structures, num_structs_limit=5, msa_files=No
         template = template.replace('<div id="pae_placeholder"></div>', pae_html)
     # TODO: need logic to keep PAEs in sync with structure upon click
     else:
-        template = template.replace('<div id="pae_placeholder"></div>', "")
+        pass
         # TODO: Remove the PAE div if no PAE files are provided.
         # The below approach will remove the div but needs dynamic resizing in the report
         # pae_section_text = """
@@ -134,7 +136,7 @@ def main():
     parser.add_argument("--structs", required=True, nargs="+", help="List of structure file paths.")
     parser.add_argument("--msa", nargs="+", default=None, help="List of MSA file paths (optional).")
     parser.add_argument("--pae", nargs="+", default=None, help="List of PAE file paths (optional).")
-    parser.add_argument("--prog", default="proteinfold", choices=["alphafold2", "esmfold", "colabfold", "rosettafold-all-atom", "helixfold-3", "boltz-1"], type=str.lower, help="The program used to generate the structures, can be called in the workflow")
+    parser.add_argument("--prog", default="proteinfold", choices=["alphafold2", "esmfold", "colabfold", "rosettafold-all-atom", "helixfold3", "boltz1"], type=str.lower, help="The program used to generate the structures, can be called in the workflow")
     parser.add_argument("--type", default="standard", choices=["standard", "comparison"], help="The type of report file generated .") # TODO: change to --type with options in case there are other reports
     #TODO: remove --html_template as this is already determined by the type
     parser.add_argument("--html_template", default=None, help="Path to the HTML template for comparison (optional).")

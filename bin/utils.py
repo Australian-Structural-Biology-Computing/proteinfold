@@ -3,6 +3,7 @@ import plotly.graph_objects as go
 from Bio import PDB
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 def reset_residue_numbers(input_pdb, output_pdb):  #TODO: use PDBIO instead of file I/O
     """
@@ -43,12 +44,26 @@ def reset_residue_numbers(input_pdb, output_pdb):  #TODO: use PDBIO instead of f
                 # Write non-ATOM/HETATM lines (e.g., TER, PARENT) without changes
                 outfile.write(line)
 
+# TODO: Barcelona team to implement AF3
 def sort_structures_by_rank(structures, prog):
     """
     Sorts a list of structures based on their rank. Needs to handle different program naming
     """
     if prog == "alphafold2":
+        # AlphaFold2 structures are named with [run]/ranked_[rank].pdb
         sorted_structures = sorted(structures, key=lambda x: int(os.path.basename(x).replace('ranked_', '').split('.')[0]))
+    if prog == "colabfold":
+        # ColabFold structures are named with [run]_unrelaxed_rank_[rank]_alphafold2_ptm_model_[num]_seed_[seed].pdb
+        sorted_structures = sorted(structures, key=lambda x: int(os.path.basename(x).split('_')[3]))
+    if prog == "helixfold3":
+        # HelixFold3 structures are named with .../[run]/[run]-rank[rank]/predicted_structure.pdb
+        sorted_structures = sorted(structures, key=lambda x: int(os.path.dirname(x).split('rank')[-1]))
+    if prog == "esmfold" or "rosettafold-all-atom":
+        # ESMFold and RoseTTAFold only produce one structure
+        sorted_structures = structures[0]
+    if prog == "boltz1":
+        # Boltz1 structures are named with ..._model_[diffusion_samples-1].[pdb|cif]
+        sorted_structures = sorted(structures, key=lambda x: int(os.path.basename(x).split('_model_')[-1]))
     else:
         print(f"Warning: Sorting not implemented for {prog}. Using original order.")
         return structures
