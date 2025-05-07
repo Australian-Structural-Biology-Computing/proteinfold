@@ -262,8 +262,7 @@ def generate_sequence_coverage_plot(msa_path, out_dir, name, in_type="standard",
                 colorscale="Rainbow_r",
                 zmin=0,
                 zmax=1,
-                colorbar=dict({"title" : "Sequence identity to query"}, title_side="right"),
-                orientation="v",
+                colorbar={"title": 'Your title'}
             )
         )
         # Add black line for sequence coverage depth
@@ -277,8 +276,40 @@ def generate_sequence_coverage_plot(msa_path, out_dir, name, in_type="standard",
             )
         )
         fig.update_layout(
-            title=dict(text="Sequence coverage", xanchor="center"),
+            title=dict(text="Sequence coverage", x=0.5, xanchor="center"),
             xaxis_title="Positions", yaxis_title="Sequences",
         )
+
+    if save_image:
+        return fig, image_path
+    else:
+        return fig
+
+def generate_pae_plot(pae_path, out_dir, name, save_image=True):
+    """
+    Generate a Plotly heatmap for Predicted Aligned Error (PAE) data.
+
+    Args:
+        pae (2D array): The PAE matrix.
+    Returns:
+        fig: A Plotly figure object of the PAE heatmap in green color scale
+    """
+    pae = np.genfromtxt(pae_path, delimiter="\t")
+    max_pae = np.max(pae)
+    fig = go.Figure()
+
+    # Add heatmap
+    fig.add_trace(
+        go.Heatmap(
+            z=pae,
+            colorscale="Greens_r",
+            zmin=0,
+            zmax=max_pae,
+        )
+    )
+
+    if save_image:
+            image_path = f"{out_dir}/{name+('_' if name else '')}pae.png"
+            fig.write_image(image_path, width=800, height=800)
 
     return fig

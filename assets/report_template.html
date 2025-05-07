@@ -435,8 +435,8 @@
       <div id="seq_coverage_container" class="flex-1 max-w-[720px]">
         <div class="text-4xl font-bold tracking-tight mb-6">Sequence Coverage</div>
         <div class="p-6 bg-white shadow-md rounded">
-          <div class="w-[660px] h-[600px] flex justify-center items-center mx-auto">
-            <img class="max-w-[600px] max-h-[600px]" id="seq_cov_img" src="seq_coverage.png" />
+          <div id="seq_cov_container" class="w-[660px] h-[600px] flex justify-center items-center mx-auto">
+            <div id="seq_cov_placeholder"></div>
           </div>
         </div>
       </div>
@@ -448,7 +448,14 @@
           </div>
         </div>
       </div>
-      <!--<div class="col" style="padding: 20px;"><img id="pae_img"  width="400px" src=""></div>-->
+      <div class="flex-1 max-w-[720px]">
+        <div id="plddt-title" class="text-4xl font-bold tracking-tight mb-6">PAE</div>
+        <div class="p-6 bg-white shadow-md rounded">
+          <div id="pae_container" class="w-[660px] min-h-[600px] flex justify-center items-center mx-auto">
+            <div id="pae_placeholder"></div>
+          </div>
+        </div>
+      </div>
     </div>
     <!-- Footer -->
     <div class="py-24 bg-gray-100 px-6 sm:px-0">
@@ -549,15 +556,9 @@
     // NGL color schemes https://nglviewer.org/ngl/api/manual/usage/coloring.html
     const COLORSCHEME = confidenceScheme; //'bfactor'
 
-    const MODELS = ["ranked_0.pdb", "ranked_1.pdb", "ranked_2.pdb", "ranked_3.pdb", "ranked_4.pdb"];
+    const MODELS = [];
 
-    const MODELS_DATA = [
-      "*_data_ranked_0.pdb*",
-      "*_data_ranked_1.pdb*",
-      "*_data_ranked_2.pdb*",
-      "*_data_ranked_3.pdb*",
-      "*_data_ranked_4.pdb*",
-    ];
+    const MODELS_DATA = [];
 
     const LDDT_IMGS = [
       "coverage_LDDT_0.png",
