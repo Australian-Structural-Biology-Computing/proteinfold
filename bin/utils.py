@@ -70,12 +70,12 @@ def align_structures(structures):
     else:
         raise ValueError(f"{structure} is neither a PDB or mmCIF file!")
 
-    ref_structure = structures[0]
     parsed_structures = [parser.get_structure(f"structure-{idx}", structure) for idx, structure in enumerate(structures)]
+    ref_structure = parsed_structures[0]
 
     def get_atom_ids(structure):
-        atom_ids = [(atom.get_parent().get_id(), atom.name) for atom in structure.get_atoms()]
-        return atom_ids
+        # Note: this is a set of atom_ids due to the {} surrounding the comprehension
+        return {(atom.get_parent().get_id(), atom.name) for atom in structure.get_atoms()}
 
     # Update the atoms shared between will structures with progressive intersections
     common_atoms = get_atom_ids(ref_structure)
@@ -85,10 +85,11 @@ def align_structures(structures):
     if not common_atoms:
         raise ValueError("No common atoms found between structures.")
 
-    def extract_atom_objs(structure, atom_ids):
+    def extract_atoms(structure, atom_ids):
+        # Note: this comprehension returns an atom *object* for each atom in the structure
         return [atom for atom in structure.get_atoms() if (atom.get_parent().get_id(), atom.name) in atom_ids]
 
-    ref_atoms = extract_atom_objs(ref_structure, common_atoms)
+    ref_atoms = extract_atoms(ref_structure, common_atoms)
 
     # The aligned structures will be the parsed structures aligned to the common atoms of the reference structure
     super_imposer = PDB.Superimposer()
@@ -96,10 +97,10 @@ def align_structures(structures):
     for idx, structure in enumerate(parsed_structures):
         # The reference structure doesn't need to be aligned so can be skipped
         if idx == 0:
-            aligned_structures.append(parsed_structures[0])
+            aligned_structures.append(structure)
             continue
 
-        target_atoms = extract_atom_objs(structure, common_atoms)
+        target_atoms = extract_atoms(structure, common_atoms)
         super_imposer.set_atoms(ref_atoms, target_atoms)
         super_imposer.apply(structure.get_atoms())
 
@@ -107,6 +108,7 @@ def align_structures(structures):
         io.set_structure(structure)
         aligned_structures.append(structure)
 
+    # Technically, parsed_structures now also points to the same aligned structures, but I've kept for readability
     return aligned_structures
 
 def plddt_from_struct_b_factor(struct_file):
