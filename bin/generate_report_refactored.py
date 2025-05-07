@@ -1,4 +1,4 @@
-from utils import reset_residue_numbers, align_structures, plddt_from_struct_b_factor, generate_plddt_plot, generate_pae_plot, generate_sequence_coverage_plot
+from utils import reset_residue_numbers, sort_structures_by_rank, align_structures, plddt_from_struct_b_factor, generate_plddt_plot, generate_pae_plot, generate_sequence_coverage_plot
 import os
 import base64
 import argparse
@@ -9,14 +9,14 @@ def generate_report(name, out_dir, structures, num_structs_limit=5, msa_files=No
             reset_residue_numbers(pdb_file, pdb_file) #Output pdb overwrite input to reset numbers
 
 
+    # Sort structures by name and limit to set set number
     if len(structures) > num_structs_limit:
         print(f"Warning: More than {num_structs_limit} structures provided. Sorting and using only the first {num_structs_limit} structures.")
-        # Sort structures by name and limit to num_structs_limit
+        sorted_structures = sort_structures_by_rank(structures, prog)
 
-        # TODO: this only wokrs on AF2.3 structures. Need a sort util, things like HF3 only have 'predicted_structure' with rank in dir.
+        # TODO: this only works on AF2.3 structures. Finish sort util, things like HF3 only have 'predicted_structure' with rank in dir.
         # E.g. colabfold is [name]_(un)relaxed_rank_{i}_alphafold2_ptm_model_{i}_seed_000.pdb
-        structures = sorted(structures, key=lambda x: int(os.path.basename(x).replace('ranked_', '').split('.')[0]))
-        structures = structures[:num_structs_limit]
+        structures = sorted_structures[:num_structs_limit]
 
     # Replace structures with aligned versions
     if type == "comparison":

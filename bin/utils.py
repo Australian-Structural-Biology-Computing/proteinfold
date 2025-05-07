@@ -43,7 +43,19 @@ def reset_residue_numbers(input_pdb, output_pdb):  #TODO: use PDBIO instead of f
                 # Write non-ATOM/HETATM lines (e.g., TER, PARENT) without changes
                 outfile.write(line)
 
-def align_structures(structures):
+def sort_structures_by_rank(structures, prog):
+    """
+    Sorts a list of structures based on their rank. Needs to handle different program naming
+    """
+    if prog == "AlphaFold2":
+        sorted_structures = sorted(structures, key=lambda x: int(os.path.basename(x).replace('ranked_', '').split('.')[0]))
+    else:
+        print(f"Warning: Sorting not implemented for {prog}. Using original order.")
+        return structures
+
+    return sorted_structures
+
+def align_structures(structures, save_ref_structure=True):
     parser = PDB.PDBParser(QUIET=True)  #TODO: or use MMCIFParser for mmCIF files
     structures = [
         parser.get_structure(f"Structure_{i}", pdb) for i, pdb in enumerate(structures)
@@ -87,11 +99,17 @@ def align_structures(structures):
         io.save(aligned_structure)
         aligned_structures.append(aligned_structure)
 
+    if save_ref_structure == True:
+        io = PDB.PDBIO()
+        ref_structure_path = os.path.join(out_dir, "aligned_structure_0.pdb")
+        io.set_structure(aligned_structures[0])
+        io.save(ref_structure_path)
+
     return aligned_structures
 
 def plddt_from_struct_b_factor(struct_file):
     """
-    Uses the BioPython PDB package to extract residue plddt values from the b-factor column. Iterates over PDB objects rather than processes raw file
+    Uses the BioPython PDB package to extract residue pLDDT values from the b-factor column. Iterates over PDB objects rather than processes raw file
     """
     if str(struct_file).endswith(".pdb"):
         parser = PDB.PDBParser(QUIET=True)
@@ -132,13 +150,13 @@ def plddt_from_struct_b_factor(struct_file):
 
 def generate_plddt_plot(structures):
     """
-    Generate a Plotly figure for predicted lddt per position for given structures.
+    Generate a Plotly figure for predicted LDDT per position for given structures.
 
     Args:
         structures (list): List of structure file paths.
 
     Returns:
-        go.Figure: Plotly figure object with lddt data.
+        go.Figure: Plotly figure object with pLDDT data.
     """
     plddt_per_struct = OrderedDict()
 
@@ -163,12 +181,12 @@ def generate_plddt_plot(structures):
 
     # Update layout
     fig.update_layout(
-        title=dict(text="Predicted lddt per position", x=0.5, xanchor="center"),
+        title=dict(text="Predicted LDDT per position", x=0.5, xanchor="center"),
         xaxis=dict(
             title="Positions", showline=True, linecolor="black", gridcolor="WhiteSmoke"
         ),
         yaxis=dict(
-            title="Predicted lddt",
+            title="Predicted LDDT",
             range=[0, 100],
             showline=True,
             linecolor="black",
@@ -184,75 +202,74 @@ def generate_plddt_plot(structures):
 
     return fig
 
-def generate_sequence_coverage_plot(msa_path, out_dir, name, in_type="standard", save_image=True):
+def generate_sequence_coverage_plot(msa_path, out_dir, name, save_image=True):
     msa = []
-    if in_type.lower() != "colabfold" and not msa_path.endswith("NO_FILE"):
-        with open(msa_path, "r") as in_file:
-            for line in in_file:
-                msa.append([int(x) for x in line.strip().split()])
+    with open(msa_path, "r") as in_file:
+        for line in in_file:
+            msa.append([int(x) for x in line.strip().split()])
 
-        seqid = []
-        for sequence in msa:
-            matches = [
-                1.0 if first == other else 0.0 for first, other in zip(msa[0], sequence)
+    seqid = []
+    for sequence in msa:
+        matches = [
+            1.0 if first == other else 0.0 for first, other in zip(msa[0], sequence)
+        ]
+        seqid.append(sum(matches) / len(matches))
+
+    seqid_sort = sorted(range(len(seqid)), key=seqid.__getitem__)
+
+    non_gaps = []
+    for sequence in msa:
+        non_gaps.append(
+            [float(num != 21) if num != 21 else float("nan") for num in sequence]
+        )
+
+    sorted_non_gaps = [non_gaps[i] for i in seqid_sort]
+    final = []
+    for sorted_seq, identity in zip(
+        sorted_non_gaps, [seqid[i] for i in seqid_sort]
+    ):
+        final.append(
+            [
+                value * identity if not isinstance(value, str) else value
+                for value in sorted_seq
             ]
-            seqid.append(sum(matches) / len(matches))
+        )
 
-        seqid_sort = sorted(range(len(seqid)), key=seqid.__getitem__)
+    # TODO: don't have a seperate save iamge plot and a plotly ploy
+    # Plot the sequence coverage and save as image
+    # ##################################################################
+    if save_image:
+        image_path = f"{out_dir}/{name+('_' if name else '')}seq_coverage.png"
+        plt.figure(figsize=(14, 14), dpi=100)
+        plt.title("Sequence coverage", fontsize=30, pad=36)
+        plt.imshow(
+            final,
+            interpolation="nearest",
+            aspect="auto",
+            cmap="rainbow_r",
+            vmin=0,
+            vmax=1,
+            origin="lower",
+        )
 
-        non_gaps = []
-        for sequence in msa:
-            non_gaps.append(
-                [float(num != 21) if num != 21 else float("nan") for num in sequence]
-            )
+        column_counts = [0] * len(msa[0])
+        for col in range(len(msa[0])):
+            for row in msa:
+                if row[col] != 21:
+                    column_counts[col] += 1
 
-        sorted_non_gaps = [non_gaps[i] for i in seqid_sort]
-        final = []
-        for sorted_seq, identity in zip(
-            sorted_non_gaps, [seqid[i] for i in seqid_sort]
-        ):
-            final.append(
-                [
-                    value * identity if not isinstance(value, str) else value
-                    for value in sorted_seq
-                ]
-            )
+        plt.plot(column_counts, color="black")
+        plt.xlim(-0.5, len(msa[0]) - 0.5)
+        plt.ylim(-0.5, len(msa) - 0.5)
 
-        # TODO: don't have a seperate save iamge plot and a plotly ploy
-        # Plot the sequence coverage and save as image
-        # ##################################################################
-        if save_image:
-            image_path = f"{out_dir}/{name+('_' if name else '')}seq_coverage.png"
-            plt.figure(figsize=(14, 14), dpi=100)
-            plt.title("Sequence coverage", fontsize=30, pad=36)
-            plt.imshow(
-                final,
-                interpolation="nearest",
-                aspect="auto",
-                cmap="rainbow_r",
-                vmin=0,
-                vmax=1,
-                origin="lower",
-            )
+        plt.tick_params(axis="both", which="both", labelsize=18)
 
-            column_counts = [0] * len(msa[0])
-            for col in range(len(msa[0])):
-                for row in msa:
-                    if row[col] != 21:
-                        column_counts[col] += 1
-
-            plt.plot(column_counts, color="black")
-            plt.xlim(-0.5, len(msa[0]) - 0.5)
-            plt.ylim(-0.5, len(msa) - 0.5)
-
-            plt.tick_params(axis="both", which="both", labelsize=18)
-
-            cbar = plt.colorbar()
-            cbar.set_label("Sequence identity to query", fontsize=24, labelpad=24)
-            cbar.ax.tick_params(labelsize=18)
-            plt.xlabel("Positions", fontsize=24, labelpad=24)
-            plt.ylabel("Sequences", fontsize=24, labelpad=36)
-            plt.savefig(image_path)
+        cbar = plt.colorbar()
+        cbar.set_label("Sequence identity to query", fontsize=24, labelpad=24)
+        cbar.ax.tick_params(labelsize=18)
+        plt.xlabel("Positions", fontsize=24, labelpad=24)
+        plt.ylabel("Sequences", fontsize=24, labelpad=36)
+        plt.savefig(image_path)
 
         # Interactive plot of sequence coverage
         fig = go.Figure()
@@ -306,6 +323,10 @@ def generate_pae_plot(pae_path, out_dir, name, save_image=True):
             zmin=0,
             zmax=max_pae,
         )
+    )
+    fig.update_layout(
+    xaxis=dict(title="Scored Residue"),
+    yaxis=dict(title="Aligned Residue"),
     )
 
     if save_image:
