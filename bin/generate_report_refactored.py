@@ -31,9 +31,6 @@ def generate_report(name, out_dir, structures, num_structs_limit=5, msa_files=No
     # Sort structures by name and limit to set set number
     if len(structures) > num_structs_limit:
         print(f"Warning: More than {num_structs_limit} structures provided. Sorting and using only the first {num_structs_limit} structures.")
-
-        # TODO: this only works on AF2.3 structures. Finish sort util, things like HF3 only have 'predicted_structure' with rank in dir.
-        # E.g. colabfold is [name]_(un)relaxed_rank_{i}_alphafold2_ptm_model_{i}_seed_000.pdb
         sorted_structures = sort_structures_by_rank(structures, prog)
         structures = sorted_structures[:num_structs_limit]
 
