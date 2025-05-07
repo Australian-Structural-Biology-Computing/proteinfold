@@ -7,7 +7,6 @@ from utils import (
     generate_pae_plot,
     generate_sequence_coverage_plot,
 )
-import os
 import base64
 import argparse
 
@@ -23,10 +22,10 @@ prog_name_mapping = {
 }
 
 def generate_report(name, out_dir, structures, num_structs_limit=5, msa_files=None, pae_files=None, prog="ProteinFold", type="standard", html_template=None, write_htmls=True, seq_cov_as_html=False):
-    for structure in structures:
-        if "esmfold" in structure:
-            reset_residue_numbers(pdb_file, pdb_file) #Output pdb overwrite input to reset numbers
 
+    if prog = "esmfold":
+        for structure in structures:
+            structure = reset_residue_numbers(structure)
 
     # Sort structures by name and limit to set set number
     if len(structures) > num_structs_limit:

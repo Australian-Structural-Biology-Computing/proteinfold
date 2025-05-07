@@ -5,44 +5,31 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-def reset_residue_numbers(input_pdb, output_pdb):  #TODO: use PDBIO instead of file I/O
+def reset_residue_numbers(structure):
     """
-    Resets residue numbers (column 23-26) in a PDB file so the position starts from 1 for each chain
+    Resets residue numbering in a PDB file, because ESMFold starts
     and increment only when encountering a new residue.
     """
-    with open(input_pdb, 'r') as infile, open(output_pdb, 'w') as outfile:
-        current_residue_number = 1
-        previous_residue_id = None
-        previous_chain = None
+    if str(structure).endswith(".pdb"):
+        parser = PDB.PDBParser(QUIET=True)
+    elif str(structure).endswith(".cif"):
+        parser = PDB.MMCIFParser(QUIET=True)
+    else:
+        print(f"{structure} is neither a PDB or mmCIF file!")
+        return
 
-        for line in infile:
-            if line.startswith("ATOM") or line.startswith("HETATM"):
-                chain = line[21]  # Extract the chain identifier (column 22)
-                residue_id = line[22:26].strip()  # Extract the residue ID (column 23-26)
+    structure = parser.get_structure("structure", structure)
 
-                # Reset residue numbering if the chain changes
-                if chain != previous_chain:
-                    current_residue_number = 1
-                    previous_chain = chain
-                    previous_residue_id = None
+    for model in structure:
+        for idx, residue in enumerate(model.get_residues(), start=1):
+        # Do a swap in place to renumber the residue, the other entries in the tuple can stay the same
+        # See: https://biopython.org/docs/1.76/api/Bio.PDB.Chain.html#Bio.PDB.Chain.Chain.__getitem__
+        het_atom, _, insertion_code = residue.get_id()
+        residue.id = (het_atom, idx, insertion_code)
 
-                # Increment residue number if it's a new residue
-                if residue_id != previous_residue_id:
-                    if previous_residue_id is not None:  # Only increment after the first residue
-                        current_residue_number += 1
-                    previous_residue_id = residue_id
-
-                # Update the line with the new residue number
-                updated_line = (
-                    line[:22] +
-                    f"{current_residue_number:4}" +
-                    line[26:]
-                )
-                outfile.write(updated_line)
-
-            else:
-                # Write non-ATOM/HETATM lines (e.g., TER, PARENT) without changes
-                outfile.write(line)
+    io = PDB.PDBIO()
+    io.set_structure(structure)
+    io.save(structure)
 
 # TODO: Barcelona team to implement AF3
 def sort_structures_by_rank(structures, prog):
@@ -236,8 +223,9 @@ def generate_sequence_coverage_plot(msa_path, out_dir, name, save_image=True):
     #
     seq_depth_counts = np.sum(~np.isnan(non_gaps_msas), axis=0)
 
-    # TODO: don't have a seperate save iamge plot and a plotly ploy
-    # Plot the sequence coverage and save as image
+    # TODO: don't have a seperate save image plot and an HTML plotly ploy
+    # ##################################################################
+    # Plot the sequence coverage with matplotlib and save as image
     # ##################################################################
     if save_image:
         image_path = f"{out_dir}/{name+('_' if name else '')}seq_coverage.png"
@@ -267,7 +255,8 @@ def generate_sequence_coverage_plot(msa_path, out_dir, name, save_image=True):
         plt.ylabel("Sequences", fontsize=24, labelpad=36)
         plt.savefig(image_path)
 
-        # Interactive plot of sequence coverage
+        # ##################################################################
+        # Interactive HTML plot of sequence coverage
         fig = go.Figure()
         fig.add_trace(
             go.Heatmap(
