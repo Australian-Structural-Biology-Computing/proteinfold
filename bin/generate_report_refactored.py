@@ -1,7 +1,25 @@
-from utils import reset_residue_numbers, sort_structures_by_rank, align_structures, plddt_from_struct_b_factor, generate_plddt_plot, generate_pae_plot, generate_sequence_coverage_plot
+from utils import (
+    reset_residue_numbers,
+    sort_structures_by_rank,
+    align_structures,
+    plddt_from_struct_b_factor,
+    generate_plddt_plot,
+    generate_pae_plot,
+    generate_sequence_coverage_plot,
+)
 import os
 import base64
 import argparse
+
+prog_name_mapping = {
+    "proteinfold": "ProteinFold",
+    "alphafold2": "AlphaFold2",
+    "esmfold": "ESMFold",
+    "colabfold": "ColabFold",
+    "rosettafold-all-atom": "RoseTTAFold-All-Atom",
+    "helixfold-3": "HelixFold-3",
+    "boltz-1": "Boltz-1",
+}
 
 def generate_report(name, out_dir, structures, num_structs_limit=5, msa_files=None, pae_files=None, prog="ProteinFold", type="standard", html_template=None, write_htmls=True, seq_cov_as_html=False):
     for structure in structures:
@@ -12,10 +30,10 @@ def generate_report(name, out_dir, structures, num_structs_limit=5, msa_files=No
     # Sort structures by name and limit to set set number
     if len(structures) > num_structs_limit:
         print(f"Warning: More than {num_structs_limit} structures provided. Sorting and using only the first {num_structs_limit} structures.")
-        sorted_structures = sort_structures_by_rank(structures, prog)
 
         # TODO: this only works on AF2.3 structures. Finish sort util, things like HF3 only have 'predicted_structure' with rank in dir.
         # E.g. colabfold is [name]_(un)relaxed_rank_{i}_alphafold2_ptm_model_{i}_seed_000.pdb
+        sorted_structures = sort_structures_by_rank(structures, prog)
         structures = sorted_structures[:num_structs_limit]
 
     # Replace structures with aligned versions
@@ -29,7 +47,7 @@ def generate_report(name, out_dir, structures, num_structs_limit=5, msa_files=No
     #However, most replacements are simple and this is faster
     template = open(html_template, "r").read()
     template = template.replace("*sample_name*", name)
-    template = template.replace("*prog_name*", prog)
+    template = template.replace("*prog_name*", prog_name_mapping[prog])
 
     lddt_averages = []
     for structure in structures:
@@ -116,7 +134,7 @@ def main():
     parser.add_argument("--structs", required=True, nargs="+", help="List of structure file paths.")
     parser.add_argument("--msa", nargs="+", default=None, help="List of MSA file paths (optional).")
     parser.add_argument("--pae", nargs="+", default=None, help="List of PAE file paths (optional).")
-    parser.add_argument("--prog", default=None, choices=["AlphaFold2", "ESMFold", "ColabFold", "RoseTTAFold-All-Atom", "HelixFold-3", "Boltz-1"], help="The program used to generate the structures, can be called in the workflow")
+    parser.add_argument("--prog", default="proteinfold", choices=["alphafold2", "esmfold", "colabfold", "rosettafold-all-atom", "helixfold-3", "boltz-1"], type=str.lower, help="The program used to generate the structures, can be called in the workflow")
     parser.add_argument("--type", default="standard", choices=["standard", "comparison"], help="The type of report file generated .") # TODO: change to --type with options in case there are other reports
     #TODO: remove --html_template as this is already determined by the type
     parser.add_argument("--html_template", default=None, help="Path to the HTML template for comparison (optional).")
@@ -126,10 +144,11 @@ def main():
 
     print("Generating report.....")
 
+    # TODO: want a better way of pathing this
     if args.type == "comparison":
-        html_template = "../assests/comparison_template.html"
+        html_template = "../.../assets/comparison_template.html"
     elif args.type == "standard":
-        html_template = "../assests/report_template.html"
+        html_template = "../../assets/report_template.html"
     else:
         html_template = args.html_template
 

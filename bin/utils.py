@@ -47,7 +47,7 @@ def sort_structures_by_rank(structures, prog):
     """
     Sorts a list of structures based on their rank. Needs to handle different program naming
     """
-    if prog == "AlphaFold2":
+    if prog == "alphafold2":
         sorted_structures = sorted(structures, key=lambda x: int(os.path.basename(x).replace('ranked_', '').split('.')[0]))
     else:
         print(f"Warning: Sorting not implemented for {prog}. Using original order.")
@@ -160,11 +160,9 @@ def generate_plddt_plot(structures):
     """
     plddt_per_struct = OrderedDict()
 
-    # Extract plddt values for each structure
     for struct in structures:
         plddt_per_struct[struct] = plddt_from_struct_b_factor(struct)
 
-    # Create the Plotly figure
     fig = go.Figure()
 
     for idx, (struct, plddts) in enumerate(plddt_per_struct.items()):
@@ -178,8 +176,6 @@ def generate_plddt_plot(structures):
                 hoverinfo="text",
             )
         )
-
-    # Update layout
     fig.update_layout(
         title=dict(text="Predicted LDDT per position", x=0.5, xanchor="center"),
         xaxis=dict(
@@ -202,38 +198,28 @@ def generate_plddt_plot(structures):
 
     return fig
 
+def process_msas(msa_path):
+    msa = np.loadtxt(msa_path, dtype=int)
+
+    query_sequence = msa[0]
+    seqid_match = np.mean(msa == query_sequence, axis=1)
+
+    # Sort sequences by sequence identity
+    seqid_sort_indices = np.argsort(seqid_match)
+    sorted_msa = msa[seqid_sort_indices]
+    sorted_seqid = seqid_match[seqid_sort_indices]
+
+    non_gaps_msas = np.where(sorted_msa != 21, 1.0, np.nan)
+
+    # Scale non-gap positions by sequence identity
+    final_msas = non_gaps_msas * sorted_seqid[:, None]
+
+    return final_msas, non_gaps_msas
+
 def generate_sequence_coverage_plot(msa_path, out_dir, name, save_image=True):
-    msa = []
-    with open(msa_path, "r") as in_file:
-        for line in in_file:
-            msa.append([int(x) for x in line.strip().split()])
-
-    seqid = []
-    for sequence in msa:
-        matches = [
-            1.0 if first == other else 0.0 for first, other in zip(msa[0], sequence)
-        ]
-        seqid.append(sum(matches) / len(matches))
-
-    seqid_sort = sorted(range(len(seqid)), key=seqid.__getitem__)
-
-    non_gaps = []
-    for sequence in msa:
-        non_gaps.append(
-            [float(num != 21) if num != 21 else float("nan") for num in sequence]
-        )
-
-    sorted_non_gaps = [non_gaps[i] for i in seqid_sort]
-    final = []
-    for sorted_seq, identity in zip(
-        sorted_non_gaps, [seqid[i] for i in seqid_sort]
-    ):
-        final.append(
-            [
-                value * identity if not isinstance(value, str) else value
-                for value in sorted_seq
-            ]
-        )
+    final_msas, non_gaps_msas = process_msas(msa_path)
+    #
+    seq_depth_counts = np.sum(~np.isnan(non_gaps_msas), axis=0)
 
     # TODO: don't have a seperate save iamge plot and a plotly ploy
     # Plot the sequence coverage and save as image
@@ -243,7 +229,7 @@ def generate_sequence_coverage_plot(msa_path, out_dir, name, save_image=True):
         plt.figure(figsize=(14, 14), dpi=100)
         plt.title("Sequence coverage", fontsize=30, pad=36)
         plt.imshow(
-            final,
+            final_msas,
             interpolation="nearest",
             aspect="auto",
             cmap="rainbow_r",
@@ -252,15 +238,10 @@ def generate_sequence_coverage_plot(msa_path, out_dir, name, save_image=True):
             origin="lower",
         )
 
-        column_counts = [0] * len(msa[0])
-        for col in range(len(msa[0])):
-            for row in msa:
-                if row[col] != 21:
-                    column_counts[col] += 1
 
-        plt.plot(column_counts, color="black")
-        plt.xlim(-0.5, len(msa[0]) - 0.5)
-        plt.ylim(-0.5, len(msa) - 0.5)
+        plt.plot(seq_depth_counts, color="black")
+        plt.xlim(-0.5, len(final_msas[0]) - 0.5)
+        plt.ylim(-0.5, len(final_msas) - 0.5)
 
         plt.tick_params(axis="both", which="both", labelsize=18)
 
@@ -275,7 +256,7 @@ def generate_sequence_coverage_plot(msa_path, out_dir, name, save_image=True):
         fig = go.Figure()
         fig.add_trace(
             go.Heatmap(
-                z=final,
+                z=final_msas,
                 colorscale="Rainbow_r",
                 zmin=0,
                 zmax=1,
@@ -285,8 +266,8 @@ def generate_sequence_coverage_plot(msa_path, out_dir, name, save_image=True):
         # Add black line for sequence coverage depth
         fig.add_trace(
             go.Scatter(
-                x=list(range(len(column_counts))),
-                y=column_counts,
+                x=list(range(len(seq_depth_counts))),
+                y=seq_depth_counts,
                 mode="lines",
                 line=dict(color="black", width=2),
                 name="Coverage Depth",
