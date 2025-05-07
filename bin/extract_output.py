@@ -101,7 +101,10 @@ def a3m_to_int(a3m_file):  # For the RosettaFold-All-Atom .a3m. Written with Git
 
     # Convert each sequence in the MSA
     int_sequences = []
-    for line in msa.splitlines():
+    for idx, line in enumerate(msa.splitlines()):
+        if idx == 0 and not line.startswith(">"):  # If there's an additional header (non-FASTA) skip it. E.g ColabFold
+            continue
+
         if not line.startswith(">"):  # Ignore header lines
             filtered_line = ''.join(char for char in line if not char.islower()) # Remove inserts (lower-case chars) in a3m
             int_sequence = [AA_to_int.get(char.upper(), 20) for char in filtered_line]
