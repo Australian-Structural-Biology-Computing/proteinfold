@@ -1,41 +1,43 @@
 from utils import reset_residue_numbers, align_structures, plddt_from_struct_b_factor, generate_plddt_plot, generate_pae_plot, generate_sequence_coverage_plot
 import os
 import base64
-from Bio import PDB
 import argparse
-from io import BytesIO
 
-def generate_report(name, out_dir, structures, msa_files=None, pae_files=None, type="standard", html_template=None, write_htmls=True, seq_cov_as_html=False):
+def generate_report(name, out_dir, structures, num_structs_limit=5, msa_files=None, pae_files=None, prog="ProteinFold", type="standard", html_template=None, write_htmls=True, seq_cov_as_html=False):
     for structure in structures:
         if "esmfold" in structure:
             reset_residue_numbers(pdb_file, pdb_file) #Output pdb overwrite input to reset numbers
 
+
+    if len(structures) > num_structs_limit:
+        print(f"Warning: More than {num_structs_limit} structures provided. Sorting and using only the first {num_structs_limit} structures.")
+        # Sort structures by name and limit to num_structs_limit
+        # TODO: this only wokrs on AF2.3 structures. Need a sort util, things like HF3 only have 'predicted_structure' with rank in dir.
+        # E.g. colabfold is [name]_(un)relaxed_rank_{i}_alphafold2_ptm_model_{i}_seed_000.pdb
+        structures = sorted(structures, key=lambda x: int(os.path.basename(x).replace('ranked_', '').split('.')[0]))
+        structures = structures[:num_structs_limit]
+
+    # Replace structures with aligned versions
     if type == "comparison":
-        aligned_structures = align_structures(structures)
-
-        # Save the reference structure
-        io = PDB.PDBIO()
-        ref_structure_path = os.path.join(out_dir, "aligned_structure_0.pdb")
-        io.set_structure(aligned_structures[0])
-        io.save(ref_structure_path)
-        aligned_structures[0] = ref_structure_path
-
-        # Replace structures with aligned versions
+        aligned_structures = align_structures(structures, save_ref_structure=True)
         structures = aligned_structures
 
     print("Structures:", structures)
 
+    #TODO: should really use a proper HTML parse for this, like BeautifulSoup or html5lib. strings prone to failure
     template = open(html_template, "r").read()
     template = template.replace("*sample_name*", name)
-    # TODO: pass in program name as an argument
-    #template = template.replace("*prog_name*", prog_name)
+    template = template.replace("*prog_name*", prog)
 
-    #Implement an LDDT averages function
-    #plddt_rank_0 = plddt_from_struct_b_factor(structures[0])
-    #template = template.replace("*prog_name*", prog_name)
+    lddt_averages = []
+    for structure in structures:
+        lddt_averages.append(round(plddt_from_struct_b_factor(structure).mean(), 2))
+    averages_js_array = f"const LDDT_AVERAGES = {lddt_averages};"
+    template = template.replace("const LDDT_AVERAGES = [];", averages_js_array)
 
     # Populate MODELS into the HTML template
-    models_js = ("const MODELS = [" + ",\n".join([f'"{model}"' for model in structures]) + "];")
+    model_names = [os.path.basename(structure).replace('.pdb','') for structure in structures]
+    models_js = ("const MODELS = [" + ",\n".join([f'"{model_name}"' for model_name in model_names]) + "];")
     template = template.replace("const MODELS = [];", models_js)
     # Populate MODELS_DATA with the content of the PDB files
     pdb_strings = [open(structure, "r").read().replace("\n", "\\n") for structure in structures]
@@ -46,16 +48,19 @@ def generate_report(name, out_dir, structures, msa_files=None, pae_files=None, t
     # Generate sequence coverage plots and convert to HTML
     if msa_files:
         for msa_file in msa_files:
-            if msa_file and not msa_file.endswith("NO_FILE"):
-                seq_cov_fig, seq_cov_img_path = generate_sequence_coverage_plot(msa_file, out_dir, name, in_type="NOT_COLABFOLD", save_image=True)
-                seq_cov_img_encoded = base64.b64encode(open(seq_cov_img_path, "rb").read()).decode("utf-8")
-                seq_cov_img_tag = f'<img src="data:image/png;base64,{seq_cov_img_encoded}" alt="Sequence Coverage Image">'
+            seq_cov_fig, seq_cov_img_path = generate_sequence_coverage_plot(msa_file, out_dir, name, save_image=True)
+            seq_cov_img_encoded = base64.b64encode(open(seq_cov_img_path, "rb").read()).decode("utf-8")
+            seq_cov_img_tag = f'<img src="data:image/png;base64,{seq_cov_img_encoded}" alt="Sequence Coverage Image">'
 
-                seq_cov_html = seq_cov_fig.to_html(
-                    full_html=False,
-                    include_plotlyjs="cdn",
-                    config={"displayModeBar": True, "displaylogo": False, "scrollZoom": True},
-                )
+            seq_cov_html = seq_cov_fig.to_html(
+                full_html=False,
+                include_plotlyjs="cdn",
+                config={"displayModeBar": True, "displaylogo": False, "scrollZoom": True},
+            )
+    if seq_cov_as_html == True:
+        template = template.replace('<div id="seq_cov_placeholder"></div>', seq_cov_html)
+    else:
+        template = template.replace('<div id="seq_cov_placeholder"></div>', seq_cov_img_tag)
 
     # Generate the pLDDT plot and convert to HTML
     plddt_fig = generate_plddt_plot(structures)
@@ -64,7 +69,9 @@ def generate_report(name, out_dir, structures, msa_files=None, pae_files=None, t
         include_plotlyjs="cdn",
         config={"displayModeBar": True, "displaylogo": False, "scrollZoom": True},
     )
+    template = template.replace('<div id="lddt_placeholder"></div>', plddt_html)
 
+   #Generate PAE plot and conver to HTML TODO: currently onlt the first
     if pae_files:
         pae_figs = []
         for pae_file in pae_files:
@@ -74,19 +81,25 @@ def generate_report(name, out_dir, structures, msa_files=None, pae_files=None, t
             include_plotlyjs="cdn",
             config={"displayModeBar": True, "displaylogo": False, "scrollZoom": True},
         )
-   #Generate PAE plot and conver to HTML TODO: currently onlt the first
-
-    # Place the HTML plots in their div conttainer
-    if seq_cov_as_html == True:
-        template = template.replace('<div id="seq_cov_placeholder"></div>', seq_cov_html)
+        template = template.replace('<div id="pae_placeholder"></div>', pae_html)
+    # TODO: need logic to keep PAEs in sync with structure upon click
     else:
-        template = template.replace('<div id="seq_cov_placeholder"></div>', seq_cov_img_tag)
-    template = template.replace('<div id="lddt_placeholder"></div>', plddt_html)
-    template = template.replace('<div id="pae_placeholder"></div>', pae_html)
+        # Remove the PAE div if no PAE files are provided
+        pae_section_text = """
+      <div class="flex-1 max-w-[720px]">
+        <div id="pae-title" class="text-4xl font-bold tracking-tight mb-6">PAE</div>
+        <div class="p-6 bg-white shadow-md rounded">
+          <div id="pae_container" class="w-[660px] min-h-[600px] flex justify-center items-center mx-auto">
+            <div id="pae_placeholder"></div>
+          </div>
+        </div>
+      </div>
+        """
+        template = template.replace(pae_section_text.strip(), "")
 
     if write_htmls:
         with open(f"{out_dir}/{name}_coverage_pLDDT.html", "w") as out_file:
-            out_file.write(seq_cov_html)
+            out_file.write(plddt_html)
         with open(f"{out_dir}/{name}_coverage_MSA.html", "w") as out_file:
             out_file.write(seq_cov_html)
 
@@ -116,6 +129,7 @@ def main():
         name=args.name,
         out_dir=args.output_dir,
         structures=args.structs,
+        num_structs_limit=5,
         msa_files=args.msa,
         pae_files=args.pae,
         type=args.type,
