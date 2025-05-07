@@ -29,7 +29,8 @@ def reset_residue_numbers(structure):
 
     io = PDB.PDBIO()
     io.set_structure(structure)
-    io.save(structure)
+
+    return structure
 
 # TODO: Barcelona team to implement AF3
 def sort_structures_by_rank(structures, prog):
@@ -57,55 +58,54 @@ def sort_structures_by_rank(structures, prog):
 
     return sorted_structures
 
-def align_structures(structures, save_ref_structure=True):
-    parser = PDB.PDBParser(QUIET=True)  #TODO: or use MMCIFParser for mmCIF files
-    structures = [
-        parser.get_structure(f"Structure_{i}", pdb) for i, pdb in enumerate(structures)
-    ]
+def align_structures(structures):
+
+    if not structures:
+        raise ValueError("No structures provided for alignment.")
+
+    if structures[0].endswith(".pdb"):
+        parser = PDB.PDBParser(QUIET=True)
+    elif structures[0].endswith(".cif"):
+        parser = PDB.MMCIFParser(QUIET=True)
+    else:
+        raise ValueError(f"{structure} is neither a PDB or mmCIF file!")
+
     ref_structure = structures[0]
+    parsed_structures = [parser.get_structure(f"structure-{idx}", structure) for idx, structure in enumerate(structures)]
 
-    common_atoms = set(
-        f"{atom.get_parent().get_id()[1]}-{atom.name}"
-        for atom in ref_structure.get_atoms()
-    )
-    for i, structure in enumerate(structures[1:], start=1):
-        common_atoms = common_atoms.intersection(
-            set(
-                f"{atom.get_parent().get_id()[1]}-{atom.name}"
-                for atom in structure.get_atoms()
-            )
-        )
+    def get_atom_ids(structure):
+        atom_ids = [(atom.get_parent().get_id(), atom.name) for atom in structure.get_atoms()]
+        return atom_ids
 
-    ref_atoms = [
-        atom
-        for atom in ref_structure.get_atoms()
-        if f"{atom.get_parent().get_id()[1]}-{atom.name}" in common_atoms
-    ]
-    # print(ref_atoms)
+    # Update the atoms shared between will structures with progressive intersections
+    common_atoms = get_atom_ids(ref_structure)
+    for structure in parsed_structures[1:]:
+        common_atoms.intersection_update(get_atom_ids(structure))
+
+    if not common_atoms:
+        raise ValueError("No common atoms found between structures.")
+
+    def extract_atom_objs(structure, atom_ids):
+        return [atom for atom in structure.get_atoms() if (atom.get_parent().get_id(), atom.name) in atom_ids]
+
+    ref_atoms = extract_atom_objs(ref_structure, common_atoms)
+
+    # The aligned structures will be the parsed structures aligned to the common atoms of the reference structure
     super_imposer = PDB.Superimposer()
-    aligned_structures = [structures[0]]  # Include the reference structure in the list
+    aligned_structures = []
+    for idx, structure in enumerate(parsed_structures):
+        # The reference structure doesn't need to be aligned so can be skipped
+        if idx == 0:
+            aligned_structures.append(parsed_structures[0])
+            continue
 
-    for i, structure in enumerate(structures[1:], start=1):
-        target_atoms = [
-            atom
-            for atom in structure.get_atoms()
-            if f"{atom.get_parent().get_id()[1]}-{atom.name}" in common_atoms
-        ]
-
+        target_atoms = extract_atom_objs(structure, common_atoms)
         super_imposer.set_atoms(ref_atoms, target_atoms)
         super_imposer.apply(structure.get_atoms())
 
-        aligned_structure = f"aligned_structure_{i}.pdb"
         io = PDB.PDBIO()
         io.set_structure(structure)
-        io.save(aligned_structure)
-        aligned_structures.append(aligned_structure)
-
-    if save_ref_structure == True:
-        io = PDB.PDBIO()
-        ref_structure_path = os.path.join(out_dir, "aligned_structure_0.pdb")
-        io.set_structure(aligned_structures[0])
-        io.save(ref_structure_path)
+        aligned_structures.append(structure)
 
     return aligned_structures
 
