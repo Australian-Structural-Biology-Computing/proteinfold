@@ -8,15 +8,17 @@ process GENERATE_REPORT {
         'community.wave.seqera.io/library/biopython_matplotlib_pip_plotly:35975fa0fc54b2d3' }"
 
     input:
-    tuple val(meta), path(pdb)
+    tuple val(meta_pdb), path(pdb)
+    tuple val(meta_plddt), path(plddt)
     tuple val(meta_msa), path(msa)
+    tuple val(meta_paes), path(paes)
     val(output_type)
     path(template)
 
     output:
     tuple val(meta), path ("*report.html")     , emit: report
     tuple val(meta), path ("*seq_coverage.png"), optional: true, emit: sequence_coverage
-    tuple val(meta), path ("*_LDDT.html")      , emit: plddt
+    tuple val(meta), path ("*_LDDT.html")      , optional: true, emit: plddt_html
     path "versions.yml"                        , emit: versions
 
     when:
@@ -25,14 +27,16 @@ process GENERATE_REPORT {
     script:
     def args = task.ext.args ?: ''
 
+    // TODO: implement a --prog=${prog} where it comes from the workflow
     """
     generate_report.py \\
-        --type ${output_type} \\
-        --msa ${msa} \\
-        --pdb ${pdb.join(' ')} \\
-        --html_template ${template} \\
-        --output_dir ./ \\
         --name ${meta.id} \\
+        --output_dir ./ \\
+        --structs ${pdb} \\
+        --msa ${msa} \\
+        --paes ${paes} \\
+        --html_template ${template} \\
+        --type ${output_type} \\
         $args \\
 
     cat <<-END_VERSIONS > versions.yml
