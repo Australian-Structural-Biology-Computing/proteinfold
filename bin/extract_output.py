@@ -30,7 +30,7 @@ def extract_structs_plddt_to_tsv(id, struct_files):
         writer.writerow(["Positions"] + rank_names)
 
     res_counts = []
-    pLDDT_cols = []
+    plddt_cols = []
 
     for struct_file in struct_files:
         plddts = plddt_from_struct_b_factor(struct_file)

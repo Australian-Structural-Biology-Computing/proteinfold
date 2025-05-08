@@ -1,284 +1,172 @@
-#!/usr/bin/env python
-
-import os
-import argparse
-from matplotlib import pyplot as plt
-from collections import OrderedDict
+from utils import (
+    reset_residue_numbers,
+    sort_structures_by_rank,
+    align_structures,
+    plddt_from_struct_b_factor,
+    generate_plddt_plot,
+    generate_pae_plot,
+    generate_sequence_coverage_plot,
+)
 import base64
-import plotly.graph_objects as go
-import re
-from Bio import PDB
-from utils import pLDDT_from_struct_b_factor
-from utils import generate_plddt_plot
+import argparse
 
-def generate_output_images(msa_path, structures, name, out_dir, in_type):
-    msa = []
-    if in_type.lower() != "colabfold" and not msa_path.endswith("NO_FILE"):
-        with open(msa_path, "r") as in_file:
-            for line in in_file:
-                msa.append([int(x) for x in line.strip().split()])
+# TODO: Barcelona team to implement AF3, others
+prog_name_mapping = {
+    "proteinfold": "ProteinFold",
+    "alphafold2": "AlphaFold2",
+    "esmfold": "ESMFold",
+    "colabfold": "ColabFold",
+    "rosettafold-all-atom": "RoseTTAFold-All-Atom",
+    "helixfold3": "HelixFold3",
+    "boltz1": "Boltz1",
+}
 
-        seqid = []
-        for sequence in msa:
-            matches = [
-                1.0 if first == other else 0.0 for first, other in zip(msa[0], sequence)
-            ]
-            seqid.append(sum(matches) / len(matches))
+def generate_report(name, out_dir, structures, num_structs_limit=5, msa_files=None, pae_files=None, prog="ProteinFold", type="standard", html_template=None, write_htmls=True, seq_cov_as_html=False):
 
-        seqid_sort = sorted(range(len(seqid)), key=seqid.__getitem__)
+    if prog == "esmfold":
+        for structure in structures:
+            structure = reset_residue_numbers(structure)
 
-        non_gaps = []
-        for sequence in msa:
-            non_gaps.append(
-                [float(num != 21) if num != 21 else float("nan") for num in sequence]
+    # Sort structures by name and limit to set set number
+    if len(structures) > num_structs_limit:
+        print(f"Warning: More than {num_structs_limit} structures provided. Sorting and using only the first {num_structs_limit} structures.")
+        sorted_structures = sort_structures_by_rank(structures, prog)
+        structures = sorted_structures[:num_structs_limit]
+
+    # Replace structures with aligned versions
+    if type == "comparison":
+        aligned_structures = align_structures(structures, save_ref_structure=True)
+        structures = aligned_structures
+
+    # Keeping for parsing visibility purposes
+    print("Structures:", structures)
+
+    #TODO: should really use a proper HTML parser for this, like BeautifulSoup or html5lib. strings prone to failure
+    #However, most replacements are simple and this is faster
+    template = open(html_template, "r").read()
+    template = template.replace("*sample_name*", name)
+    template = template.replace("*prog_name*", prog_name_mapping[prog])
+
+    lddt_averages = []
+    for structure in structures:
+        lddt_averages.append(round(plddt_from_struct_b_factor(structure).mean(), 2))
+    averages_js_array = f"const LDDT_AVERAGES = {lddt_averages};"
+    template = template.replace("const LDDT_AVERAGES = [];", averages_js_array)
+
+    # Populate MODELS into the HTML templat
+    rank_names = [f"Rank {idx+1}" for idx, _ in enumerate(structures)]
+    model_names_js = ("const MODELS = [" + ",\n".join([f'"{model}"' for model in rank_names]) + "];")
+    template = template.replace("const MODELS = [];", model_names_js)
+
+    # Populate MODELS_DATA with the content of the PDB files
+    # TODO: If the .cif string is written as a literal in the report, will it still render? Probably, not be see the logic
+    pdb_strings = [open(structure, "r").read().replace("\n", "\\n") for structure in structures]
+    models_data = ",\n".join([f'"{pdb_string}"' for pdb_string in pdb_strings])
+    models_data_js = f"const MODELS_DATA = [{models_data}];"
+    template = template.replace("const MODELS_DATA = [];", models_data_js)
+
+    # Generate sequence coverage plots and convert to HTML
+    if msa_files:
+        for msa_file in msa_files:
+            seq_cov_fig, seq_cov_img_path = generate_sequence_coverage_plot(msa_file, out_dir, name, save_image=True)
+            seq_cov_img_encoded = base64.b64encode(open(seq_cov_img_path, "rb").read()).decode("utf-8")
+            seq_cov_img_tag = f'<img src="data:image/png;base64,{seq_cov_img_encoded}" alt="Sequence Coverage Image">'
+
+            seq_cov_html = seq_cov_fig.to_html(
+                full_html=False,
+                include_plotlyjs="cdn",
+                config={"displayModeBar": True, "displaylogo": False, "scrollZoom": True},
             )
+    if seq_cov_as_html == True:
+        template = template.replace('<div id="seq_cov_placeholder"></div>', seq_cov_html)
+    else:
+        template = template.replace('<div id="seq_cov_placeholder"></div>', seq_cov_img_tag)
 
-        sorted_non_gaps = [non_gaps[i] for i in seqid_sort]
-        final = []
-        for sorted_seq, identity in zip(
-            sorted_non_gaps, [seqid[i] for i in seqid_sort]
-        ):
-            final.append(
-                [
-                    value * identity if not isinstance(value, str) else value
-                    for value in sorted_seq
-                ]
-            )
-
-        # ##################################################################
-        plt.figure(figsize=(14, 14), dpi=100)
-        # ##################################################################
-        plt.title("Sequence coverage", fontsize=30, pad=36)
-        plt.imshow(
-            final,
-            interpolation="nearest",
-            aspect="auto",
-            cmap="rainbow_r",
-            vmin=0,
-            vmax=1,
-            origin="lower",
-        )
-
-        column_counts = [0] * len(msa[0])
-        for col in range(len(msa[0])):
-            for row in msa:
-                if row[col] != 21:
-
-                    column_counts[col] += 1
-
-        plt.plot(column_counts, color="black")
-        plt.xlim(-0.5, len(msa[0]) - 0.5)
-        plt.ylim(-0.5, len(msa) - 0.5)
-
-        plt.tick_params(axis="both", which="both", labelsize=18)
-
-        cbar = plt.colorbar()
-        cbar.set_label("Sequence identity to query", fontsize=24, labelpad=24)
-        cbar.ax.tick_params(labelsize=18)
-        plt.xlabel("Positions", fontsize=24, labelpad=24)
-        plt.ylabel("Sequences", fontsize=24, labelpad=36)
-        plt.savefig(f"{out_dir}/{name+('_' if name else '')}seq_coverage.png")
-
-        # ##################################################################
-
-    fig = generate_plddt_plot(structures)
-    html_content = fig.to_html(
+    # Generate the pLDDT plot and convert to HTML
+    plddt_fig = generate_plddt_plot(structures)
+    plddt_html = plddt_fig.to_html(
         full_html=False,
         include_plotlyjs="cdn",
         config={"displayModeBar": True, "displaylogo": False, "scrollZoom": True},
     )
+    template = template.replace('<div id="lddt_placeholder"></div>', plddt_html)
 
-    with open(
-        f"{out_dir}/{name+('_' if name else '')}coverage_LDDT.html", "w"
-    ) as out_file:
-        out_file.write(html_content)
-
-
-def generate_plots(msa_path, plddt_paths, name, out_dir):
-    msa = []
-    with open(msa_path, "r") as in_file:
-        for line in in_file:
-            msa.append([int(x) for x in line.strip().split()])
-
-    seqid = []
-    for sequence in msa:
-        matches = [
-            1.0 if first == other else 0.0 for first, other in zip(msa[0], sequence)
-        ]
-        seqid.append(sum(matches) / len(matches))
-
-    seqid_sort = sorted(range(len(seqid)), key=seqid.__getitem__)
-
-    non_gaps = []
-    for sequence in msa:
-        non_gaps.append(
-            [float(num != 21) if num != 21 else float("nan") for num in sequence]
+   #Generate PAE plot and conver to HTML TODO: currently onlt the first
+    if pae_files:
+        pae_figs = []
+        for pae_file in pae_files:
+            # TODO: ensure PAE files are sorted and limited to num_structs_limit
+            pae_figs.append(generate_pae_plot(pae_file, out_dir, name, save_image=True))
+        pae_html = pae_figs[0].to_html(
+            full_html=False,
+            include_plotlyjs="cdn",
+            config={"displayModeBar": True, "displaylogo": False, "scrollZoom": True},
         )
+        template = template.replace('<div id="pae_placeholder"></div>', pae_html)
+    # TODO: need logic to keep PAEs in sync with structure upon click
+    # TODO: look at the Sequence coverage approach (e.g. ESMFold has none)
+    else:
+        pass
+        # TODO: Remove the PAE div if no PAE files are provided.
+        # The below approach will remove the div but needs dynamic resizing in the report
+        # pae_section_text = """
+        # <div id="pae-title" class="text-4xl font-bold tracking-tight mb-6">PAE</div>
+        # <div class="p-6 bg-white shadow-md rounded">
+        #   <div id="pae_container" class="w-[660px] min-h-[600px] flex justify-center items-center mx-auto">
+            # <div id="pae_placeholder"></div>
+        #   </div>
+        # </div>
+        # """
+        # template = template.replace(pae_section_text.strip(), "")
 
-    sorted_non_gaps = [non_gaps[i] for i in seqid_sort]
-    final = []
-    for sorted_seq, identity in zip(sorted_non_gaps, [seqid[i] for i in seqid_sort]):
-        final.append(
-            [
-                value * identity if not isinstance(value, str) else value
-                for value in sorted_seq
-            ]
-        )
+    if write_htmls:
+        with open(f"{out_dir}/{name}_coverage_pLDDT.html", "w") as out_file:
+            out_file.write(plddt_html)
+        with open(f"{out_dir}/{name}_coverage_MSA.html", "w") as out_file:
+            out_file.write(seq_cov_html)
 
-    # Plotting Sequence Coverage using Plotly
-    fig = go.Figure()
-    fig.add_trace(
-        go.Heatmap(
-            z=final,
-            colorscale="Rainbow",
-            zmin=0,
-            zmax=1,
-        )
-    )
-    fig.update_layout(
-        title="Sequence coverage", xaxis_title="Positions", yaxis_title="Sequences"
-    )
-    # Save as interactive HTML instead of an image
-    fig.savefig(f"{out_dir}/{name+('_' if name else '')}seq_coverage.png")
+    # Write the final HTML report
+    with open(f"{out_dir}/{name}_{type}_report.html", "w") as out_file:
+        out_file.write(template)
 
-    # Save pLDDT plot
-    fig = generate_plddt_plot(structures)
-    fig.savefig(f"{out_dir}/{name+('_' if name else '')}coverage_LDDT_{idx}.png")
+def main():
+    parser = argparse.ArgumentParser(description="Generate protein structure reports.")
+    parser.add_argument("--name", required=True, help="Name of the report.")
+    parser.add_argument("--output_dir", required=True, help="Output directory for the report.")
+    parser.add_argument("--structs", required=True, nargs="+", help="List of structure file paths.")
+    parser.add_argument("--msa", nargs="+", default=None, help="List of MSA file paths (optional).")
+    parser.add_argument("--pae", nargs="+", default=None, help="List of PAE file paths (optional).")
+    parser.add_argument("--prog", default="proteinfold", choices=["alphafold2", "esmfold", "colabfold", "rosettafold-all-atom", "helixfold3", "boltz1"], type=str.lower, help="The program used to generate the structures, can be called in the workflow")
+    parser.add_argument("--type", default="standard", choices=["standard", "comparison"], help="The type of report file generated .") # TODO: change to --type with options in case there are other reports
+    #TODO: remove --html_template as this is already determined by the type
+    parser.add_argument("--html_template", default=None, help="Path to the HTML template for comparison (optional).")
+    parser.add_argument("--write_htmls", default=True, help="Write out seperate files for each html plot (optional).")
 
-def align_structures(structures):
-    parser = PDB.PDBParser(QUIET=True)
-    structures = [
-        parser.get_structure(f"Structure_{i}", pdb) for i, pdb in enumerate(structures)
-    ]
-    ref_structure = structures[0]
+    args = parser.parse_args()
 
-    common_atoms = set(
-        f"{atom.get_parent().get_id()[1]}-{atom.name}"
-        for atom in ref_structure.get_atoms()
-    )
-    for i, structure in enumerate(structures[1:], start=1):
-        common_atoms = common_atoms.intersection(
-            set(
-                f"{atom.get_parent().get_id()[1]}-{atom.name}"
-                for atom in structure.get_atoms()
-            )
-        )
+    print("Generating report.....")
 
-    ref_atoms = [
-        atom
-        for atom in ref_structure.get_atoms()
-        if f"{atom.get_parent().get_id()[1]}-{atom.name}" in common_atoms
-    ]
-    # print(ref_atoms)
-    super_imposer = PDB.Superimposer()
-    aligned_structures = [structures[0]]  # Include the reference structure in the list
+    # TODO: want a better way of pathing this
+    if args.type == "comparison":
+        html_template = "../.../assets/comparison_template.html"
+    elif args.type == "standard":
+        html_template = "../../assets/report_template.html"
+    else:
+        html_template = args.html_template
 
-    for i, structure in enumerate(structures[1:], start=1):
-        target_atoms = [
-            atom
-            for atom in structure.get_atoms()
-            if f"{atom.get_parent().get_id()[1]}-{atom.name}" in common_atoms
-        ]
-
-        super_imposer.set_atoms(ref_atoms, target_atoms)
-        super_imposer.apply(structure.get_atoms())
-
-        aligned_structure = f"aligned_structure_{i}.pdb"
-        io = PDB.PDBIO()
-        io.set_structure(structure)
-        io.save(aligned_structure)
-        aligned_structures.append(aligned_structure)
-
-    return aligned_structures
-
-print("Starting...")
-
-version = "1.0.0"
-model_name = {
-    "esmfold": "ESMFold",
-    "alphafold2": "AlphaFold2",
-    "colabfold": "ColabFold",
-    "rosettafold_all_atom": "Rosettafold_All_Atom",
-    "helixfold3": "HelixFold3"
-}
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--type", dest="in_type")
-parser.add_argument("--msa", dest="msa", default="NO_FILE")
-parser.add_argument("--structs", dest="structs", required=True, nargs="+")
-parser.add_argument("--name", dest="name")
-parser.add_argument("--output_dir", dest="output_dir")
-parser.add_argument("--html_template", dest="html_template")
-parser.add_argument("--version", action="version", version=f"{version}")
-parser.set_defaults(output_dir="")
-parser.set_defaults(in_type="esmfold")
-parser.set_defaults(name="")
-args = parser.parse_args()
-
-generate_output_images(args.msa, args.structs, args.name, args.output_dir, args.in_type)
-
-print("generating html report...")
-structures = args.structs
-structures.sort()
-aligned_structures = align_structures(structures)
-
-io = PDB.PDBIO()
-ref_structure_path = "aligned_structure_0.pdb"
-io.set_structure(aligned_structures[0])
-io.save(ref_structure_path)
-aligned_structures[0] = ref_structure_path
-
-proteinfold_template = open(args.html_template, "r").read()
-proteinfold_template = proteinfold_template.replace("*sample_name*", args.name)
-proteinfold_template = proteinfold_template.replace(
-    "*prog_name*", model_name[args.in_type.lower()]
-)
-
-args_pdb_array_js = ",\n".join([f'"{model}"' for model in structures])
-proteinfold_template = re.sub(
-    r"const MODELS = \[.*?\];",  # Match the existing MODELS array in HTML template
-    f"const MODELS = [\n  {args_pdb_array_js}\n];",  # Replace with the new array
-    proteinfold_template,
-    flags=re.DOTALL,
-)
-
-plddts = pLDDT_from_struct_b_factor(args.structs[0])
-
-averages_js_array = f"const LDDT_AVERAGES = { plddts.mean() };"
-proteinfold_template = proteinfold_template.replace(
-    "const LDDT_AVERAGES = [];", averages_js_array
-)
-
-for idx, structure in enumerate(aligned_structures):
-    proteinfold_template = proteinfold_template.replace(
-        f"*_data_ranked_{idx}.pdb*", open(structure, "r").read().replace("\n", "\\n")
+    generate_report(
+        name=args.name,
+        out_dir=args.output_dir,
+        structures=args.structs,
+        num_structs_limit=5,
+        msa_files=args.msa,
+        pae_files=args.pae,
+        prog=args.prog,
+        type=args.type,
+        html_template=html_template,
+        write_htmls=args.write_htmls,
+        seq_cov_as_html=False,
     )
 
-if not args.msa.endswith("NO_FILE"):
-    image_path = (
-        f"{args.output_dir}/{args.msa}"
-        if args.in_type.lower() == "colabfold"
-        else f"{args.output_dir}/{args.name + ('_' if args.name else '')}seq_coverage.png"
-    )
-    with open(image_path, "rb") as in_file:
-        proteinfold_template = proteinfold_template.replace(
-            "seq_coverage.png",
-            f"data:image/png;base64,{base64.b64encode(in_file.read()).decode('utf-8')}",
-        )
-else:
-    pattern = r'<div id="seq_coverage_container".*?>.*?(<!--.*?-->.*?)*?</div>\s*</div>'
-    proteinfold_template = re.sub(pattern, "", proteinfold_template, flags=re.DOTALL)
-
-with open(
-    f"{args.output_dir}/{args.name + ('_' if args.name else '')}coverage_LDDT.html",
-    "r",
-) as in_file:
-    lddt_html = in_file.read()
-    proteinfold_template = proteinfold_template.replace(
-        '<div id="lddt_placeholder"></div>', lddt_html
-    )
-
-with open(
-    f"{args.output_dir}/{args.name}_{args.in_type.lower()}_report.html", "w"
-) as out_file:
-    out_file.write(proteinfold_template)
+if __name__ == "__main__":
+    main()
