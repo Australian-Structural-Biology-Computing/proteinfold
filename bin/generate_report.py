@@ -134,8 +134,8 @@ def main():
     parser.add_argument("--name", required=True, help="Name of the report.")
     parser.add_argument("--output_dir", required=True, help="Output directory for the report.")
     parser.add_argument("--structs", required=True, nargs="+", help="List of structure file paths.")
-    parser.add_argument("--msa", nargs="+", default=None, help="List of MSA file paths (optional).")
-    parser.add_argument("--pae", nargs="+", default=None, help="List of PAE file paths (optional).")
+    parser.add_argument("--msa", nargs="+", default=None, help="MSA file path.")
+    parser.add_argument("--paes", nargs="+", default=None, help="List of PAE file paths (optional).")
     parser.add_argument("--prog", default="proteinfold", choices=["alphafold2", "esmfold", "colabfold", "rosettafold-all-atom", "helixfold3", "boltz1"], type=str.lower, help="The program used to generate the structures, can be called in the workflow")
     parser.add_argument("--type", default="standard", choices=["standard", "comparison"], help="The type of report file generated .") # TODO: change to --type with options in case there are other reports
     #TODO: remove --html_template as this is already determined by the type
@@ -160,7 +160,7 @@ def main():
         structures=args.structs,
         num_structs_limit=5,
         msa_files=args.msa,
-        pae_files=args.pae,
+        pae_files=args.paes,
         prog=args.prog,
         type=args.type,
         html_template=html_template,
