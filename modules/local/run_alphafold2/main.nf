@@ -25,10 +25,12 @@ process RUN_ALPHAFOLD2 {
 
     output:
     path ("${fasta.baseName}*")
-    tuple val(meta), path ("${meta.id}_alphafold2.pdb")   , emit: top_ranked_pdb
-    tuple val(meta), path ("${fasta.baseName}/ranked*pdb"), emit: pdb
-    tuple val(meta), path ("${fasta.baseName}/*_msa.tsv") , emit: msa
-    tuple val(meta), path ("*_mqc.tsv")                   , emit: multiqc
+    tuple val(meta), path ("${meta.id}_alphafold2.pdb")              , emit: top_ranked_pdb
+    tuple val(meta), path ("${fasta.baseName}/ranked*.pdb")          , emit: pdb
+    tuple val(meta), path ("${fasta.baseName}/${meta.id}_plddt.tsv") , emit: plddt
+    tuple val(meta), path ("${fasta.baseName}/${meta.id}_msa.tsv")   , emit: msa
+    // TODO: alphafold2_model_preset == "monomer" the pae file won't exist. Performance loss tiny for insight
+    tuple val(meta), path ("${fasta.baseName}/${meta.id}_*_pae.tsv")   , emit: paes
     path "versions.yml", emit: versions
 
     when:
@@ -68,9 +70,9 @@ process RUN_ALPHAFOLD2 {
     cp "${fasta.baseName}"/ranked_0.pdb ./"${meta.id}"_alphafold2.pdb
     cd "${fasta.baseName}"
 
-    extract_output.py --name ${meta.id} \\
+    extract_metrics.py --name ${meta.id} \\
         --pkls features.pkl \\
-        --structs *.pdb
+        --structs ranked*.pdb
 
     cd ..
 
@@ -82,15 +84,16 @@ process RUN_ALPHAFOLD2 {
 
     stub:
     """
-    touch ./"${meta.id}"_alphafold2.pdb
-    touch ./"${meta.id}"_mqc.tsv
     mkdir "${fasta.baseName}"
+    touch "${fasta.baseName}/${meta.id}_alphafold2.pdb"
+    touch "${fasta.baseName}/${meta.id}_plddt.tsv"
+    touch "${fasta.baseName}/${meta.id}_msa.tsv"
+    touch "${fasta.baseName}/${meta.id}_0_pae.tsv"
     touch "${fasta.baseName}/ranked_0.pdb"
     touch "${fasta.baseName}/ranked_1.pdb"
     touch "${fasta.baseName}/ranked_2.pdb"
     touch "${fasta.baseName}/ranked_3.pdb"
     touch "${fasta.baseName}/ranked_4.pdb"
-    touch "${fasta.baseName}/${fasta.baseName}_msa.tsv"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

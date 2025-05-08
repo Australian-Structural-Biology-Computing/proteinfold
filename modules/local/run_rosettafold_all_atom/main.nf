@@ -16,7 +16,9 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
 
     output:
     tuple val(meta), path ("${meta.id}_rosettafold_all_atom.pdb"), emit: pdb
-    tuple val(meta), path ("*_mqc.tsv")                          , emit: multiqc
+    tuple val(meta), path ("${meta.id}_plddt.tsv")               , emit: plddt
+    tuple val(meta), path ("${meta.id}_msa.tsv")                 , emit: msa
+    tuple val(meta), path ("${meta.id}_*_pae.tsv")               , emit: paes
     path "versions.yml"                                          , emit: versions
 
     when:
@@ -42,8 +44,9 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
     cp "${fasta.baseName}".pdb ./"${meta.id}"_rosettafold_all_atom.pdb
 
     extract_output.py --name ${meta.id} \\
+        --structs "${meta.id}_rosettafold_all_atom.pdb" \\
         --a3ms "${fasta.baseName}/A/t000_.msa0.a3m" \\
-        --structs "${meta.id}_rosettafold_all_atom.pdb"
+        --pts ${meta.id}_aux.pt
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -53,14 +56,13 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
 
     stub:
     """
-    touch ./"${meta.id}"_rosettafold_all_atom.pdb
-    touch ./"${meta.id}"_plddt_mqc.tsv
-    touch ./"${meta.id}"_aux.pt
-    touch ./"${meta.id}".pdb
-    touch ./header.tsv
-    touch ./plddt.tsv
-    mkdir ./outputs
-    mkdir ./"${meta.id}"
+    touch "${meta.id}"_rosettafold_all_atom.pdb"
+    touch "${meta.id}".pdb"
+    touch "${meta.id}"_aux.pt"
+    touch "${meta.id}"_plddt.tsv"
+    touch "${meta.id}"_msa.tsv"
+    touch "${meta.id}"_0_pae.tsv"
+    mkdir "${meta.id}"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

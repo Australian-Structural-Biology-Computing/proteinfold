@@ -21,15 +21,18 @@ process RUN_ALPHAFOLD2_PRED {
     path ('uniref90/*')
     path ('pdb_seqres/*')
     path ('uniprot/*')
-    tuple val(meta2), path(msa)
+    tuple val(meta2), path(features)
 
     output:
     path ("${fasta.baseName}*")
-    tuple val(meta), path ("${meta.id}_alphafold2.pdb")   , emit: top_ranked_pdb
-    tuple val(meta), path ("${fasta.baseName}/ranked*pdb"), emit: pdb
-    tuple val(meta), path ("*_msa.tsv")                   , emit: msa
-    tuple val(meta), path ("*_mqc.tsv")                   , emit: multiqc
-    path "versions.yml"                                   , emit: versions
+    tuple val(meta), path ("${meta.id}_alphafold2.pdb")              , emit: top_ranked_pdb
+    tuple val(meta), path ("${fasta.baseName}/ranked*.pdb")          , emit: pdb
+    tuple val(meta), path ("${fasta.baseName}/${meta.id}_plddt.tsv") , emit: plddt
+    tuple val(meta), path ("${fasta.baseName}/${meta.id}_msa.tsv")   , emit: msa
+    // TODO: alphafold2_model_preset == "monomer" the pae file won't exist, recommend running monomer_ptm by default. Performance loss tiny for insight
+    // TODO: handle by passing 5 NO_FILE s
+    tuple val(meta), path ("${fasta.baseName}/${meta.id}_*_pae.tsv") , emit: paes
+    path "versions.yml"                                              , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -47,15 +50,17 @@ process RUN_ALPHAFOLD2_PRED {
         --model_preset=${alphafold2_model_preset} \
         --output_dir=\$PWD \
         --data_dir=\$PWD \
-        --msa_path=${msa} \
+        --msa_path=${features} \
         $args
 
     cp "${fasta.baseName}"/ranked_0.pdb ./"${meta.id}"_alphafold2.pdb
     cd "${fasta.baseName}"
-   
-    extract_output.py --name ${meta.id} \\
-        --pkls ${msa} \\
-        --structs *.pdb 
+
+    extract_metrics.py --name ${meta.id} \\
+        --structs *.pdb \\
+        --pkls ${features} \\
+
+    cd ..
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -66,14 +71,15 @@ process RUN_ALPHAFOLD2_PRED {
     stub:
     """
     touch ./"${meta.id}"_alphafold2.pdb
-    touch ./"${meta.id}"_mqc.tsv
+    touch ./"${meta.id}"_plddt.tsv
+    touch ./${meta.id}_msa.tsv
+    touch ./${meta.id}_0_pae.tsv
     mkdir "${fasta.baseName}"
     touch "${fasta.baseName}/ranked_0.pdb"
     touch "${fasta.baseName}/ranked_1.pdb"
     touch "${fasta.baseName}/ranked_2.pdb"
     touch "${fasta.baseName}/ranked_3.pdb"
     touch "${fasta.baseName}/ranked_4.pdb"
-    touch ${meta.id}_msa.tsv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

@@ -26,7 +26,10 @@ process RUN_HELIXFOLD3 {
     path ("${meta.id}*")
     tuple val(meta), path ("${meta.id}_helixfold3.pdb") , emit: top_ranked_pdb
     tuple val(meta), path ("${meta.id}/ranked*pdb")     , emit: pdb
-    tuple val(meta), path ("*_mqc.tsv")                 , emit: multiqc
+    tuple val(meta), path ("${meta.id}_plddt.tsv")      , emit: plddt
+    tuple val(meta), path ("${meta.id}_msa.tsv")        , emit: msa
+    // If ${meta.id}-rank*/all_results.json" doesn't have pae this will be blank
+    tuple val(meta), path ("${meta.id}_*_pae.tsv")      , emit: paes
     tuple val(meta), path ("${meta.id}_helixfold3.cif") , emit: main_cif
     path ("versions.yml")                               , emit: versions
 
@@ -68,8 +71,9 @@ process RUN_HELIXFOLD3 {
     cp "${meta.id}"/"${meta.id}"-rank1/predicted_structure.pdb ./"${meta.id}"_helixfold3.pdb
 
     extract_output.py --name ${meta.id} \\
+      --structs "${meta.id}"/"${meta.id}"-rank*/predicted_structure.pdb \\
       --pkls "${meta.id}/final_features.pkl" \\
-      --structs "${meta.id}"/"${meta.id}"-rank*/predicted_structure.pdb
+      --jsons "${meta.id}-rank*/all_results.json"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -81,7 +85,9 @@ process RUN_HELIXFOLD3 {
     """
     touch ./"${meta.id}"_helixfold3.cif
     touch ./"${meta.id}"_helixfold3.pdb
-    touch ./"${meta.id}"_plddt_mqc.tsv
+    touch ./"${meta.id}"_plddt.tsv
+    touch ./"${meta.id}"_msa.tsv
+    touch ./"${meta.id}"_0_pae.tsv
     mkdir ./"${meta.id}"
     touch "${meta.id}/ranked_1.pdb"
     touch "${meta.id}/ranked_2.pdb"

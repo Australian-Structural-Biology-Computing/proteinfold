@@ -11,7 +11,11 @@ process RUN_ESMFOLD {
 
     output:
     tuple val(meta), path ("${meta.id}_esmfold.pdb")  , emit: pdb
-    tuple val(meta), path ("${meta.id}_plddt_mqc.tsv"), emit: multiqc
+    tuple val(meta), path ("${meta.id}_plddt.tsv")    , emit: plddt
+    // No MSA information in ESMFold
+    // PAE from ESMFold is an absolute pain to retrieve, skipping.
+    // https://github.com/facebookresearch/esm/issues/582
+    // TODO: pass NO_FILE for both MSA and PAE
     path "versions.yml"                               , emit: versions
 
     when:
@@ -32,12 +36,11 @@ process RUN_ESMFOLD {
         -m \$PWD \
         --num-recycles ${numRec} \
         $args
-  
-    mv  *.pdb tmp.pdb  
-    mv  tmp.pdb ${meta.id}_esmfold.pdb  
 
-    extract_output.py --name ${meta.id} \\
-      --pkls features.pkl \\
+    // Only one .pdb per ESMFold run
+    mv  *.pdb ${meta.id}_esmfold.pdb
+
+    extract_metrics.py --name ${meta.id} \\
       --structs *.pdb
 
     cat <<-END_VERSIONS > versions.yml
@@ -50,7 +53,7 @@ process RUN_ESMFOLD {
     def VERSION = '1.0.3' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     """
     touch ./${meta.id}_esmfold.pdb
-    touch ./${meta.id}_plddt_mqc.tsv
+    touch ./${meta.id}_plddt.tsv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

@@ -15,8 +15,11 @@ process COLABFOLD_BATCH {
     output:
     tuple val(meta), path ("${meta.id}_colabfold.pdb"), emit: top_ranked_pdb
     tuple val(meta), path ("*_relaxed_rank_*.pdb")    , emit: pdb
-    tuple val(meta), path ("*_coverage.png")          , emit: msa
-    tuple val(meta), path ("*_mqc.png")               , emit: multiqc
+    tuple val(meta), path ("${meta.id}_plddt.tsv")    , emit: plddt
+    tuple val(meta), path ("${meta.id}_msa.tsv")      , emit: msa
+    tuple val(meta), path ("${meta.id}_*_pae.tsv")    , emit: paes
+    tuple val(meta), path ("*_plddt.png")             , emit: plddt_img
+    tuple val(meta), path ("*_coverage.png")          , emit: msa_img
     path "versions.yml"                               , emit: versions
 
     when:
@@ -40,8 +43,13 @@ process COLABFOLD_BATCH {
         ${fasta} \\
         \$PWD
     for i in `find *_relaxed_rank_001*.pdb`; do cp \$i `echo \$i | sed "s|_relaxed_rank_|\t|g" | cut -f1`"_colabfold.pdb"; done
-    for i in `find *.png -maxdepth 0`; do cp \$i \${i%'.png'}_mqc.png; done
+    for i in `find *.png -maxdepth 0`; do cp \$i \${i%'.png'}_plddt.png; done
     cp *_relaxed_rank_001*.pdb ${meta.id}_colabfold.pdb
+
+    extract_metrics.py  --name ${meta.id} \\
+        --structs ${meta.id}_colabfold.pdb \\
+        --a3ms  ${meta.id}/${meta.id}.a3m \\
+        --jsons ${meta.id}/${meta.id}_scores_rank_*_alphafold2_ptm_model_*_seed_*.json
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -52,13 +60,17 @@ process COLABFOLD_BATCH {
     stub:
     def VERSION = '1.5.2' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     """
-    touch ./"${meta.id}"_colabfold.pdb
-    touch ./"${meta.id}"_mqc.png
-    touch ./${meta.id}_relaxed_rank_01.pdb
-    touch ./${meta.id}_relaxed_rank_02.pdb
-    touch ./${meta.id}_relaxed_rank_03.pdb
-    touch ./${meta.id}_coverage.png
-    touch ./${meta.id}_scores_rank.json
+    touch "${meta.id}_colabfold.pdb"
+    touch "${meta.id}_plddt.png"
+    touch "${meta.id}_coverage.png"
+    touch "${meta.id}_plddt.tsv"
+    touch "${meta.id}_msa.tsv"
+    touch "${meta.id}_0_pae.tsv"
+    touch "${meta.id}_relaxed_rank_01.pdb"
+    touch "${meta.id}_relaxed_rank_01.pdb"
+    touch "${meta.id}_relaxed_rank_02.pdb"
+    touch "${meta.id}_relaxed_rank_03.pdb"
+    touch "${meta.id}_scores_rank.json"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
