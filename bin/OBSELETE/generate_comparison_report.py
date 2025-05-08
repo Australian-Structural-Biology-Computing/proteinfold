@@ -146,7 +146,6 @@ def align_structures(structures):
         for atom in ref_structure.get_atoms()
         if f"{atom.get_parent().get_id()[1]}-{atom.name}" in common_atoms
     ]
-    # print(ref_atoms)
     super_imposer = PDB.Superimposer()
     aligned_structures = [structures[0]]  # Include the reference structure in the list
 
@@ -168,6 +167,56 @@ def align_structures(structures):
 
     return aligned_structures
 
+<<<<<<< HEAD:bin/OBSELETE/generate_comparison_report.py
+=======
+def pdb_to_lddt(struct_files, generate_tsv):
+    output_lddt = []
+    averages = []
+
+    for struct_file in struct_files:
+        plddt_values = []
+
+        if struct_file.endswith('.pdb'):
+            parser = PDB.PDBParser(QUIET=True)
+            suffix = ".pdb"
+        elif struct_file.endswith('.cif'):
+            parser = PDB.MMCIFParser(QUIET=True)
+            suffix = ".cif"
+        else:
+            raise NotImplementedError("Reporting only supported for .pdb and .cif filetypes")
+
+        structure = parser.get_structure("", struct_file)
+
+        for residue in structure.get_residues():
+            res_pLDDT_tot = 0
+            res_atom_count = 0
+
+            for atom in residue.get_atoms():
+                res_atom_count +=1
+                res_pLDDT_tot += atom.get_bfactor()
+
+            plddt_values.append(res_pLDDT_tot/res_atom_count) #residue-level mean for ESMfold atom-level pLDDT
+
+        # Calculate the average PLDDT value for the current file
+        if plddt_values:
+            avg_plddt = sum(plddt_values) / len(plddt_values)
+            averages.append(round(avg_plddt, 3))
+        else:
+            averages.append(0.0)
+
+        if generate_tsv == "y":
+            output_file = f"{pdb_file.replace('.pdb', '')}_plddt.tsv"
+            with open(output_file, "w") as outfile:
+                outfile.write(" ".join(map(str, plddt_values)) + "\n")
+            output_lddt.append(output_file)
+        else:
+            plddt_values_string = " ".join(map(str, plddt_values))
+            output_lddt.append(plddt_values_string)
+
+    return output_lddt, averages
+
+
+>>>>>>> 1b1feed197203a20a5dbb68401b957e01aabd1fa:bin/generate_comparison_report.py
 print("Starting...")
 
 version = "1.0.0"
@@ -190,10 +239,6 @@ lddt_averages = lddt_data.mean()
 generate_output(args.name, args.output_dir, args.structs)
 
 print("generating html report...")
-
-# structures = args.pdb
-# # structures.sort()
-# aligned_structures = align_structures(structures)
 
 # Preprocess "esmfold" PDB files, to reset residues on additional chains
 processed_pdbs = [
@@ -224,18 +269,29 @@ args_pdb_array_js = (
 alphafold_template = alphafold_template.replace("const MODELS = [];", args_pdb_array_js)
 
 seq_cov_imgs = []
-for item in args.msa:
-    if item != "NO_FILE":
-        image_path = item
+seq_cov_methods = []
+for msa, pdb in zip(args.msa, args.pdb):
+    if msa != "NO_FILE":
+        image_path = msa
+        method = pdb.split(".pdb")[0]
+        seq_cov_methods.append(method)
         with open(image_path, "rb") as in_file:
             encoded_image = base64.b64encode(in_file.read()).decode("utf-8")
             seq_cov_imgs.append(f"data:image/png;base64,{encoded_image}")
 
+#MSA IMAGES
 args_msa_array_js = (
     f"""const SEQ_COV_IMGS = [{", ".join([f'"{img}"' for img in seq_cov_imgs])}];"""
 )
 alphafold_template = alphafold_template.replace(
     "const SEQ_COV_IMGS = [];", args_msa_array_js
+)
+#MSA IMAGE LABELS
+args_msa_method_array_js = (
+    f"""const SEQ_COV_METHODS = [{", ".join([f'"{method}"' for method in seq_cov_methods])}];"""
+)
+alphafold_template = alphafold_template.replace(
+    "const SEQ_COV_METHODS = [];", args_msa_method_array_js
 )
 
 averages_js_array = f"const LDDT_AVERAGES = {lddt_averages};"
