@@ -36,6 +36,11 @@ workflow COLABFOLD {
 
     main:
     ch_multiqc_report = Channel.empty()
+    ch_top_ranked_pdb = Channel.empty()
+    ch_pdb            = Channel.empty()
+    ch_plddt          = Channel.empty()
+    ch_msa            = Channel.empty()
+    ch_paes           = Channel.empty()
 
     if (params.colabfold_server == 'webserver') {
         //
@@ -122,17 +127,7 @@ workflow COLABFOLD {
 
     COLABFOLD_BATCH
         .out
-        .pdb
-        .join(COLABFOLD_BATCH.out.msa)
-        .map {
-            it[0]["model"] = "colabfold"
-            it
-        }
-        .set { ch_pdb_msa }
-
-    COLABFOLD_BATCH
-        .out
-        .multiqc
+        .plddt
         .map { it[1] }
         .toSortedList()
         .map { [ [ "model":"colabfold"], it.flatten() ] }
@@ -140,16 +135,19 @@ workflow COLABFOLD {
 
     COLABFOLD_BATCH
         .out
-        .multiqc
+        .plddt
 
     COLABFOLD_BATCH
         .out
-        .multiqc
+        .plddt
         .collect()
 
     emit:
     top_ranked_pdb = ch_top_ranked_pdb // channel: [ id, /path/to/*.pdb ]
-    pdb_msa        = ch_pdb_msa        // channel: [ meta, /path/to/*.pdb, /path/to/*_coverage.png ]
+    pdb            = ch_pdb        
+    plddt          = ch_plddt        
+    msa            = ch_msa        
+    paes           = ch_paes    
     multiqc_report = ch_multiqc_report // channel: /path/to/multiqc_report.html
     versions       = ch_versions       // channel: [ path(versions.yml) ]
 }

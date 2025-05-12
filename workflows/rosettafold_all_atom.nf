@@ -31,10 +31,14 @@ workflow ROSETTAFOLD_ALL_ATOM {
     ch_pdb100               // channel: path(pdb100)
     ch_rfaa_paper_weights   // channel: path(rfaa_paper_weightsch_dummy_file           // channel: path(NO_file)
     ch_dummy_file           // channel: path(NO_FILE)
+
     main:
     ch_multiqc_files  = Channel.empty()
     ch_top_ranked_pdb = Channel.empty()
+    ch_pdb            = Channel.empty()
+    ch_plddt          = Channel.empty()
     ch_msa            = Channel.empty()
+    ch_paes           = Channel.empty()
     ch_multiqc_report = Channel.empty()
 
     RUN_ROSETTAFOLD_ALL_ATOM (
@@ -58,29 +62,18 @@ workflow ROSETTAFOLD_ALL_ATOM {
 
     RUN_ROSETTAFOLD_ALL_ATOM
         .out
-        .multiqc
+        .plddt
         .map { it[1] }
         .toSortedList()
         .map { [ [ "model": "rosettafold_all_atom" ], it.flatten() ] }
         .set { ch_multiqc_report }
 
-    RUN_ROSETTAFOLD_ALL_ATOM
-        .out
-        .pdb
-        .combine(ch_dummy_file)
-        .map {
-            it[0]["model"] = "rosettafold_all_atom"
-            it
-        }
-        .set { ch_pdb_msa }
-
-    ch_pdb_msa
-        .map { [ it[0]["id"], it[0], it[1], it[2] ] }
-        .set { ch_top_ranked_pdb }
-
     emit:
-    pdb_msa        = ch_pdb_msa        // channel: [ meta, /path/to/*.pdb, dummy_file ]
     top_ranked_pdb = ch_top_ranked_pdb // channel: [ id, /path/to/*.pdb ]
+    pdb            = ch_pdb        
+    plddt          = ch_plddt        
+    msa            = ch_msa        
+    paes           = ch_paes    
     multiqc_report = ch_multiqc_report // channel: /path/to/multiqc_report.html
     versions       = ch_versions       // channel: [ path(versions.yml) ]
 }

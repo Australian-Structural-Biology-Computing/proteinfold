@@ -45,9 +45,11 @@ workflow ALPHAFOLD2 {
 
     main:
     ch_multiqc_files  = Channel.empty()
-    ch_pdb            = Channel.empty()
     ch_top_ranked_pdb = Channel.empty()
+    ch_pdb            = Channel.empty()
+    ch_plddt          = Channel.empty()
     ch_msa            = Channel.empty()
+    ch_paes           = Channel.empty()
     ch_multiqc_report = Channel.empty()
 
     // TESTING: Why isn't meta set for each?
@@ -84,15 +86,17 @@ workflow ALPHAFOLD2 {
 
         RUN_ALPHAFOLD2
             .out
-            .multiqc
+            .plddt
             .map { it[1] }
             .toSortedList()
             .map { [ [ "model": "alphafold2" ], it.flatten() ] }
             .set { ch_multiqc_report }
 
-        ch_pdb            = ch_pdb.mix(RUN_ALPHAFOLD2.out.pdb)
         ch_top_ranked_pdb = ch_top_ranked_pdb.mix(RUN_ALPHAFOLD2.out.top_ranked_pdb)
+        ch_pdb            = ch_pdb.mix(RUN_ALPHAFOLD2.out.pdb)
+        ch_plddt          = ch_plddt.mix(RUN_ALPHAFOLD2.out.msa)
         ch_msa            = ch_msa.mix(RUN_ALPHAFOLD2.out.msa)
+        ch_paes           = ch_paes.mix(RUN_ALPHAFOLD2.out.paes)
         ch_versions       = ch_versions.mix(RUN_ALPHAFOLD2.out.versions)
 
     } else if (alphafold2_mode == 'split_msa_prediction') {
@@ -136,33 +140,39 @@ workflow ALPHAFOLD2 {
    
         RUN_ALPHAFOLD2_PRED
             .out
-            .multiqc
+            .plddt
             .map { it[1] }
             .toSortedList()
             .map { [ [ "model": "alphafold2" ], it.flatten() ] }
             .set { ch_multiqc_report }
-
-        ch_top_ranked_pdb = ch_top_ranked_pdb.mix(RUN_ALPHAFOLD2_PRED.out.top_ranked_pdb)
-        ch_pdb            = ch_pdb.mix(RUN_ALPHAFOLD2_PRED.out.pdb)
-        ch_msa            = ch_msa.mix(RUN_ALPHAFOLD2_PRED.out.msa)
-        ch_versions       = ch_versions.mix(RUN_ALPHAFOLD2_PRED.out.versions)
     }
 
     ch_top_ranked_pdb
         .map { [ it[0]["id"], it[0], it[1] ] }
         .set { ch_top_ranked_pdb }
 
-    ch_pdb
-        .join(ch_msa)
-        .map {
-            it[0]["model"] = "alphafold2"
-            it
-        }
-        .set { ch_pdb_msa }
+
+    ch_top_ranked_pdb = ch_top_ranked_pdb.mix(RUN_ALPHAFOLD2_PRED.out.top_ranked_pdb)
+    ch_pdb            = ch_pdb.mix(RUN_ALPHAFOLD2_PRED.out.pdb)
+    ch_plddt          = ch_plddt.mix(RUN_ALPHAFOLD2_PRED.out.msa)
+    ch_msa            = ch_msa.mix(RUN_ALPHAFOLD2_PRED.out.msa)
+    ch_paes           = ch_paes.mix(RUN_ALPHAFOLD2_PRED.out.paes)
+    ch_versions       = ch_versions.mix(RUN_ALPHAFOLD2_PRED.out.versions)
+
+    //ch_pdb
+    //    .join(ch_msa)
+    //    .map {
+    //        it[0]["model"] = "alphafold2"
+    //        it
+    //    }
+    //    .set { ch_pdb_msa }
 
     emit:
     top_ranked_pdb = ch_top_ranked_pdb // channel: [ id, /path/to/*.pdb ]
-    pdb_msa        = ch_pdb_msa        // channel: [ meta, /path/to/*.pdb, /path/to/*_coverage.png ]
+    pdb            = ch_pdb        
+    plddt          = ch_plddt        
+    msa            = ch_msa        
+    paes           = ch_paes    
     multiqc_report = ch_multiqc_report // channel: /path/to/multiqc_report.html
     versions       = ch_versions       // channel: [ path(versions.yml) ]
 }
