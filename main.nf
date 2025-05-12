@@ -75,8 +75,8 @@ workflow NFCORE_PROTEINFOLD {
     ch_esmfold_top_ranked_pdb               = Channel.empty()
     ch_rosettafold_all_atom_top_ranked_pdb  = Channel.empty()
     ch_helixfold3_top_ranked_pdb            = Channel.empty()
-    ch_multiqc                              = Channel.empty()
     ch_versions                             = Channel.empty()
+    ch_plddt                                = Channel.empty()
     ch_report_input                         = Channel.empty()
     ch_foldseek_db                          = Channel.empty()
     requested_modes                         = params.mode.toLowerCase().split(",")
@@ -140,9 +140,21 @@ workflow NFCORE_PROTEINFOLD {
             PREPARE_ALPHAFOLD2_DBS.out.uniprot
         )
         ch_alphafold_top_ranked_pdb = ALPHAFOLD2.out.top_ranked_pdb
-        ch_multiqc                  = ch_multiqc.mix(ALPHAFOLD2.out.multiqc_report.collect())
+        ch_report_input = ALPHAFOLD2.out.top_ranked_pdb
+        .combine(ALPHAFOLD2.out.pdb)
+        .combine(ALPHAFOLD2.out.plddt)
+        .combine(ALPHAFOLD2.out.msa)
+        .combine(ALPHAFOLD2.out.paes)
+        .map { top_ranked_pdb, pdb, plddt, msa, paes ->
+            [
+                pdb: pdb.path,   
+                msa: msa.path,       
+                pae: paes.path,      
+                plddt: plddt.path,  
+                mode: 'alphafold2'
+            ]
+        }
         ch_versions                 = ch_versions.mix(ALPHAFOLD2.out.versions)
-        ch_report_input             = ch_report_input.mix(ALPHAFOLD2.out.pdb_msa)
     }
 
     //
@@ -177,11 +189,22 @@ workflow NFCORE_PROTEINFOLD {
             PREPARE_COLABFOLD_DBS.out.uniref30,
             params.num_recycles_colabfold
         )
-
         ch_colabfold_top_ranked_pdb = COLABFOLD.out.top_ranked_pdb
-        ch_multiqc                  = ch_multiqc.mix(COLABFOLD.out.multiqc_report)
-        ch_versions                 = ch_versions.mix(COLABFOLD.out.versions)
-        ch_report_input             = ch_report_input.mix(COLABFOLD.out.pdb_msa)
+        ch_report_input = COLABFOLD.out.top_ranked_pdb
+        .combine(COLABFOLD.out.pdb)
+        .combine(COLABFOLD.out.plddt)
+        .combine(COLABFOLD.out.msa)
+        .combine(COLABFOLD.out.paes)
+        .map { top_ranked_pdb, pdb, plddt, msa, paes ->
+            [
+                pdb: pdb.path,   
+                msa: msa.path,       
+                pae: paes.path,      
+                plddt: plddt.path,  
+                mode: 'colabfold'
+            ]
+        }
+        ch_versions             = ch_versions.mix(COLABFOLD.out.versions)
     }
 
     //
@@ -210,11 +233,22 @@ workflow NFCORE_PROTEINFOLD {
             params.num_recycles_esmfold,
             ch_dummy_file
         )
-
         ch_esmfold_top_ranked_pdb = ESMFOLD.out.top_ranked_pdb
-        ch_multiqc                = ch_multiqc.mix(ESMFOLD.out.multiqc_report.collect())
+        ch_report_input = ESMFOLD.out.top_ranked_pdb
+        .combine(ESMFOLD.out.pdb)
+        .combine(ESMFOLD.out.plddt)
+        .combine(ESMFOLD.out.msa)
+        .combine(ESMFOLD.out.paes)
+        .map { top_ranked_pdb, pdb, plddt, msa, paes ->
+            [
+                pdb: pdb.path,   
+                msa: msa.path,       
+                pae: paes.path,      
+                plddt: plddt.path,  
+                mode: 'esmfold'
+            ]
+        }
         ch_versions               = ch_versions.mix(ESMFOLD.out.versions)
-        ch_report_input           = ch_report_input.mix(ESMFOLD.out.pdb_msa)
     }
 
     //
@@ -249,10 +283,22 @@ workflow NFCORE_PROTEINFOLD {
             PREPARE_ROSETTAFOLD_ALL_ATOM_DBS.out.rfaa_paper_weights,
             ch_dummy_file
         )
-        ch_rosettafold_all_atom_top_ranked_pdb  = ROSETTAFOLD_ALL_ATOM.out.top_ranked_pdb
-        ch_multiqc                              = ch_multiqc.mix(ROSETTAFOLD_ALL_ATOM.out.multiqc_report.collect())
+        ch_rosettafold_all_atom_top_ranked_pdb = ROSETTAFOLD_ALL_ATOM.out.top_ranked_pdb
+        ch_report_input = ROSETTAFOLD_ALL_ATOM.out.top_ranked_pdb
+        .combine(ROSETTAFOLD_ALL_ATOM.out.pdb)
+        .combine(ROSETTAFOLD_ALL_ATOM.out.plddt)
+        .combine(ROSETTAFOLD_ALL_ATOM.out.msa)
+        .combine(ROSETTAFOLD_ALL_ATOM.out.paes)
+        .map { top_ranked_pdb, pdb, plddt, msa, paes ->
+            [
+                pdb: pdb.path,   
+                msa: msa.path,       
+                pae: paes.path,      
+                plddt: plddt.path,  
+                mode: 'rosettafold_all_atom'
+            ]
+        }
         ch_versions                             = ch_versions.mix(ROSETTAFOLD_ALL_ATOM.out.versions)
-        ch_report_input                         = ch_report_input.mix(ROSETTAFOLD_ALL_ATOM.out.pdb_msa)
     }
 
     //
@@ -312,9 +358,20 @@ workflow NFCORE_PROTEINFOLD {
             PREPARE_HELIXFOLD3_DBS.out.helixfold3_maxit_src
         )
         ch_helixfold3_top_ranked_pdb = HELIXFOLD3.out.top_ranked_pdb
-        ch_multiqc                   = ch_multiqc.mix(HELIXFOLD3.out.multiqc_report.collect())
-        ch_versions                  = ch_versions.mix(HELIXFOLD3.out.versions)
-        ch_report_input              = ch_report_input.mix(HELIXFOLD3.out.pdb_msa)
+        ch_report_input = HELIXFOLD3.out.top_ranked_pdb
+        .combine(HELIXFOLD3.out.pdb)
+        .combine(HELIXFOLD3.out.plddt)
+        .combine(HELIXFOLD3.out.msa)
+        .combine(HELIXFOLD3.out.paes)
+        .map { top_ranked_pdb, pdb, plddt, msa, paes ->
+            [
+                pdb: pdb.path,   
+                msa: msa.path,       
+                pae: paes.path,      
+                plddt: plddt.path,  
+                mode: 'helixfold3'
+            ]
+        }
     }
 
     //
@@ -352,7 +409,7 @@ workflow NFCORE_PROTEINFOLD {
         params.skip_multiqc,
         params.outdir,
         ch_versions,
-        ch_multiqc,
+        ch_plddt,
         ch_multiqc_config,
         ch_multiqc_custom_config,
         ch_multiqc_logo,
@@ -365,7 +422,7 @@ workflow NFCORE_PROTEINFOLD {
     )
 
     emit:
-    multiqc_report = ch_multiqc
+    multiqc_report = ch_plddt
 }
 
 /*
