@@ -42,9 +42,11 @@ workflow HELIXFOLD3 {
 
     main:
     ch_multiqc_files  = Channel.empty()
-    ch_pdb            = Channel.empty()
     ch_top_ranked_pdb = Channel.empty()
+    ch_pdb            = Channel.empty()
+    ch_plddt          = Channel.empty()
     ch_msa            = Channel.empty()
+    ch_paes           = Channel.empty()
     ch_multiqc_report = Channel.empty()
 
     //
@@ -69,36 +71,38 @@ workflow HELIXFOLD3 {
 
     RUN_HELIXFOLD3
         .out
-        .multiqc
+        .plddt
         .map { it[1] }
         .toSortedList()
         .map { [ [ "model": "helixfold3" ], it.flatten() ] }
         .set { ch_multiqc_report }
+ 
+        ch_top_ranked_pdb = ch_top_ranked_pdb.mix(RUN_HELIXFOLD3.out.top_ranked_pdb)
+        ch_pdb            = ch_pdb.mix(RUN_HELIXFOLD3.out.pdb)
+        ch_plddt          = ch_plddt.mix(RUN_HELIXFOLD3.out.msa)
+        ch_msa            = ch_msa.mix(RUN_HELIXFOLD3.out.msa)
+        ch_paes           = ch_paes.mix(RUN_HELIXFOLD3.out.paes)
+        ch_versions       = ch_versions.mix(RUN_HELIXFOLD3.out.versions)
 
-    ch_pdb            = ch_pdb.mix(RUN_HELIXFOLD3.out.pdb)
-    ch_top_ranked_pdb = ch_top_ranked_pdb.mix(RUN_HELIXFOLD3.out.top_ranked_pdb)
-    ch_versions       = ch_versions.mix(RUN_HELIXFOLD3.out.versions)
+//  ch_pdb
+//      .join(ch_msa)
+//      .map {
+//          it[0]["model"] = "helixfold3"
+//          it
+//      }
+//      .set { ch_pdb_msa }
 
-    ch_top_ranked_pdb
-        .map { [ it[0]["id"], it[0], it[1] ] }
-        .set { ch_top_ranked_pdb }
-
-    ch_pdb
-        .join(ch_msa)
-        .map {
-            it[0]["model"] = "helixfold3"
-            it
-        }
-        .set { ch_pdb_msa }
-
-    ch_pdb_msa
-        .map { [ it[0]["id"], it[0], it[1], it[2] ] }
-        .set { ch_top_ranked_pdb }
+//  ch_pdb_msa
+//      .map { [ it[0]["id"], it[0], it[1], it[2] ] }
+//      .set { ch_top_ranked_pdb }
 
     emit:
     top_ranked_pdb = ch_top_ranked_pdb // channel: [ id, /path/to/*.pdb ]
-    pdb_msa        = ch_pdb_msa        // channel: [ meta, /path/to/*.pdb, /path/to/*_coverage.png ]
-    multiqc_report = ch_multiqc_report // channel: /path/to/multiqc_report.html
+    pdb            = ch_pdb        
+    plddt          = ch_plddt        
+    msa            = ch_msa        
+    paes           =  ch_paes
+    multiqc_report = ch_multiqc_report 
     versions       = ch_versions       // channel: [ path(versions.yml) ]
 }
 

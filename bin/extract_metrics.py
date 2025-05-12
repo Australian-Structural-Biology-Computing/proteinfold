@@ -3,7 +3,7 @@ import pickle
 import os
 import argparse
 import json
-import torch
+#import torch moved to a conditional import since too bulky import if not used
 import numpy as np
 import csv
 from utils import plddt_from_struct_b_factor
@@ -62,7 +62,7 @@ def extract_structs_plddt_to_tsv(id, structures):
     if len(set(res_counts)) != 1:
         raise ValueError("Not all structures have the same number of residues!")
 
-    rank_names = [f"rank_{i}" for i in range(len(struct_files))]
+    rank_names = [f"rank_{i}" for i in range(len(structures))]
     # Create header as the first row
     plddt_rows =  [["Positions"] + rank_names]
     res_id_col = list(range(len(plddt_cols[0])))
@@ -90,6 +90,7 @@ def read_pkl(id, pkl_files):
 
             if 'predicted_aligned_error' not in data.keys():
                 print(f"No PAE output in {pkl_file}, it was likely a monomer calculation")
+                write_tsv(f"{id}_{model_id}_pae.tsv", None))
             else:
                 write_tsv(f"{id}_{model_id}_pae.tsv", format_pae_rows(data["predicted_aligned_error"]))
 
@@ -100,14 +101,14 @@ def read_a3m(id, a3m_files):
         write_tsv(f"{id}_msa.tsv", format_msa_rows(int_seqs))
 
 def read_npz(id, npz_files):
-   for npz_file in npz_files:
+   for idx, npz_file in enumerate(npz_files):
         data = np.load(npz_file)
        #Boltz PAE files if --write_full_pae is used
         if npz_file.split('/')[-1].startswith('pae') and npz_file.endswith('.npz'):
-            write_tsv(f"{id}_pae.tsv", format_pae_rows(data["pae"]))
+            write_tsv(f"{id}_{idx}_pae.tsv", format_pae_rows(data["pae"]))
 
 def read_json(id, json_files):
-    for json_file in json_files:
+    for idx, json_file in enumerate(json_files):
         with open(json_file, 'r') as f:
             data = json.load(f)
             if json_file.endswith("_data.json"): #AF3 output with MSA info
@@ -118,7 +119,7 @@ def read_json(id, json_files):
                 write_tsv(f"{id}_msa.tsv", msa_rows)
             #AF3 output with PAE info, or HF3 PAE data. TODO: Need to make sure the workflow points to [protein]/[protein]_rank1/all_results.json
             elif "pae" in data:
-                write_tsv(f"{id}_pae.tsv", format_pae_rows(data["pae"]))
+                write_tsv(f"{id}_{idx}_pae.tsv", format_pae_rows(data["pae"]))
 
 def read_pt(id, pt_files):
     for pt_file in pt_files:
@@ -146,9 +147,10 @@ def main():
         read_a3m(args.name, args.a3ms)
     if args.npzs:
         read_npz(args.name, args.npzs)
-    if args.json:
+    if args.jsons:
         read_json(args.name, args.jsons)
-    if args.pt:
+    if args.pts:
+        import torch # moved to a conditional import since too bulky import if not used
         read_pt(args.name, args.pts)
     if args.structs:
         extract_structs_plddt_to_tsv(args.name, args.structs)

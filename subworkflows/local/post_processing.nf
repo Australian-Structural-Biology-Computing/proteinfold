@@ -46,11 +46,16 @@ workflow POST_PROCESSING {
 
     if (!skip_visualisation){
         GENERATE_REPORT(
-            ch_report_input.map { [it[0], it[1]] },
-            ch_report_input.map { [it[0], it[2]] },
-            ch_report_input.map { it[0].model },
-            ch_report_template
+        ch_report_input,
+        output_type = 'standard',
+        ch_report_template
         )
+
+//          ch_report_input.map { [it[0], it[1]] },
+//          ch_report_input.map { [it[0], it[2]] },
+//          ch_report_input.map { it[0].model },
+//          ch_report_template
+//      )
         ch_versions = ch_versions.mix(GENERATE_REPORT.out.versions)
 
         if (requested_modes_size > 1){
