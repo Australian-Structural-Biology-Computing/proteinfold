@@ -3,7 +3,7 @@ import pickle
 import os
 import argparse
 import json
-import torch
+#import torch moved to a conditional import since too bulky import if not used
 import numpy as np
 import csv
 from utils import plddt_from_struct_b_factor
@@ -149,6 +149,7 @@ def main():
     if args.json:
         read_json(args.name, args.jsons)
     if args.pt:
+       import torch # moved to a conditional import since too bulky import if not used
         read_pt(args.name, args.pts)
     if args.structs:
         extract_structs_plddt_to_tsv(args.name, args.structs)
