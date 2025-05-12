@@ -9,7 +9,8 @@ import csv
 from utils import plddt_from_struct_b_factor
 
 # TODO: add extraction of other values, iPTM, etc
-# TODO: look into have a --prog argument that could set filenames etc, logically seperated it?
+# TODO: look into have a --prog argument that could set filenames etc, logically seperate it?
+# {id}_{prog}_{metric}.tsv might be easier for MultiQC to parse a complex workdir, than without the .prog
 
 # Mapping of characters to integers for MSA parsing.
 # 21 is for gaps, and 20 is for unknown characters.
@@ -90,7 +91,7 @@ def read_pkl(id, pkl_files):
 
             if 'predicted_aligned_error' not in data.keys():
                 print(f"No PAE output in {pkl_file}, it was likely a monomer calculation")
-                write_tsv(f"{id}_{model_id}_pae.tsv", None))
+                write_tsv(f"{id}_{model_id}_pae.tsv", None)
             else:
                 write_tsv(f"{id}_{model_id}_pae.tsv", format_pae_rows(data["predicted_aligned_error"]))
 
