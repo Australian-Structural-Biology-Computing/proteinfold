@@ -25,7 +25,7 @@ process RUN_ALPHAFOLD2_MSA {
 
     output:
     path ("${fasta.baseName}*")
-    tuple val(meta), path ("${fasta.baseName}.features.pkl"), emit: features
+    tuple val(meta), path ("${fasta.baseName}/features.pkl"), emit: features
     path "versions.yml"                                     , emit: versions
 
     when:
@@ -60,8 +60,6 @@ process RUN_ALPHAFOLD2_MSA {
         --template_mmcif_dir=./pdb_mmcif/mmcif_files \
         --obsolete_pdbs_path=./pdb_mmcif/obsolete.dat  \
         $args
-
-    cp "${fasta.baseName}"/features.pkl ./"${fasta.baseName}".features.pkl
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
