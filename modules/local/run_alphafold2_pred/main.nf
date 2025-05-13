@@ -32,7 +32,7 @@ process RUN_ALPHAFOLD2_PRED {
     // TODO: alphafold2_model_preset == "monomer" the pae file won't exist, recommend running monomer_ptm by default. Performance loss tiny for insight
     // TODO: handle by passing 5 NO_FILE s
     // KR - I really don't like NO_FILE. Ziad has removed ch_dummy_file, so I'll see if there's a way to handle it with logic
-    tuple val(meta), path ("${fasta.baseName}/${meta.id}_*_pae.tsv") , emit: paes
+    tuple val(meta), path ("${meta.id}_*_pae.tsv") , emit: paes
     path "versions.yml"                                              , emit: versions
 
     when:
@@ -69,8 +69,8 @@ process RUN_ALPHAFOLD2_PRED {
 
     stub:
     """
-    touch ./"${meta.id}"_alphafold2.pdb
-    touch ./"${meta.id}"_plddt.tsv
+    touch ./${meta.id}_alphafold2.pdb
+    touch ./${meta.id}_plddt.tsv
     touch ./${meta.id}_msa.tsv
     touch ./${meta.id}_0_pae.tsv
     mkdir "${fasta.baseName}"

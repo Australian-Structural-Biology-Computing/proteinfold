@@ -47,7 +47,7 @@ workflow POST_PROCESSING {
     if (!skip_visualisation){
         GENERATE_REPORT(
         ch_report_input,
-        output_type = 'standard',
+        output_type = 'standard',  //TODO: the report output_type can determined the report_template path in ch_report_template
         ch_report_template
         )
 
