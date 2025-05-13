@@ -154,6 +154,10 @@ def main():
     else:
         html_template = args.html_template
 
+    if args.paes == null:
+        args.peas=None
+
+
     generate_report(
         name=args.name,
         out_dir=args.output_dir,
