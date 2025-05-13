@@ -27,10 +27,11 @@ process RUN_ALPHAFOLD2_PRED {
     path ("${fasta.baseName}*")
     tuple val(meta), path ("${meta.id}_alphafold2.pdb")              , emit: top_ranked_pdb
     tuple val(meta), path ("${fasta.baseName}/ranked*.pdb")          , emit: pdb
-    tuple val(meta), path ("${fasta.baseName}/${meta.id}_plddt.tsv") , emit: plddt
-    tuple val(meta), path ("${fasta.baseName}/${meta.id}_msa.tsv")   , emit: msa
+    tuple val(meta), path ("${meta.id}_plddt.tsv") , emit: plddt
+    tuple val(meta), path ("${meta.id}_msa.tsv")   , emit: msa
     // TODO: alphafold2_model_preset == "monomer" the pae file won't exist, recommend running monomer_ptm by default. Performance loss tiny for insight
     // TODO: handle by passing 5 NO_FILE s
+    // KR - I really don't like NO_FILE. Ziad has removed ch_dummy_file, so I'll see if there's a way to handle it with logic
     tuple val(meta), path ("${fasta.baseName}/${meta.id}_*_pae.tsv") , emit: paes
     path "versions.yml"                                              , emit: versions
 
@@ -53,10 +54,10 @@ process RUN_ALPHAFOLD2_PRED {
         --msa_path=${features} \
         $args
 
-    cp "${fasta.baseName}"/ranked_0.pdb ./"${meta.id}"_alphafold2.pdb
+    cp ${fasta.baseName}/ranked_0.pdb ./${meta.id}_alphafold2.pdb
 
     extract_metrics.py --name ${meta.id} \\
-        --structs "${fasta.baseName}/ranked_*.pdb" \\
+        --structs ${fasta.baseName}/ranked_*.pdb \\
         --pkls ${features} \\
 
 

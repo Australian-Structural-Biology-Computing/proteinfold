@@ -27,9 +27,10 @@ process RUN_ALPHAFOLD2 {
     path ("${fasta.baseName}*")
     tuple val(meta), path ("${meta.id}_alphafold2.pdb")              , emit: top_ranked_pdb
     tuple val(meta), path ("${fasta.baseName}/ranked*.pdb")          , emit: pdb
-    tuple val(meta), path ("${fasta.baseName}/${meta.id}_plddt.tsv") , emit: plddt
-    tuple val(meta), path ("${fasta.baseName}/${meta.id}_msa.tsv")   , emit: msa
-    // TODO: alphafold2_model_preset == "monomer" the pae file won't exist. Performance loss tiny for insight
+    tuple val(meta), path ("${meta.id}_plddt.tsv") , emit: plddt
+    tuple val(meta), path ("${meta.id}_msa.tsv")   , emit: msa
+    // TODO: alphafold2_model_preset == "monomer" the pae file won't exist.
+    // Default is monomer_ptm. Performance loss tiny for metric insight. Nevertheless disabling until handled
     tuple val(meta), path ("${fasta.baseName}/${meta.id}_*_pae.tsv")   , emit: paes
     path "versions.yml", emit: versions
 
@@ -67,14 +68,11 @@ process RUN_ALPHAFOLD2 {
         --obsolete_pdbs_path=./obsolete_pdb/obsolete.dat \
         $args
 
-    cp "${fasta.baseName}"/ranked_0.pdb ./"${meta.id}"_alphafold2.pdb
-    cd "${fasta.baseName}"
+    cp ${fasta.baseName}/ranked_0.pdb ./${meta.id}_alphafold2.pdb
 
     extract_metrics.py --name ${meta.id} \\
-        --pkls features.pkl \\
-        --structs ranked*.pdb
-
-    cd ..
+        --pkls ${fasta.baseName}/features.pkl \\
+        --structs ${fasta.baseName}/ranked*.pdb
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -82,13 +80,14 @@ process RUN_ALPHAFOLD2 {
     END_VERSIONS
     """
 
+    // KR - I think it makes sense of metrics to be in the root folder
     stub:
     """
     mkdir "${fasta.baseName}"
-    touch "${fasta.baseName}/${meta.id}_alphafold2.pdb"
-    touch "${fasta.baseName}/${meta.id}_plddt.tsv"
-    touch "${fasta.baseName}/${meta.id}_msa.tsv"
-    touch "${fasta.baseName}/${meta.id}_0_pae.tsv"
+    touch "${meta.id}_alphafold2.pdb"
+    touch "${meta.id}_plddt.tsv"
+    touch "${meta.id}_msa.tsv"
+    touch "${meta.id}_0_pae.tsv"
     touch "${fasta.baseName}/ranked_0.pdb"
     touch "${fasta.baseName}/ranked_1.pdb"
     touch "${fasta.baseName}/ranked_2.pdb"

@@ -29,6 +29,7 @@ process RUN_ESMFOLD {
     def VERSION = '1.0.3' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
 
     // KR - note: why the *.pdb to tmp.pdb. Why not just take directly?
+    // Only one .pdb per ESMFold run
     """
     esm-fold \
         -i ${fasta} \
@@ -37,7 +38,6 @@ process RUN_ESMFOLD {
         --num-recycles ${numRec} \
         $args
 
-    // Only one .pdb per ESMFold run
     mv  *.pdb ${meta.id}_esmfold.pdb
 
     extract_metrics.py --name ${meta.id} \\
