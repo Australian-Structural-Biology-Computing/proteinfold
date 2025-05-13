@@ -140,6 +140,8 @@ workflow NFCORE_PROTEINFOLD {
             PREPARE_ALPHAFOLD2_DBS.out.uniprot
         )
         ch_alphafold_top_ranked_pdb = ALPHAFOLD2.out.top_ranked_pdb
+        ALPHAFOLD2.out.paes.ifEmpty { file('NO_FILE') }
+
         ch_report_input = ALPHAFOLD2.out.top_ranked_pdb
         .combine(ALPHAFOLD2.out.pdb)
         .combine(ALPHAFOLD2.out.plddt)
@@ -149,7 +151,7 @@ workflow NFCORE_PROTEINFOLD {
             [
                 pdb: pdb.path,
                 msa: msa.path,
-                pae: paes.path,
+                paes: paes.name == 'NO_FILE' ? null : paes.path,  // Create a null values to handle NO_FILE case
                 plddt: plddt.path,
                 mode: 'alphafold2'
             ]

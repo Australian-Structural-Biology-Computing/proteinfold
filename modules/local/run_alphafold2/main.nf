@@ -31,7 +31,7 @@ process RUN_ALPHAFOLD2 {
     tuple val(meta), path ("${meta.id}_msa.tsv")   , emit: msa
     // TODO: alphafold2_model_preset == "monomer" the pae file won't exist.
     // Default is monomer_ptm. Performance loss tiny for metric insight. Nevertheless disabling until handled
-    tuple val(meta), path ("${fasta.baseName}/${meta.id}_*_pae.tsv")   , emit: paes
+    tuple val(meta), path ("${meta.id}_*_pae.tsv")   , optional: true, emit: paes
     path "versions.yml", emit: versions
 
     when:
