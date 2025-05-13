@@ -41,7 +41,7 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
 
     cp "${fasta.baseName}".pdb ./"${meta.id}"_rosettafold_all_atom.pdb
 
-    extract_output.py --name ${meta.id} \\
+    extract_metrics.py --name ${meta.id} \\
         --structs "${meta.id}_rosettafold_all_atom.pdb" \\
         --a3ms "${fasta.baseName}/A/t000_.msa0.a3m" \\
         --pts ${meta.id}_aux.pt
