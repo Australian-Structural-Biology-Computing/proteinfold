@@ -70,9 +70,9 @@ process RUN_HELIXFOLD3 {
     cp "${meta.id}"/"${meta.id}"-rank1/predicted_structure.pdb ./"${meta.id}"_helixfold3.pdb
 
     extract_output.py --name ${meta.id} \\
-      --structs "${meta.id}"/"${meta.id}"-rank*/predicted_structure.pdb \\
-      --pkls "${meta.id}/final_features.pkl" \\
-      --jsons "${meta.id}-rank*/all_results.json"
+        --structs "${meta.id}"/"${meta.id}"-rank*/predicted_structure.pdb \\
+        --pkls "${meta.id}/final_features.pkl" \\
+        --jsons "${meta.id}-rank*/all_results.json"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

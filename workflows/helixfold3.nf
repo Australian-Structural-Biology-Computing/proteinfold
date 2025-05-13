@@ -76,7 +76,7 @@ workflow HELIXFOLD3 {
         .toSortedList()
         .map { [ [ "model": "helixfold3" ], it.flatten() ] }
         .set { ch_multiqc_report }
- 
+
         ch_top_ranked_pdb = ch_top_ranked_pdb.mix(RUN_HELIXFOLD3.out.top_ranked_pdb)
         ch_pdb            = ch_pdb.mix(RUN_HELIXFOLD3.out.pdb)
         ch_plddt          = ch_plddt.mix(RUN_HELIXFOLD3.out.msa)
@@ -98,11 +98,11 @@ workflow HELIXFOLD3 {
 
     emit:
     top_ranked_pdb = ch_top_ranked_pdb // channel: [ id, /path/to/*.pdb ]
-    pdb            = ch_pdb        
-    plddt          = ch_plddt        
-    msa            = ch_msa        
+    pdb            = ch_pdb
+    plddt          = ch_plddt
+    msa            = ch_msa
     paes           =  ch_paes
-    multiqc_report = ch_multiqc_report 
+    multiqc_report = ch_multiqc_report
     versions       = ch_versions       // channel: [ path(versions.yml) ]
 }
 

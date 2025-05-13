@@ -147,10 +147,10 @@ workflow NFCORE_PROTEINFOLD {
         .combine(ALPHAFOLD2.out.paes)
         .map { top_ranked_pdb, pdb, plddt, msa, paes ->
             [
-                pdb: pdb.path,   
-                msa: msa.path,       
-                pae: paes.path,      
-                plddt: plddt.path,  
+                pdb: pdb.path,
+                msa: msa.path,
+                pae: paes.path,
+                plddt: plddt.path,
                 mode: 'alphafold2'
             ]
         }
@@ -197,10 +197,10 @@ workflow NFCORE_PROTEINFOLD {
         .combine(COLABFOLD.out.paes)
         .map { top_ranked_pdb, pdb, plddt, msa, paes ->
             [
-                pdb: pdb.path,   
-                msa: msa.path,       
-                pae: paes.path,      
-                plddt: plddt.path,  
+                pdb: pdb.path,
+                msa: msa.path,
+                pae: paes.path,
+                plddt: plddt.path,
                 mode: 'colabfold'
             ]
         }
@@ -241,10 +241,10 @@ workflow NFCORE_PROTEINFOLD {
         .combine(ESMFOLD.out.paes)
         .map { top_ranked_pdb, pdb, plddt, msa, paes ->
             [
-                pdb: pdb.path,   
-                msa: msa.path,       
-                pae: paes.path,      
-                plddt: plddt.path,  
+                pdb: pdb.path,
+                msa: msa.path,
+                pae: paes.path,
+                plddt: plddt.path,
                 mode: 'esmfold'
             ]
         }
@@ -291,10 +291,10 @@ workflow NFCORE_PROTEINFOLD {
         .combine(ROSETTAFOLD_ALL_ATOM.out.paes)
         .map { top_ranked_pdb, pdb, plddt, msa, paes ->
             [
-                pdb: pdb.path,   
-                msa: msa.path,       
-                pae: paes.path,      
-                plddt: plddt.path,  
+                pdb: pdb.path,
+                msa: msa.path,
+                pae: paes.path,
+                plddt: plddt.path,
                 mode: 'rosettafold_all_atom'
             ]
         }
@@ -367,10 +367,10 @@ workflow NFCORE_PROTEINFOLD {
         .combine(HELIXFOLD3.out.paes)
         .map { top_ranked_pdb, pdb, plddt, msa, paes ->
             [
-                pdb: pdb.path,   
-                msa: msa.path,       
-                pae: paes.path,      
-                plddt: plddt.path,  
+                pdb: pdb.path,
+                msa: msa.path,
+                pae: paes.path,
+                plddt: plddt.path,
                 mode: 'helixfold3'
             ]
         }

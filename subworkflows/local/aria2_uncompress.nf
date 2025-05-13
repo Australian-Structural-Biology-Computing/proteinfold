@@ -30,4 +30,3 @@ workflow ARIA2_UNCOMPRESS {
     db       = ch_db              // channel: [ db ]
     versions = ARIA2.out.versions // channel: [ versions.yml ]
 }
-

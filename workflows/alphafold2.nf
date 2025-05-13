@@ -53,15 +53,15 @@ workflow ALPHAFOLD2 {
     ch_multiqc_report = Channel.empty()
 
     // TESTING: Why isn't meta set for each?
-   // if (alphafold2_model_preset != 'multimer') {
-      ch_samplesheet
-          .map {
-              meta, fasta ->
-              [ meta, fasta.splitFasta(file:true) ]
-          }
-          .transpose()
-          .set { ch_samplesheet }
-   // }
+//  if (alphafold2_model_preset != 'multimer') {
+    ch_samplesheet
+        .map {
+            meta, fasta ->
+            [ meta, fasta.splitFasta(file:true) ]
+        }
+        .transpose()
+        .set { ch_samplesheet }
+//  }
 
     if (alphafold2_mode == 'standard') {
         //
@@ -137,7 +137,7 @@ workflow ALPHAFOLD2 {
             ch_uniprot,
             RUN_ALPHAFOLD2_MSA.out.features
         )
-   
+
         RUN_ALPHAFOLD2_PRED
             .out
             .plddt
@@ -145,19 +145,19 @@ workflow ALPHAFOLD2 {
             .toSortedList()
             .map { [ [ "model": "alphafold2" ], it.flatten() ] }
             .set { ch_multiqc_report }
+
+        ch_top_ranked_pdb = ch_top_ranked_pdb.mix(RUN_ALPHAFOLD2_PRED.out.top_ranked_pdb)
+        ch_pdb            = ch_pdb.mix(RUN_ALPHAFOLD2_PRED.out.pdb)
+        ch_plddt          = ch_plddt.mix(RUN_ALPHAFOLD2_PRED.out.msa)
+        ch_msa            = ch_msa.mix(RUN_ALPHAFOLD2_PRED.out.msa)
+        ch_paes           = ch_paes.mix(RUN_ALPHAFOLD2_PRED.out.paes)
+        ch_versions       = ch_versions.mix(RUN_ALPHAFOLD2_PRED.out.versions)
     }
 
     ch_top_ranked_pdb
         .map { [ it[0]["id"], it[0], it[1] ] }
         .set { ch_top_ranked_pdb }
 
-
-    ch_top_ranked_pdb = ch_top_ranked_pdb.mix(RUN_ALPHAFOLD2_PRED.out.top_ranked_pdb)
-    ch_pdb            = ch_pdb.mix(RUN_ALPHAFOLD2_PRED.out.pdb)
-    ch_plddt          = ch_plddt.mix(RUN_ALPHAFOLD2_PRED.out.msa)
-    ch_msa            = ch_msa.mix(RUN_ALPHAFOLD2_PRED.out.msa)
-    ch_paes           = ch_paes.mix(RUN_ALPHAFOLD2_PRED.out.paes)
-    ch_versions       = ch_versions.mix(RUN_ALPHAFOLD2_PRED.out.versions)
 
     //ch_pdb
     //    .join(ch_msa)
@@ -169,10 +169,10 @@ workflow ALPHAFOLD2 {
 
     emit:
     top_ranked_pdb = ch_top_ranked_pdb // channel: [ id, /path/to/*.pdb ]
-    pdb            = ch_pdb        
-    plddt          = ch_plddt        
-    msa            = ch_msa        
-    paes           = ch_paes    
+    pdb            = ch_pdb
+    plddt          = ch_plddt
+    msa            = ch_msa
+    paes           = ch_paes
     multiqc_report = ch_multiqc_report // channel: /path/to/multiqc_report.html
     versions       = ch_versions       // channel: [ path(versions.yml) ]
 }

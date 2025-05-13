@@ -144,10 +144,10 @@ workflow COLABFOLD {
 
     emit:
     top_ranked_pdb = ch_top_ranked_pdb // channel: [ id, /path/to/*.pdb ]
-    pdb            = ch_pdb        
-    plddt          = ch_plddt        
-    msa            = ch_msa        
-    paes           = ch_paes    
+    pdb            = ch_pdb
+    plddt          = ch_plddt
+    msa            = ch_msa
+    paes           = ch_paes
     multiqc_report = ch_multiqc_report // channel: /path/to/multiqc_report.html
     versions       = ch_versions       // channel: [ path(versions.yml) ]
 }

@@ -41,7 +41,7 @@ process RUN_ESMFOLD {
     mv  *.pdb ${meta.id}_esmfold.pdb
 
     extract_metrics.py --name ${meta.id} \\
-      --structs *.pdb
+        --structs *.pdb
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
