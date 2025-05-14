@@ -140,23 +140,26 @@ workflow NFCORE_PROTEINFOLD {
             PREPARE_ALPHAFOLD2_DBS.out.uniprot
         )
         ch_alphafold_top_ranked_pdb = ALPHAFOLD2.out.top_ranked_pdb
-        ALPHAFOLD2.out.paes.ifEmpty { file('NO_FILE') }
+        ch_versions                 = ch_versions.mix(ALPHAFOLD2.out.versions)
 
-        ch_report_input = ALPHAFOLD2.out.top_ranked_pdb
-        .combine(ALPHAFOLD2.out.pdb)
-        .combine(ALPHAFOLD2.out.plddt)
-        .combine(ALPHAFOLD2.out.msa)
-        .combine(ALPHAFOLD2.out.paes)
-        .map { top_ranked_pdb, pdb, plddt, msa, paes ->
+        // KR - not all programs are emitting PAEs, even though the should.
+        // It's tricky, see: https://github.com/nf-core/proteinfold/issues/262
+        ALPHAFOLD2.out.paes.ifEmpty { file('NO_FILE') }
+        ch_report_input = ALPHAFOLD2.out.pdb
+        .join(ALPHAFOLD2.out.plddt)
+        .join(ALPHAFOLD2.out.msa)
+        .join(ALPHAFOLD2.out.paes)
+        .map { meta, pdb, plddt, msa, paes ->
             [
-                pdb: pdb.path,
-                msa: msa.path,
-                paes: paes.name == 'NO_FILE' ? null : paes.path,  // Create a null values to handle NO_FILE case
-                plddt: plddt.path,
-                mode: 'alphafold2'
+                meta,
+                pdb,
+                plddt,
+                msa,
+                paes.name == 'NO_FILE' ? null : paes,  // Create a null values to handle NO_FILE case
+                model = 'alphafold2'
             ]
         }
-        ch_versions                 = ch_versions.mix(ALPHAFOLD2.out.versions)
+        ch_report_input.view()
     }
 
     //

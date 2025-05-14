@@ -8,7 +8,7 @@ process GENERATE_REPORT {
         'community.wave.seqera.io/library/biopython_matplotlib_pip_plotly:35975fa0fc54b2d3' }"
 
     input:
-    tuple val(meta), path(report_input)
+    tuple val(meta), path(pdb), path(plddt), path(msa), path(paes), val(model)
     val(output_type)
     path(template)
 
@@ -29,9 +29,9 @@ process GENERATE_REPORT {
     generate_report.py \\
         --name ${meta.id} \\
         --output_dir ./ \\
-        --structs ${report_input.pdb} \\
-        --msa ${report_input.msa} \\
-        --paes ${report_input.paes} \\
+        --structs ${pdb} \\
+        --msa ${msa} \\
+        --paes ${paes} \\
         --html_template ${template} \\
         --type ${output_type} \\
         $args \\
