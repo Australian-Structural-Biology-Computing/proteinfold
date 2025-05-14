@@ -79,7 +79,7 @@ workflow HELIXFOLD3 {
 
         ch_top_ranked_pdb = ch_top_ranked_pdb.mix(RUN_HELIXFOLD3.out.top_ranked_pdb)
         ch_pdb            = ch_pdb.mix(RUN_HELIXFOLD3.out.pdb)
-        ch_plddt          = ch_plddt.mix(RUN_HELIXFOLD3.out.msa)
+        ch_plddt          = ch_plddt.mix(RUN_HELIXFOLD3.out.plddt)
         ch_msa            = ch_msa.mix(RUN_HELIXFOLD3.out.msa)
         ch_paes           = ch_paes.mix(RUN_HELIXFOLD3.out.paes)
         ch_versions       = ch_versions.mix(RUN_HELIXFOLD3.out.versions)
@@ -101,7 +101,7 @@ workflow HELIXFOLD3 {
     pdb            = ch_pdb
     plddt          = ch_plddt
     msa            = ch_msa
-    paes           =  ch_paes
+    paes           = ch_paes
     multiqc_report = ch_multiqc_report
     versions       = ch_versions       // channel: [ path(versions.yml) ]
 }
