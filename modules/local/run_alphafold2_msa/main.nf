@@ -25,7 +25,7 @@ process RUN_ALPHAFOLD2_MSA {
 
     output:
     path ("${fasta.baseName}*")
-    tuple val(meta), path ("${fasta.baseName}.features.pkl"), emit: features
+    tuple val(meta), path ("${fasta.baseName}/features.pkl"), emit: features
     path "versions.yml"                                     , emit: versions
 
     when:
@@ -69,7 +69,8 @@ process RUN_ALPHAFOLD2_MSA {
 
     stub:
     """
-    touch ./"${fasta.baseName}".features.pkl
+    mkdir ./"${fasta.baseName}"
+    touch ./"${fasta.baseName}"/features.pkl
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
