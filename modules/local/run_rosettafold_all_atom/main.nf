@@ -54,12 +54,12 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
 
     stub:
     """
-    touch "${meta.id}"_rosettafold_all_atom.pdb"
-    touch "${meta.id}".pdb"
-    touch "${meta.id}"_aux.pt"
-    touch "${meta.id}"_plddt.tsv"
-    touch "${meta.id}"_msa.tsv"
-    touch "${meta.id}"_0_pae.tsv"
+    touch "${meta.id}_rosettafold_all_atom.pdb"
+    touch "${meta.id}.pdb"
+    touch "${meta.id}_aux.pt"
+    touch "${meta.id}_plddt.tsv"
+    touch "${meta.id}_msa.tsv"
+    touch "${meta.id}_0_pae.tsv"
     mkdir "${meta.id}"
 
     cat <<-END_VERSIONS > versions.yml
