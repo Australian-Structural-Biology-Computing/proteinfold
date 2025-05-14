@@ -88,7 +88,7 @@ def align_structures(structures):
 
     def extract_atoms(structure, atom_ids):
         # Note: this comprehension returns an atom *object* for each atom in the structure
-        return [atom for atom in structure.get_atoms() if (atom.get_parent().get_id(), atom.name) in atom_ids]
+        return {atom for atom in structure.get_atoms() if (atom.get_parent().get_id(), atom.name) in atom_ids}
 
     ref_atoms = extract_atoms(ref_structure, common_atoms)
 
