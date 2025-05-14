@@ -44,10 +44,16 @@ workflow POST_PROCESSING {
     main:
     ch_comparison_report_files = Channel.empty()
 
+    def debug_report_input = ch_report_input.map {
+        println "DEBUG post_processing/main.nf ch_report_input: $it"
+        it
+    }
+
     if (!skip_visualisation){
+
         GENERATE_REPORT(
-        ch_report_input,
-        output_type = 'standard',  //TODO: the report output_type can determined the report_template path in ch_report_template
+        debug_report_input,
+        output_type = 'standard',
         ch_report_template
         )
 

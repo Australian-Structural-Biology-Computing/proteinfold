@@ -87,7 +87,6 @@ process RUN_ALPHAFOLD2 {
     touch "${meta.id}_alphafold2.pdb"
     touch "${meta.id}_plddt.tsv"
     touch "${meta.id}_msa.tsv"
-    touch "${meta.id}_0_pae.tsv"
     touch "${fasta.baseName}/ranked_0.pdb"
     touch "${fasta.baseName}/ranked_1.pdb"
     touch "${fasta.baseName}/ranked_2.pdb"

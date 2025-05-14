@@ -142,6 +142,11 @@ workflow NFCORE_PROTEINFOLD {
         ch_alphafold_top_ranked_pdb = ALPHAFOLD2.out.top_ranked_pdb
         ch_versions                 = ch_versions.mix(ALPHAFOLD2.out.versions)
 
+     // ALPHAFOLD2.out.pdb.view("PDB Channel:")
+     // ALPHAFOLD2.out.plddt.view("pLDDT Channel:")
+     // ALPHAFOLD2.out.msa.view("MSA Channel:")
+     // ALPHAFOLD2.out.paes.view("PAE Channel:")
+
         // KR - not all programs are emitting PAEs, even though the should.
         // It's tricky, see: https://github.com/nf-core/proteinfold/issues/262
         ALPHAFOLD2.out.paes.ifEmpty { file('NO_FILE') }
@@ -155,8 +160,8 @@ workflow NFCORE_PROTEINFOLD {
                 pdb,
                 plddt,
                 msa,
-                paes.name == 'NO_FILE' ? null : paes,  // Create a null values to handle NO_FILE case
-                model = 'alphafold2'
+                paes,
+                mode = 'alphafold2'
             ]
         }
         ch_report_input.view()
@@ -236,24 +241,27 @@ workflow NFCORE_PROTEINFOLD {
             ch_versions,
             PREPARE_ESMFOLD_DBS.out.params,
             params.num_recycles_esmfold,
-            ch_dummy_file
         )
         ch_esmfold_top_ranked_pdb = ESMFOLD.out.top_ranked_pdb
-        ch_report_input = ESMFOLD.out.top_ranked_pdb
-        .combine(ESMFOLD.out.pdb)
-        .combine(ESMFOLD.out.plddt)
-        .combine(ESMFOLD.out.msa)
-        .combine(ESMFOLD.out.paes)
-        .map { top_ranked_pdb, pdb, plddt, msa, paes ->
+        ch_versions               = ch_versions.mix(ESMFOLD.out.versions)
+
+        ESMFOLD.out.msa.ifEmpty { file('NO_FILE') } //ESMFold doesn't have MSA input
+        ESMFOLD.out.paes.ifEmpty { file('NO_FILE') }
+        ch_report_input = ESMFOLD.out.pdb
+        .join(ESMFOLD.out.plddt)
+        .join(ESMFOLD.out.msa)
+        .join(ESMFOLD.out.paes)
+        .map { meta, pdb, plddt, msa, paes ->
             [
-                pdb: pdb.path,
-                msa: msa.path,
-                pae: paes.path,
-                plddt: plddt.path,
-                mode: 'esmfold'
+                meta,
+                pdb,
+                plddt,
+                msa,
+                paes,
+                mode = 'esmfold'
             ]
         }
-        ch_versions               = ch_versions.mix(ESMFOLD.out.versions)
+        ch_report_input.view()
     }
 
     //
@@ -289,21 +297,25 @@ workflow NFCORE_PROTEINFOLD {
             ch_dummy_file
         )
         ch_rosettafold_all_atom_top_ranked_pdb = ROSETTAFOLD_ALL_ATOM.out.top_ranked_pdb
-        ch_report_input = ROSETTAFOLD_ALL_ATOM.out.top_ranked_pdb
-        .combine(ROSETTAFOLD_ALL_ATOM.out.pdb)
-        .combine(ROSETTAFOLD_ALL_ATOM.out.plddt)
-        .combine(ROSETTAFOLD_ALL_ATOM.out.msa)
-        .combine(ROSETTAFOLD_ALL_ATOM.out.paes)
-        .map { top_ranked_pdb, pdb, plddt, msa, paes ->
+        ch_versions               = ch_versions.mix(ROSETTAFOLD_ALL_ATOM.out.versions)
+
+        ROSETTAFOLD_ALL_ATOM.out.paes.ifEmpty { file('NO_FILE') }
+        ch_report_input = ROSETTAFOLD_ALL_ATOM.out.pdb
+        .join(ROSETTAFOLD_ALL_ATOM.out.plddt)
+        .join(ROSETTAFOLD_ALL_ATOM.out.msa)
+
+       .join(ROSETTAFOLD_ALL_ATOM.out.paes)
+        .map { meta, pdb, plddt, msa, paes ->
             [
-                pdb: pdb.path,
-                msa: msa.path,
-                pae: paes.path,
-                plddt: plddt.path,
-                mode: 'rosettafold_all_atom'
+                meta,
+                pdb,
+                plddt,
+                msa,
+                paes.name == 'NO_FILE' ? null : paes,  // Create a null values to handle NO_FILE case
+                mode = 'rosetta_fold_all_atom'
             ]
         }
-        ch_versions                             = ch_versions.mix(ROSETTAFOLD_ALL_ATOM.out.versions)
+        //ch_report_input.view()
     }
 
     //
@@ -365,20 +377,24 @@ workflow NFCORE_PROTEINFOLD {
             PREPARE_HELIXFOLD3_DBS.out.helixfold3_maxit_src
         )
         ch_helixfold3_top_ranked_pdb = HELIXFOLD3.out.top_ranked_pdb
-        ch_report_input = HELIXFOLD3.out.top_ranked_pdb
-        .combine(HELIXFOLD3.out.pdb)
-        .combine(HELIXFOLD3.out.plddt)
-        .combine(HELIXFOLD3.out.msa)
-        .combine(HELIXFOLD3.out.paes)
-        .map { top_ranked_pdb, pdb, plddt, msa, paes ->
+        ch_versions               = ch_versions.mix(HELIXFOLD3.out.versions)
+
+        HELIXFOLD3.out.paes.ifEmpty { file('NO_FILE') }
+        ch_report_input = HELIXFOLD3.out.pdb
+        .join(HELIXFOLD3.out.plddt)
+        .join(HELIXFOLD3.out.msa)
+        .join(HELIXFOLD3.out.paes)
+        .map { meta, pdb, plddt, msa, paes ->
             [
-                pdb: pdb.path,
-                msa: msa.path,
-                pae: paes.path,
-                plddt: plddt.path,
-                mode: 'helixfold3'
+                meta,
+                pdb,
+                plddt,
+                msa,
+                paes.name == 'NO_FILE' ? null : paes,  // Create a null values to handle NO_FILE case
+                mode = 'rosetta_fold_all_atom'
             ]
         }
+        //ch_report_input.view()
     }
 
     //

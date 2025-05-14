@@ -32,7 +32,7 @@ process RUN_ALPHAFOLD2_PRED {
     // TODO: alphafold2_model_preset == "monomer" the pae file won't exist, recommend running monomer_ptm by default. Performance loss tiny for insight
     // TODO: handle by passing 5 NO_FILE s
     // KR - I really don't like NO_FILE. Ziad has removed ch_dummy_file, so I'll see if there's a way to handle it with logic
-    tuple val(meta), path ("${meta.id}_*_pae.tsv") , emit: paes
+    tuple val(meta), path ("${meta.id}_*_pae.tsv") , optional: true, emit: paes
     path "versions.yml"                                              , emit: versions
 
     when:

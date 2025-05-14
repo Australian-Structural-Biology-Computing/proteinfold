@@ -29,7 +29,6 @@ workflow ESMFOLD {
     ch_versions       // channel: [ path(versions.yml) ]
     ch_esmfold_params // directory: /path/to/esmfold/params/
     ch_num_recycles   // int: Number of recycles for esmfold
-    ch_dummy_file     // channel: [ path(NO_FILE) ]
 
     main:
     ch_multiqc_files  = Channel.empty()
@@ -62,24 +61,6 @@ workflow ESMFOLD {
         )
         ch_versions = ch_versions.mix(RUN_ESMFOLD.out.versions)
     }
-
-    RUN_ESMFOLD
-        .out
-        .pdb
-        .combine(ch_dummy_file)
-        .map {
-            it[0]["model"] = "esmfold"
-            [ it[0]["id"], it[0], it[1], it[2] ]
-        }
-        .set { ch_top_ranked_pdb }
-
-    RUN_ESMFOLD
-        .out
-        .plddt
-        .map { it[1] }
-        .toSortedList()
-        .map { [ [ "model": "esmfold"], it.flatten() ] }
-        .set { ch_multiqc_report  }
 
     emit:
     top_ranked_pdb = ch_top_ranked_pdb // channel: [ id, /path/to/*.pdb ]

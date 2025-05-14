@@ -8,7 +8,7 @@ process GENERATE_REPORT {
         'community.wave.seqera.io/library/biopython_matplotlib_pip_plotly:35975fa0fc54b2d3' }"
 
     input:
-    tuple val(meta), path(pdb), path(plddt), path(msa), path(paes), val(model)
+    tuple val(meta), path(pdb), path(plddt), path(msa), path(paes), val(mode)
     val(output_type)
     path(template)
 
@@ -26,12 +26,22 @@ process GENERATE_REPORT {
 
     // TODO: implement a --prog=${prog} where it comes from the workflow
     """
+    echo "DEBUG meta: ${meta}"
+    echo "DEBUG pdb: ${pdb}"
+    echo "DEBUG plddt: ${plddt}"
+    echo "DEBUG msa: ${msa}"
+    echo "DEBUG paes: ${paes}"
+    echo "DEBUG mode: ${mode}"
+    echo "DEBUG output_type: ${output_type}"
+    echo "DEBUG template: ${template}"
+
     generate_report.py \\
         --name ${meta.id} \\
         --output_dir ./ \\
         --structs ${pdb} \\
         --msa ${msa} \\
         --paes ${paes} \\
+        --prog ${mode} \\
         --html_template ${template} \\
         --type ${output_type} \\
         $args \\
