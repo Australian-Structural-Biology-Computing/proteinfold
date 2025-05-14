@@ -94,7 +94,7 @@ workflow ALPHAFOLD2 {
 
         ch_top_ranked_pdb = ch_top_ranked_pdb.mix(RUN_ALPHAFOLD2.out.top_ranked_pdb)
         ch_pdb            = ch_pdb.mix(RUN_ALPHAFOLD2.out.pdb)
-        ch_plddt          = ch_plddt.mix(RUN_ALPHAFOLD2.out.msa)
+        ch_plddt          = ch_plddt.mix(RUN_ALPHAFOLD2.out.plddt)
         ch_msa            = ch_msa.mix(RUN_ALPHAFOLD2.out.msa)
         ch_paes           = ch_paes.mix(RUN_ALPHAFOLD2.out.paes)
         ch_versions       = ch_versions.mix(RUN_ALPHAFOLD2.out.versions)
@@ -148,7 +148,7 @@ workflow ALPHAFOLD2 {
 
         ch_top_ranked_pdb = ch_top_ranked_pdb.mix(RUN_ALPHAFOLD2_PRED.out.top_ranked_pdb)
         ch_pdb            = ch_pdb.mix(RUN_ALPHAFOLD2_PRED.out.pdb)
-        ch_plddt          = ch_plddt.mix(RUN_ALPHAFOLD2_PRED.out.msa)
+        ch_plddt          = ch_plddt.mix(RUN_ALPHAFOLD2_PRED.out.plddt)
         ch_msa            = ch_msa.mix(RUN_ALPHAFOLD2_PRED.out.msa)
         ch_paes           = ch_paes.mix(RUN_ALPHAFOLD2_PRED.out.paes)
         ch_versions       = ch_versions.mix(RUN_ALPHAFOLD2_PRED.out.versions)
