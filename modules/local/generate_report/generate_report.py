@@ -23,9 +23,9 @@ prog_name_mapping = {
 
 def generate_report(name, out_dir, structures, num_structs_limit=5, msa_files=None, pae_files=None, prog="ProteinFold", type="standard", html_template=None, write_htmls=True, seq_cov_as_html=False):
 
-    if prog == "esmfold":
-        for structure in structures:
-            structure = reset_residue_numbers(structure)
+    # Change this to not just be ESMFold. HF3 resets on chainbreaks. Have structure res sequential just in case
+    for structure in structures:
+        structure = reset_residue_numbers(structure)
 
     # Sort structures by name and limit to set set number
     if len(structures) > num_structs_limit:
