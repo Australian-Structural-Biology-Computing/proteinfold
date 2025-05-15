@@ -200,21 +200,21 @@ workflow NFCORE_PROTEINFOLD {
             params.num_recycles_colabfold
         )
         ch_colabfold_top_ranked_pdb = COLABFOLD.out.top_ranked_pdb
-        ch_report_input = COLABFOLD.out.top_ranked_pdb
-        .combine(COLABFOLD.out.pdb)
+        ch_versions             = ch_versions.mix(COLABFOLD.out.versions)
+
+        ch_report_input = COLABFOLD.out.pdb
         .combine(COLABFOLD.out.plddt)
         .combine(COLABFOLD.out.msa)
         .combine(COLABFOLD.out.paes)
-        .map { top_ranked_pdb, pdb, plddt, msa, paes ->
+        .map { meta, pdb, plddt, msa, paes ->
             [
-                pdb: pdb.path,
-                msa: msa.path,
-                pae: paes.path,
-                plddt: plddt.path,
-                mode: 'colabfold'
+                meta + [mode : 'colabfold'],
+                pdb,
+                plddt,
+                msa,
+                paes,
             ]
         }
-        ch_versions             = ch_versions.mix(COLABFOLD.out.versions)
     }
 
     //
@@ -253,15 +253,13 @@ workflow NFCORE_PROTEINFOLD {
         .join(ESMFOLD.out.paes)
         .map { meta, pdb, plddt, msa, paes ->
             [
-                meta,
+                meta + [mode : 'esmfold'],
                 pdb,
                 plddt,
                 msa,
                 paes,
-                mode = 'esmfold'
             ]
         }
-        ch_report_input.view()
     }
 
     //
@@ -303,19 +301,16 @@ workflow NFCORE_PROTEINFOLD {
         ch_report_input = ROSETTAFOLD_ALL_ATOM.out.pdb
         .join(ROSETTAFOLD_ALL_ATOM.out.plddt)
         .join(ROSETTAFOLD_ALL_ATOM.out.msa)
-
         .join(ROSETTAFOLD_ALL_ATOM.out.paes)
         .map { meta, pdb, plddt, msa, paes ->
             [
-                meta,
+                meta + [mode : 'rosettafold_all_atom'],
                 pdb,
                 plddt,
                 msa,
-                paes.name == 'NO_FILE' ? null : paes,  // Create a null values to handle NO_FILE case
-                mode = 'rosetta_fold_all_atom'
+                paes,
             ]
         }
-        //ch_report_input.view()
     }
 
     //
@@ -386,12 +381,11 @@ workflow NFCORE_PROTEINFOLD {
         .join(HELIXFOLD3.out.paes)
         .map { meta, pdb, plddt, msa, paes ->
             [
-                meta,
+                meta + [mode : 'helixfold3'],
                 pdb,
                 plddt,
                 msa,
-                paes.name == 'NO_FILE' ? null : paes,  // Create a null values to handle NO_FILE case
-                mode = 'rosetta_fold_all_atom'
+                paes,
             ]
         }
         //ch_report_input.view()
