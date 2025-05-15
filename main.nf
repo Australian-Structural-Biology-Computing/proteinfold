@@ -149,12 +149,19 @@ workflow NFCORE_PROTEINFOLD {
 
         // KR - not all programs are emitting PAEs, even though the should.
         // It's tricky, see: https://github.com/nf-core/proteinfold/issues/262
-        ALPHAFOLD2.out.paes.ifEmpty { file('NO_FILE') }
+        //ALPHAFOLD2.out.paes.ifEmpty { file('NO_FILE') }
+        //def ch_paes = ALPHAFOLD2.out.paes.ifEmpty { file('NO_FILE') }
 
+        def ch_paes = ALPHAFOLD2.out.paes.ifEmpty {
+            // Taking meta from the other output so that .join is clear
+            ALPHAFOLD2.out.pdb.map { meta, pdb -> tuple(meta, file('NO_FILE')) }
+        }
+
+        // considered using .concat but .join seems 'safer' to link to each protein
         ch_report_input = ALPHAFOLD2.out.pdb
         .join(ALPHAFOLD2.out.plddt)
         .join(ALPHAFOLD2.out.msa)
-        .join(ALPHAFOLD2.out.paes)
+        .join(ch_paes)
         .map { meta, pdb, plddt, msa, paes ->
             [
                 meta + [mode : 'alphafold2'],
@@ -260,6 +267,7 @@ workflow NFCORE_PROTEINFOLD {
                 paes,
             ]
         }
+        ch_report_input.view()
     }
 
     //
