@@ -25,13 +25,13 @@ process RUN_ALPHAFOLD2 {
 
     output:
     path ("${fasta.baseName}*")
-    tuple val(meta), path ("${meta.id}_alphafold2.pdb")              , emit: top_ranked_pdb
-    tuple val(meta), path ("${fasta.baseName}/ranked*.pdb")          , emit: pdb
-    tuple val(meta), path ("${meta.id}_plddt.tsv") , emit: plddt
-    tuple val(meta), path ("${meta.id}_msa.tsv")   , emit: msa
+    tuple val(meta), path ("${meta.id}_alphafold2.pdb")     , emit: top_ranked_pdb
+    tuple val(meta), path ("${fasta.baseName}/ranked*.pdb") , emit: pdb
+    tuple val(meta), path ("${meta.id}_plddt.tsv")          , emit: plddt
+    tuple val(meta), path ("${meta.id}_msa.tsv")            , emit: msa
     // TODO: alphafold2_model_preset == "monomer" the pae file won't exist.
     // Default is monomer_ptm. Performance loss tiny for metric insight. Nevertheless disabling until handled
-    tuple val(meta), path ("${meta.id}_*_pae.tsv")   , optional: true, emit: paes
+    tuple val(meta), path ("${meta.id}_*_pae.tsv")          , optional: true, emit: paes
     path "versions.yml", emit: versions
 
     when:
@@ -87,7 +87,6 @@ process RUN_ALPHAFOLD2 {
     touch "${meta.id}_alphafold2.pdb"
     touch "${meta.id}_plddt.tsv"
     touch "${meta.id}_msa.tsv"
-    touch "${meta.id}_0_pae.tsv"
     touch "${fasta.baseName}/ranked_0.pdb"
     touch "${fasta.baseName}/ranked_1.pdb"
     touch "${fasta.baseName}/ranked_2.pdb"
