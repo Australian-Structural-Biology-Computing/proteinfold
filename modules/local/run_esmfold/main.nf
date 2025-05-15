@@ -10,7 +10,8 @@ process RUN_ESMFOLD {
     val numRec
 
     output:
-    tuple val(meta), path ("${meta.id}_esmfold.pdb")  , emit: pdb
+    tuple val(meta), path ("${meta.id}_esmfold.pdb")  , emit: top_ranked_pdb
+    tuple val(meta), path ("$*.pdb")  , emit: pdb
     tuple val(meta), path ("${meta.id}_plddt.tsv")    , emit: plddt
     // No MSA information in ESMFold
     // PAE from ESMFold is an absolute pain to retrieve, skipping.
@@ -54,8 +55,8 @@ process RUN_ESMFOLD {
     stub:
     def VERSION = '1.0.3' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     """
-    touch ./${meta.id}_esmfold.pdb
-    touch ./${meta.id}_plddt.tsv
+    touch "${meta.id}_esmfold.pdb"
+    touch "${meta.id}_plddt.tsv"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

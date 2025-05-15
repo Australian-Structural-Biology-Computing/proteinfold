@@ -52,14 +52,28 @@ workflow ESMFOLD {
             ch_esmfold_params,
             ch_num_recycles
         )
-        ch_versions = ch_versions.mix(RUN_ESMFOLD.out.versions)
+
+        ch_top_ranked_pdb = ch_top_ranked_pdb.mix(RUN_ESMFOLD.out.top_ranked_pdb)
+        ch_pdb            = ch_pdb.mix(RUN_ESMFOLD.out.pdb)
+        ch_plddt          = ch_plddt.mix(RUN_ESMFOLD.out.plddt)
+        ch_msa            = ch_msa.mix(RUN_ESMFOLD.out.msa)
+        ch_paes           = ch_paes.mix(RUN_ESMFOLD.out.paes)
+        ch_versions       = ch_versions.mix(RUN_ESMFOLD.out.versions)
+
     } else {
         RUN_ESMFOLD(
             ch_samplesheet,
             ch_esmfold_params,
             ch_num_recycles
         )
-        ch_versions = ch_versions.mix(RUN_ESMFOLD.out.versions)
+
+        ch_top_ranked_pdb = ch_top_ranked_pdb.mix(RUN_ESMFOLD.out.top_ranked_pdb)
+        ch_pdb            = ch_pdb.mix(RUN_ESMFOLD.out.pdb)
+        ch_plddt          = ch_plddt.mix(RUN_ESMFOLD.out.plddt)
+        ch_msa            = ch_msa.mix(RUN_ESMFOLD.out.msa)
+        ch_paes           = ch_paes.mix(RUN_ESMFOLD.out.paes)
+        ch_versions       = ch_versions.mix(RUN_ESMFOLD.out.versions)
+
     }
 
     emit:
