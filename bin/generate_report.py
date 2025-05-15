@@ -316,7 +316,8 @@ model_name = {
     "alphafold2": "AlphaFold2",
     "colabfold": "ColabFold",
     "rosettafold_all_atom": "Rosettafold_All_Atom",
-    "helixfold3": "HelixFold3"
+    "helixfold3": "HelixFold3",
+    "boltz": "Boltz-1"
 }
 
 parser = argparse.ArgumentParser()

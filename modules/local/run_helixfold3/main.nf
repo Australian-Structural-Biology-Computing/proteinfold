@@ -18,7 +18,8 @@ process RUN_HELIXFOLD3 {
     path ('pdb_seqres/*')
     path ('uniref90/*')
     path ('mgnify/*')
-    path ('pdb_mmcif/*')
+    path ('*')
+    path ('*')
     path ('init_models/*')
     path ('maxit_src')
 
@@ -40,9 +41,7 @@ process RUN_HELIXFOLD3 {
     }
     def args = task.ext.args ?: ''
     """
-    ln -s /app/helixfold3/* .
-
-    mamba run --name helixfold python3.9 inference.py \
+    mamba run --name helixfold python3.9 /app/helixfold3/inference.py \
         --maxit_binary "./maxit_src/bin/maxit" \
         --jackhmmer_binary_path "jackhmmer" \
         --hhblits_binary_path "hhblits" \
@@ -56,8 +55,8 @@ process RUN_HELIXFOLD3 {
         --uniprot_database_path="./uniprot/uniprot.fasta" \
         --pdb_seqres_database_path="./pdb_seqres/pdb_seqres.txt" \
         --rfam_database_path="./Rfam-14.9_rep_seq.fasta" \
-        --template_mmcif_dir="./pdb_mmcif/mmcif_files" \
-        --obsolete_pdbs_path="./pdb_mmcif/obsolete.dat" \
+        --template_mmcif_dir="./mmcif_files" \
+        --obsolete_pdbs_path="./obsolete.dat" \
         --ccd_preprocessed_path="./ccd_preprocessed_etkdg.pkl.gz" \
         --uniref90_database_path "./uniref90/uniref90.fasta" \
         --mgnify_database_path "./mgnify/mgy_clusters_2018_12.fa" \
@@ -65,18 +64,18 @@ process RUN_HELIXFOLD3 {
         --output_dir="\$PWD" \
         $args
 
-    cp "${meta.id}"/"${meta.id}"-rank1/predicted_structure.pdb ./"${meta.id}"_helixfold3.pdb
-    cp "${meta.id}"/"${meta.id}"-rank1/predicted_structure.cif ./"${meta.id}"_helixfold3.cif
-    cd "${meta.id}"
-    awk '{print \$6"\\t"\$11}' "${meta.id}"-rank1/predicted_structure.pdb > ranked_1_plddt.tsv
+    cp ${fasta.baseName}/*-rank1/predicted_structure.pdb ./${meta.id}_helixfold3.pdb
+    cp ${fasta.baseName}/*-rank1/predicted_structure.cif ./${meta.id}_helixfold3.cif
+    cd "${fasta.baseName}"
+    awk '{print \$6"\\t"\$11}' ${fasta.baseName}-rank1/predicted_structure.pdb > ranked_1_plddt.tsv
     for i in 2 3 4
-        do awk '{print \$6"\\t"\$11}' "${meta.id}"-rank\$i/predicted_structure.pdb | awk '{print \$2}' > ranked_"\$i"_plddt.tsv
+        do awk '{print \$6"\\t"\$11}' ${fasta.baseName}-rank\$i/predicted_structure.pdb | awk '{print \$2}' > ranked_"\$i"_plddt.tsv
     done
     paste ranked_1_plddt.tsv ranked_2_plddt.tsv ranked_3_plddt.tsv ranked_4_plddt.tsv > plddt.tsv
     echo -e Positions"\\t"rank_1"\\t"rank_2"\\t"rank_3"\\t"rank_4 > header.tsv
-    cat header.tsv plddt.tsv > ../"${meta.id}"_plddt_mqc.tsv
+    cat header.tsv plddt.tsv > ../${meta.id}_plddt_mqc.tsv
     for i in 1 2 3 4
-        do cp ""${meta.id}"-rank\$i/predicted_structure.pdb" ./ranked_\$i.pdb
+        do cp "${fasta.baseName}-rank\$i/predicted_structure.pdb" ./ranked_\$i.pdb
     done
     cd ..
 
@@ -88,14 +87,14 @@ process RUN_HELIXFOLD3 {
 
     stub:
     """
-    touch ./"${meta.id}"_helixfold3.cif
-    touch ./"${meta.id}"_helixfold3.pdb
-    touch ./"${meta.id}"_plddt_mqc.tsv
-    mkdir ./"${meta.id}"
-    touch "${meta.id}/ranked_1.pdb"
-    touch "${meta.id}/ranked_2.pdb"
-    touch "${meta.id}/ranked_3.pdb"
-    touch "${meta.id}/ranked_4.pdb"
+    touch ./${meta.id}_helixfold3.cif
+    touch ./${meta.id}_helixfold3.pdb
+    touch ./${meta.id}_plddt_mqc.tsv
+    mkdir "${fasta.baseName}"
+    touch "${fasta.baseName}/ranked_1.pdb"
+    touch "${fasta.baseName}/ranked_2.pdb"
+    touch "${fasta.baseName}/ranked_3.pdb"
+    touch "${fasta.baseName}/ranked_4.pdb"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
