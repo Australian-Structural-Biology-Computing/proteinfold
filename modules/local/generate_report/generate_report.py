@@ -154,9 +154,12 @@ def main():
     else:
         html_template = args.html_template
 
-    if args.paes == null:
-        args.peas=None
 
+    # Both these values could be missing - EMSFold for MSA, many others for PAE
+    if os.path.basename(args.msa) == "NO_FILE":
+        args.peas=None
+    if os.path.basename(args.paes) == "NO_FILE":
+        args.peas=None
 
     generate_report(
         name=args.name,
