@@ -142,29 +142,29 @@ workflow NFCORE_PROTEINFOLD {
         ch_alphafold_top_ranked_pdb = ALPHAFOLD2.out.top_ranked_pdb
         ch_versions                 = ch_versions.mix(ALPHAFOLD2.out.versions)
 
-     // ALPHAFOLD2.out.pdb.view("PDB Channel:")
-     // ALPHAFOLD2.out.plddt.view("pLDDT Channel:")
-     // ALPHAFOLD2.out.msa.view("MSA Channel:")
-     // ALPHAFOLD2.out.paes.view("PAE Channel:")
+     // ALPHAFOLD2.out.pdb.view()
+     // ALPHAFOLD2.out.plddt.view()
+     // ALPHAFOLD2.out.msa.view()
+     // ALPHAFOLD2.out.paes.view()
 
         // KR - not all programs are emitting PAEs, even though the should.
         // It's tricky, see: https://github.com/nf-core/proteinfold/issues/262
         ALPHAFOLD2.out.paes.ifEmpty { file('NO_FILE') }
+
         ch_report_input = ALPHAFOLD2.out.pdb
         .join(ALPHAFOLD2.out.plddt)
         .join(ALPHAFOLD2.out.msa)
         .join(ALPHAFOLD2.out.paes)
         .map { meta, pdb, plddt, msa, paes ->
             [
-                meta,
+                meta + [mode : 'alphafold2'],
                 pdb,
                 plddt,
                 msa,
                 paes,
-                mode = 'alphafold2'
             ]
         }
-        ch_report_input.view()
+        //ch_report_input.view()
     }
 
     //
@@ -304,7 +304,7 @@ workflow NFCORE_PROTEINFOLD {
         .join(ROSETTAFOLD_ALL_ATOM.out.plddt)
         .join(ROSETTAFOLD_ALL_ATOM.out.msa)
 
-       .join(ROSETTAFOLD_ALL_ATOM.out.paes)
+        .join(ROSETTAFOLD_ALL_ATOM.out.paes)
         .map { meta, pdb, plddt, msa, paes ->
             [
                 meta,

@@ -8,7 +8,7 @@ process GENERATE_REPORT {
         'community.wave.seqera.io/library/biopython_matplotlib_pip_plotly:35975fa0fc54b2d3' }"
 
     input:
-    tuple val(meta), path(pdb), path(plddt), path(msa), path(paes), val(mode)
+    tuple val(meta), path(pdb), path(plddt), path(msa), path(paes)
     val(output_type)
     path(template)
 
@@ -24,7 +24,7 @@ process GENERATE_REPORT {
     script:
     def args = task.ext.args ?: ''
 
-    // TODO: implement a --prog=${prog} where it comes from the workflow
+    // TODO: consider just passing pLDDT file rather than extracting from struct again
     """
     echo "DEBUG meta: ${meta}"
     echo "DEBUG pdb: ${pdb}"
@@ -41,7 +41,7 @@ process GENERATE_REPORT {
         --structs ${pdb} \\
         --msa ${msa} \\
         --paes ${paes} \\
-        --prog ${mode} \\
+        --prog ${meta.mode} \\
         --html_template ${template} \\
         --type ${output_type} \\
         $args \\
