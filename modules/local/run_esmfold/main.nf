@@ -17,8 +17,8 @@ process RUN_ESMFOLD {
     // PAE from ESMFold is an absolute pain to retrieve, skipping.
     // https://github.com/facebookresearch/esm/issues/582
     // Since neither MSA or PAE exist, the optional will be handled with a NO_FILE in main.nf
-    tuple val(meta), path ("${meta.id}_msa.tsv")     , optional: true, emit: msa
-    tuple val(meta), path ("${meta.id}_*_pae.tsv")   , optional: true, emit: paes
+    tuple val(meta), path ("${meta.id}_msa.tsv")      , optional: true, emit: msa
+    tuple val(meta), path ("${meta.id}_*_pae.tsv")    , optional: true, emit: paes
     path "versions.yml"                               , emit: versions
 
     when:
