@@ -17,12 +17,17 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
 
     output:
     tuple val(meta), path ("${meta.id}_rosettafold_all_atom.pdb"), emit: pdb
-    tuple val(meta), path ("*_mqc.tsv")                          , emit: multiqc
+    tuple val(meta), path ("${meta.id}_plddt.tsv")               , emit: multiqc
+    tuple val(meta), path ("${meta.id}_msa.tsv")                 , emit: msa
+    // I think there should always be PAE from the .pt PyTorch model. extract_metrics.py has condition import torch to handle this 
+    tuple val(meta), path ("${meta.id}_*_pae.tsv")               , emit: paes
     path "versions.yml"                                          , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
 
+
+    // TODO: I'm not convinced --a3ms to chain /A/msa is entirely what I want here, but the MSA isn't easily stored elsewhere
     script:
     // Exit if running this module with -profile conda / -profile mamba
     if (workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1) {
@@ -37,10 +42,10 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
     --config-name "${yaml}" \
     $args
 
-    cp "${yaml.baseName}.pdb" "${meta.id}_rosettafold_all_atom.pdb"
-    awk '{printf "%s\\t%.0f\\n", \$6, \$11 * 100}' ${meta.id}_rosettafold_all_atom.pdb | uniq > plddt.tsv
-    echo -e Positions"\\t"${meta.id}_rosettafold_all_atom.pdb > header.tsv
-    cat header.tsv plddt.tsv > "${meta.id}_plddt_mqc.tsv"
+    extract_metrics.py --name ${meta.id} \\
+      --structs "${yaml.baseName}_rosettafold_all_atom.pdb" \\
+      --a3ms "${yaml.baseName}/A/t000_.msa0.a3m" \\
+      --pts ${yaml.baseName}_aux.pt
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -50,14 +55,12 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
 
     stub:
     """
-    touch ./${meta.id}_rosettafold_all_atom.pdb
-    touch ./${meta.id}_plddt_mqc.tsv
-    touch ./${meta.id}_aux.pt
-    touch ./${meta.id}.pdb
-    touch ./header.tsv
-    touch ./plddt.tsv
-    mkdir ./outputs
-    mkdir ./${meta.id}
+    touch "${meta.id}_rosettafold_all_atom.pdb"
+    touch "${meta.id}.pdb"
+    touch "${meta.id}_aux.pt"
+    touch "${meta.id}_plddt.tsv"
+    touch "${meta.id}_msa.tsv"
+    touch "${meta.id}_0_pae.tsv"  
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
