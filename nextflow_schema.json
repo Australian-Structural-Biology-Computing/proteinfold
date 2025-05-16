@@ -641,7 +641,7 @@
                     "type": "string",
                     "description": "Link to download model file",
                     "icon": "fas fa-link",
-                    "default": "https://huggingface.co/boltz-community/boltz-1/resolve/main/boltz1.ckpt"
+                    "default": "https://huggingface.co/boltz-community/boltz-1/resolve/main/boltz1_conf.ckpt"
                 }
             }
         },
@@ -666,7 +666,7 @@
                     "type": "string",
                     "description": "Path to boltz Model file",
                     "icon": "fas folder-open",
-                    "default": "null/boltz1.ckpt"
+                    "default": "null/boltz1_conf.ckpt"
                 }
             }
         },
