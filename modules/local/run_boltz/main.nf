@@ -34,7 +34,7 @@ process RUN_BOLTZ {
     def args = task.ext.args ?: ''
 
     """
-    boltz predict "${fasta}" ${args} --cache ./
+    boltz predict "${fasta}" ${args} --cache ./ --write_full_pae --output_format pdb
     cp boltz_results_*/predictions/*/*.pdb ./${meta.id}_boltz.pdb
 
     echo -e Atom_serial_number"\\t"Atom_name"\\t"Residue_name"\\t"Residue_sequence_number"\\t"pLDDT > ${meta.id}_plddt_mqc.tsv
