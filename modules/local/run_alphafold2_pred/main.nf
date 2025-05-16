@@ -26,7 +26,7 @@ process RUN_ALPHAFOLD2_PRED {
     output:
     path ("${fasta.baseName}*")
     tuple val(meta), path ("${meta.id}_alphafold2.pdb")   , emit: top_ranked_pdb
-    tuple val(meta), path ("${fasta.baseName}/ranked*pdb"), emit: pdb
+    tuple val(meta), path ("${fasta.baseName}/ranked*.pdb"), emit: pdb
     tuple val(meta), path ("${meta.id}_msa.tsv")          , emit: msa
     // TODO: re-label multiqc -> plddt so multiqc channel can take in all metrics 
     tuple val(meta), path ("${meta.id}_plddt.tsv")        , emit: multiqc
@@ -79,7 +79,6 @@ process RUN_ALPHAFOLD2_PRED {
     touch "${fasta.baseName}/ranked_2.pdb"
     touch "${fasta.baseName}/ranked_3.pdb"
     touch "${fasta.baseName}/ranked_4.pdb"
-    touch ${meta.id}_msa.tsv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
