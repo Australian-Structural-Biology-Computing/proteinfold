@@ -4,6 +4,8 @@
 process RUN_BOLTZ {
     tag "$meta.id"
     label 'process_medium'
+    label 'process_gpu'
+
     if (workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1) {
         error("Local RUN_BOLTZ module does not support Conda. Please use Docker / Singularity / Podman instead.")
     }
