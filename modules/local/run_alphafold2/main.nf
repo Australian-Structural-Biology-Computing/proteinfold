@@ -25,10 +25,15 @@ process RUN_ALPHAFOLD2 {
 
     output:
     path ("${fasta.baseName}*")
-    tuple val(meta), path ("${meta.id}_alphafold2.pdb")   , emit: top_ranked_pdb
-    tuple val(meta), path ("${fasta.baseName}/ranked*pdb"), emit: pdb
-    tuple val(meta), path ("${fasta.baseName}/*_msa.tsv") , emit: msa
-    tuple val(meta), path ("*_mqc.tsv")                   , emit: multiqc
+    tuple val(meta), path ("${meta.id}_alphafold2.pdb")    , emit: top_ranked_pdb
+    tuple val(meta), path ("${fasta.baseName}/ranked*.pdb"), emit: pdb
+    // TODO: re-label multiqc -> plddt so multiqc channel can take in all metrics 
+    tuple val(meta), path ("${meta.id}_plddt.tsv")         , emit: multiqc
+    tuple val(meta), path ("${meta.id}_msa.tsv")           , emit: msa
+    // TODO: alphafold2_model_preset == "monomer" the pae file won't exist.
+    // Default is monomer_ptm which does calculate metrics. Good default, metrics worth it for minor performance loss
+    // Nevertheless PAE has to be optional since not all alphafold2 NN models are handled to generate PAE
+    tuple val(meta), path ("${meta.id}_*_pae.tsv")          , optional: true, emit: paes
     path "versions.yml", emit: versions
 
     when:
@@ -66,18 +71,10 @@ process RUN_ALPHAFOLD2 {
         $args
 
     cp "${fasta.baseName}"/ranked_0.pdb ./"${meta.id}"_alphafold2.pdb
-    cd "${fasta.baseName}"
-    awk '{print \$6"\\t"\$11}' ranked_0.pdb | uniq > ranked_0_plddt.tsv
-    for i in 1 2 3 4
-        do awk '{print \$6"\\t"\$11}' ranked_\$i.pdb | uniq | awk '{print \$2}' > ranked_"\$i"_plddt.tsv
-    done
-    paste ranked_0_plddt.tsv ranked_1_plddt.tsv ranked_2_plddt.tsv ranked_3_plddt.tsv ranked_4_plddt.tsv > plddt.tsv
-    echo -e Positions"\\t"rank_0"\\t"rank_1"\\t"rank_2"\\t"rank_3"\\t"rank_4 > header.tsv
-    cat header.tsv plddt.tsv > ../"${meta.id}"_plddt_mqc.tsv
 
-    extract_output.py --name ${meta.id} \\
-        --pkls features.pkl
-    cd ..
+    extract_metrics.py --name ${meta.id} \\
+      --pkls ${fasta.baseName}/features.pkl \\
+      --structs ${fasta.baseName}/ranked*.pdb
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -87,15 +84,16 @@ process RUN_ALPHAFOLD2 {
 
     stub:
     """
-    touch ./"${meta.id}"_alphafold2.pdb
-    touch ./"${meta.id}"_mqc.tsv
+    touch "${meta.id}_alphafold2.pdb"
+    touch "${meta.id}_plddt.tsv"
+    touch "${meta.id}_msa.tsv"
+    touch "${meta.id}_0_pae.tsv"
     mkdir "${fasta.baseName}"
     touch "${fasta.baseName}/ranked_0.pdb"
     touch "${fasta.baseName}/ranked_1.pdb"
     touch "${fasta.baseName}/ranked_2.pdb"
     touch "${fasta.baseName}/ranked_3.pdb"
     touch "${fasta.baseName}/ranked_4.pdb"
-    touch "${fasta.baseName}/${fasta.baseName}_msa.tsv"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
