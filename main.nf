@@ -20,7 +20,6 @@ if (params.mode.toLowerCase().split(",").contains("alphafold2")) {
     include { ALPHAFOLD2             } from './workflows/alphafold2'
 }
 if (params.mode.toLowerCase().split(",").contains("colabfold")) {
-    include { PREPARE_COLABFOLD_DBS } from './subworkflows/local/prepare_colabfold_dbs'
     include { COLABFOLD             } from './workflows/colabfold'
 }
 if (params.mode.toLowerCase().split(",").contains("esmfold")) {
@@ -35,7 +34,13 @@ if (params.mode.toLowerCase().split(",").contains("helixfold3")) {
     include { PREPARE_HELIXFOLD3_DBS    } from './subworkflows/local/prepare_helixfold3_dbs'
     include { HELIXFOLD3                } from './workflows/helixfold3'
 }
-
+if (params.mode.toLowerCase().split(",").contains("boltz")) {
+    include { PREPARE_BOLTZ_DBS } from './subworkflows/local/prepare_boltz_dbs'
+    include { BOLTZ } from './workflows/boltz'
+}
+if (params.mode.toLowerCase().split(",").contains("colabfold") || params.mode.toLowerCase().split(",").contains("boltz")) {
+    include { PREPARE_COLABFOLD_DBS } from './subworkflows/local/prepare_colabfold_dbs'
+}
 include { PIPELINE_INITIALISATION          } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { PIPELINE_COMPLETION              } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { getColabfoldAlphafold2Params     } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
@@ -70,15 +75,11 @@ workflow NFCORE_PROTEINFOLD {
 
     main:
     ch_samplesheet                          = samplesheet
-    ch_alphafold_top_ranked_pdb             = Channel.empty()
-    ch_colabfold_top_ranked_pdb             = Channel.empty()
-    ch_esmfold_top_ranked_pdb               = Channel.empty()
-    ch_rosettafold_all_atom_top_ranked_pdb  = Channel.empty()
-    ch_helixfold3_top_ranked_pdb            = Channel.empty()
     ch_multiqc                              = Channel.empty()
     ch_versions                             = Channel.empty()
     ch_report_input                         = Channel.empty()
     ch_foldseek_db                          = Channel.empty()
+    ch_top_ranked_model                     = Channel.empty()
     requested_modes                         = params.mode.toLowerCase().split(",")
     requested_modes_size                    = requested_modes.size()
 
@@ -139,10 +140,22 @@ workflow NFCORE_PROTEINFOLD {
             PREPARE_ALPHAFOLD2_DBS.out.pdb_seqres,
             PREPARE_ALPHAFOLD2_DBS.out.uniprot
         )
-        ch_alphafold_top_ranked_pdb = ALPHAFOLD2.out.top_ranked_pdb
         ch_multiqc                  = ch_multiqc.mix(ALPHAFOLD2.out.multiqc_report.collect())
         ch_versions                 = ch_versions.mix(ALPHAFOLD2.out.versions)
-        ch_report_input             = ch_report_input.mix(ALPHAFOLD2.out.pdb_msa)
+        ch_report_input             = ch_report_input.mix(ALPHAFOLD2.out.pdb.map{
+                                                    [it[0],
+                                                    it[1].sort { path ->
+                                                                def filename = path.name
+                                                                def matcher = filename =~ /ranked_(\d+)\.pdb/
+                                                                if (matcher.matches()) {
+                                                                    return matcher[0][1].toInteger()
+                                                                } else {
+                                                                    return 0  // fallback if no match
+                                                                }
+                                                            }.subList(0, Math.min(5, it[1].size()))
+                                                    ]}
+                                                    .join(ALPHAFOLD2.out.msa))
+        ch_top_ranked_model         = ch_top_ranked_model.mix(ALPHAFOLD2.out.top_ranked_pdb)
     }
 
     //
@@ -178,10 +191,22 @@ workflow NFCORE_PROTEINFOLD {
             params.num_recycles_colabfold
         )
 
-        ch_colabfold_top_ranked_pdb = COLABFOLD.out.top_ranked_pdb
         ch_multiqc                  = ch_multiqc.mix(COLABFOLD.out.multiqc_report)
         ch_versions                 = ch_versions.mix(COLABFOLD.out.versions)
-        ch_report_input             = ch_report_input.mix(COLABFOLD.out.pdb_msa)
+        ch_report_input             = ch_report_input.mix(COLABFOLD.out.pdb.map{
+                                            [it[0],
+                                            it[1].sort { path ->
+                                                        def filename = path.name
+                                                        def matcher = filename =~ /_relaxed_rank_(\d+)\.pdb/
+                                                        if (matcher.matches()) {
+                                                            return matcher[0][1].toInteger()
+                                                        } else {
+                                                            return 0  // fallback if no match
+                                                        }
+                                                    }.subList(0, Math.min(5, it[1].size()))
+                                            ]}
+                                            .join(COLABFOLD.out.msa))
+        ch_top_ranked_model         = ch_top_ranked_model.mix(COLABFOLD.out.top_ranked_pdb)
     }
 
     //
@@ -207,14 +232,13 @@ workflow NFCORE_PROTEINFOLD {
             ch_samplesheet,
             ch_versions,
             PREPARE_ESMFOLD_DBS.out.params,
-            params.num_recycles_esmfold,
-            ch_dummy_file
+            params.num_recycles_esmfold
         )
 
-        ch_esmfold_top_ranked_pdb = ESMFOLD.out.top_ranked_pdb
         ch_multiqc                = ch_multiqc.mix(ESMFOLD.out.multiqc_report.collect())
         ch_versions               = ch_versions.mix(ESMFOLD.out.versions)
-        ch_report_input           = ch_report_input.mix(ESMFOLD.out.pdb_msa)
+        ch_report_input           = ch_report_input.mix(ESMFOLD.out.pdb.combine(ch_dummy_file))
+        ch_top_ranked_model       = ch_top_ranked_model.mix(ESMFOLD.out.pdb)
     }
 
     //
@@ -246,13 +270,12 @@ workflow NFCORE_PROTEINFOLD {
             PREPARE_ROSETTAFOLD_ALL_ATOM_DBS.out.bfd,
             PREPARE_ROSETTAFOLD_ALL_ATOM_DBS.out.uniref30,
             PREPARE_ROSETTAFOLD_ALL_ATOM_DBS.out.pdb100,
-            PREPARE_ROSETTAFOLD_ALL_ATOM_DBS.out.rfaa_paper_weights,
-            ch_dummy_file
+            PREPARE_ROSETTAFOLD_ALL_ATOM_DBS.out.rfaa_paper_weights
         )
-        ch_rosettafold_all_atom_top_ranked_pdb  = ROSETTAFOLD_ALL_ATOM.out.top_ranked_pdb
         ch_multiqc                              = ch_multiqc.mix(ROSETTAFOLD_ALL_ATOM.out.multiqc_report.collect())
         ch_versions                             = ch_versions.mix(ROSETTAFOLD_ALL_ATOM.out.versions)
-        ch_report_input                         = ch_report_input.mix(ROSETTAFOLD_ALL_ATOM.out.pdb_msa)
+        ch_report_input                         = ch_report_input.mix(ROSETTAFOLD_ALL_ATOM.out.pdb.combine(ch_dummy_file))
+        ch_top_ranked_model                     = ch_top_ranked_model.mix(ROSETTAFOLD_ALL_ATOM.out.pdb)
     }
 
     //
@@ -276,7 +299,7 @@ workflow NFCORE_PROTEINFOLD {
             params.helixfold3_uniref90_link,
             params.helixfold3_mgnify_link,
             params.helixfold3_pdb_mmcif_link,
-            params.helixfold3_pdb_obsolete_link,
+            params.helixfold3_obsolete_link,
             params.helixfold3_uniclust30_path,
             params.helixfold3_ccd_preprocessed_path,
             params.helixfold3_rfam_path,
@@ -288,6 +311,7 @@ workflow NFCORE_PROTEINFOLD {
             params.helixfold3_uniref90_path,
             params.helixfold3_mgnify_path,
             params.helixfold3_pdb_mmcif_path,
+            params.helixfold3_obsolete_path,
             params.helixfold3_maxit_src_path
         )
         ch_versions = ch_versions.mix(PREPARE_HELIXFOLD3_DBS.out.versions)
@@ -307,16 +331,68 @@ workflow NFCORE_PROTEINFOLD {
             PREPARE_HELIXFOLD3_DBS.out.helixfold3_pdb_seqres,
             PREPARE_HELIXFOLD3_DBS.out.helixfold3_uniref90,
             PREPARE_HELIXFOLD3_DBS.out.helixfold3_mgnify,
-            PREPARE_HELIXFOLD3_DBS.out.helixfold3_pdb_mmcif,
+            PREPARE_HELIXFOLD3_DBS.out.helixfold3_mmcif_files,
+            PREPARE_HELIXFOLD3_DBS.out.helixfold3_obsolete,
             PREPARE_HELIXFOLD3_DBS.out.helixfold3_init_models,
             PREPARE_HELIXFOLD3_DBS.out.helixfold3_maxit_src
         )
-        ch_helixfold3_top_ranked_pdb = HELIXFOLD3.out.top_ranked_pdb
         ch_multiqc                   = ch_multiqc.mix(HELIXFOLD3.out.multiqc_report.collect())
         ch_versions                  = ch_versions.mix(HELIXFOLD3.out.versions)
-        ch_report_input              = ch_report_input.mix(HELIXFOLD3.out.pdb_msa)
+        ch_report_input              = ch_report_input.mix(HELIXFOLD3.out.pdb.map{
+                                                    [it[0],
+                                                    it[1].sort { path ->
+                                                                def filename = path.name
+                                                                def matcher = filename =~ /ranked_(\d+)\.pdb/
+                                                                if (matcher.matches()) {
+                                                                    return matcher[0][1].toInteger()
+                                                                } else {
+                                                                    return 0  // fallback if no match
+                                                                }
+                                                            }.subList(0, Math.min(5, it[1].size()))
+                                                    ]}.combine(ch_dummy_file))
+        ch_top_ranked_model          = ch_top_ranked_model.mix(HELIXFOLD3.out.top_ranked_pdb)
     }
 
+    //
+    // WORKFLOW: Run Boltz
+    //
+    if (params.mode.toLowerCase().split(",").contains("boltz")) {
+        PREPARE_BOLTZ_DBS(
+            params.boltz_ccd_path,
+            params.boltz_model_path,
+            params.boltz_ccd_link,
+            params.boltz_model_link
+        )
+        ch_versions = ch_versions.mix(PREPARE_BOLTZ_DBS.out.versions)
+
+        PREPARE_COLABFOLD_DBS (
+            params.colabfold_db,
+            params.colabfold_server,
+            params.colabfold_alphafold2_params_path,
+            params.colabfold_db_path,
+            params.uniref30_colabfold_path,
+            params.colabfold_alphafold2_params_link,
+            params.colabfold_db_link,
+            params.uniref30_colabfold_link,
+            params.create_colabfold_index
+        )
+        ch_versions = ch_versions.mix(PREPARE_COLABFOLD_DBS.out.versions)
+
+        BOLTZ(
+            ch_samplesheet,
+            ch_versions,
+            PREPARE_BOLTZ_DBS.out.boltz_ccd,
+            PREPARE_BOLTZ_DBS.out.boltz_model,
+            PREPARE_COLABFOLD_DBS.out.params,
+            PREPARE_COLABFOLD_DBS.out.colabfold_db,
+            PREPARE_COLABFOLD_DBS.out.uniref30,
+            params.boltz_use_msa_server
+        )
+        ch_multiqc                  = ch_multiqc.mix(BOLTZ.out.multiqc_report)
+        ch_versions                 = ch_versions.mix(BOLTZ.out.versions)
+        ch_report_input             = ch_report_input.mix(BOLTZ.out.pdb.combine(ch_dummy_file))
+        ch_top_ranked_model         = ch_top_ranked_model.mix(BOLTZ.out.pdb)
+    }
     //
     // POST PROCESSING: generate visualisation reports
     //
@@ -357,11 +433,7 @@ workflow NFCORE_PROTEINFOLD {
         ch_multiqc_custom_config,
         ch_multiqc_logo,
         ch_multiqc_methods_description,
-        ch_alphafold_top_ranked_pdb,
-        ch_colabfold_top_ranked_pdb,
-        ch_esmfold_top_ranked_pdb,
-        ch_rosettafold_all_atom_top_ranked_pdb,
-        ch_helixfold3_top_ranked_pdb
+        ch_top_ranked_model
     )
 
     emit:
