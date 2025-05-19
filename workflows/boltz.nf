@@ -54,15 +54,12 @@ workflow BOLTZ {
     msa_server
 
     main:
-    ch_multiqc_files = Channel.empty()
-    ch_boltz_in = Channel.empty()
-
     ch_samplesheet.join(
         ch_samplesheet.map{[it[0], it[1].text.findAll {letter -> letter == ">" }.size()]}
     )
     .map{
-        meta = it[0].clone();
-        meta.cnt = it[2];
+        def meta = it[0].clone()
+        meta.cnt = it[2]
         [meta, it[1]]
     }
     .branch{

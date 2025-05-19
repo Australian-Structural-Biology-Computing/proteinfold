@@ -232,13 +232,6 @@
                     "type": "boolean",
                     "description": "Use the cloud MSA server",
                     "icon": "fas folder-open"
-                },
-                "boltz_precomputed_msa_path": {
-                    "type": "string"
-                },
-                "boltz_msa_server": {
-                    "type": "string",
-                    "default": "local"
                 }
             }
         },
