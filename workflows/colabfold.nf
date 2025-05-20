@@ -80,16 +80,14 @@ workflow COLABFOLD {
             MMSEQS_CUDA (
                 MULTIFASTA_TO_CSV.out.input_csv,
                 ch_colabfold_params,
-                ch_colabfold_db,
-                ch_uniref30
+                channel.fromPath("/mnt/af2/uniref30")
             )
             ch_versions = ch_versions.mix(MMSEQS_CUDA.out.versions)
         } else {
             MMSEQS_CUDA (
                 ch_samplesheet,
                 ch_colabfold_params,
-                ch_colabfold_db,
-                ch_uniref30
+                channel.fromPath("/mnt/af2/uniref30")
             )
             ch_versions = ch_versions.mix(MMSEQS_CUDA.out.versions)
         }

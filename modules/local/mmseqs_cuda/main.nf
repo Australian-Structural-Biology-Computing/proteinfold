@@ -9,7 +9,6 @@ process MMSEQS_CUDA {
     tuple val(meta), path(fasta)
     path ('db/params')
     path colabfold_db
-    path uniref30
 
     output:
     tuple val(meta), path("**.a3m"), emit: a3m
@@ -27,11 +26,11 @@ process MMSEQS_CUDA {
     def VERSION = '1.5.2' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
 
     """
-    ln -r -s $uniref30/uniref30_* ./db
-    ln -r -s $colabfold_db/colabfold_envdb* ./db
+    ln -r -s ./uniref30_* ./db
+    #ln -r -s \$colabfold_db/colabfold_envdb* ./db
 
-    mmseqs_avx2 tsv2db ./db/uniref30_2302_seq.tsv uniref30_2302
-    /usr/local/bin/mmseqs_avx2 makepaddedseqdb ./db ./paddb
+    #mmseqs_avx2 tsv2db ./db/uniref30_2302_seq.tsv uniref30_2302
+    /usr/local/bin/mmseqs_avx2 makepaddedseqdb uniref30/UniRef30_2021_03 ./paddb
 
     #/usr/local/bin/mmseqs_avx2 easy-search \\
     #    ${fasta} \\
