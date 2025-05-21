@@ -30,13 +30,13 @@ process MMSEQS_CUDA {
     #ln -r -s \$colabfold_db/colabfold_envdb* ./db
 
     #mmseqs_avx2 tsv2db ./db/uniref30_2302_seq.tsv uniref30_2302
-    /usr/local/bin/mmseqs_avx2 makepaddedseqdb uniref30/UniRef30_2021_03 ./paddb
+    #/usr/local/bin/mmseqs_avx2 makepaddedseqdb mmseqs-GPU/uniref30_2302 ./paddb
 
-    #/usr/local/bin/mmseqs_avx2 easy-search \\
-    #    ${fasta} \\
-    #    ./db \\
-    #    result.m8 \\
-    #    tmp \\
+    /usr/local/bin/mmseqs_avx2 easy-search \\
+        ${fasta} \\
+        ./mmseqs-GPU/uniref30_2302_db \\
+        result.m8 \\
+        tmp \\
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
