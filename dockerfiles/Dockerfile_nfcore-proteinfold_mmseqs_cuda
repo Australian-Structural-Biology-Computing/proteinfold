@@ -1,0 +1,17 @@
+FROM nvidia/cuda:11.4.3-cudnn8-runtime-ubuntu18.04
+
+LABEL authors="Nathan Glades" \
+    title="nfcore/proteinfold_mmseqs_gpu" \
+    Version="99a025e6bc0926cd737e1f79c2d03a22d9ff4b88" \
+    description="Docker image containing software for mmseqs_gpu MSA"
+
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A4B469963BF863CC
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+	wget
+
+RUN cd /tmp \
+	&& wget "https://mmseqs.com/latest/mmseqs-linux-gpu.tar.gz" \
+	&& tar xvf "mmseqs-linux-gpu.tar.gz" \
+	&& install -m 755 ./mmseqs/bin/mmseqs /bin/ \
+	&& rm -rf mmseqs mmseqs-linux-gpu.tar.gz
+
