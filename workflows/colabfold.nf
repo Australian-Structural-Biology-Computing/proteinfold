@@ -7,10 +7,10 @@
 //
 // MODULE: Loaded from modules/local/
 //
-include { COLABFOLD_BATCH        } from '../modules/local/colabfold_batch'
-include { MMSEQS_COLABFOLDSEARCH } from '../modules/local/mmseqs_colabfoldsearch'
-include { MMSEQS_CUDA            } from '../modules/local/mmseqs_cuda'
-include { MULTIFASTA_TO_CSV      } from '../modules/local/multifasta_to_csv'
+include { COLABFOLD_BATCH             } from '../modules/local/colabfold_batch'
+include { MMSEQS_COLABFOLDSEARCH      } from '../modules/local/mmseqs_colabfoldsearch'
+include { MMSEQS_COLABFOLDSEARCH_CUDA } from '../modules/local/mmseqs_colabfoldsearch_cuda'
+include { MULTIFASTA_TO_CSV           } from '../modules/local/multifasta_to_csv'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -77,26 +77,28 @@ workflow COLABFOLD {
                 ch_samplesheet
             )
             ch_versions = ch_versions.mix(MULTIFASTA_TO_CSV.out.versions)
-            MMSEQS_CUDA (
+            MMSEQS_COLABFOLDSEARCH_CUDA (
                 MULTIFASTA_TO_CSV.out.input_csv,
                 ch_colabfold_params,
-                channel.fromPath("/mnt/af2/uniref30")
+                ch_colabfold_db,
+                ch_uniref30
             )
-            ch_versions = ch_versions.mix(MMSEQS_CUDA.out.versions)
+            ch_versions = ch_versions.mix(MMSEQS_COLABFOLDSEARCH_CUDA.out.versions)
         } else {
-            MMSEQS_CUDA (
+            MMSEQS_COLABFOLDSEARCH_CUDA (
                 ch_samplesheet,
                 ch_colabfold_params,
-                channel.fromPath("/mnt/af2/uniref30")
+                ch_colabfold_db,
+                ch_uniref30
             )
-            ch_versions = ch_versions.mix(MMSEQS_CUDA.out.versions)
+            ch_versions = ch_versions.mix(MMSEQS_COLABFOLDSEARCH_CUDA.out.versions)
         }
 
         //
         // MODULE: Run colabfold
         //
         COLABFOLD_BATCH(
-            MMSEQS_CUDA.out.a3m,
+            MMSEQS_COLABFOLDSEARCH_CUDA.out.a3m,
             colabfold_model_preset,
             ch_colabfold_params,
             ch_colabfold_db,
