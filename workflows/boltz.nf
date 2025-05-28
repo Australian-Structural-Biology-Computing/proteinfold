@@ -29,6 +29,7 @@ include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
+include { MSA                    } from '../subworkflows/local/msa'
 
 //
 // MODULE: Boltz
@@ -118,8 +119,8 @@ workflow BOLTZ {
     }
 
     BOLTZ_FASTA(
-            ch_prepare_fasta
-        )
+        ch_prepare_fasta
+    )
 
     ch_input_by_ext.yaml
         .map { meta, file -> [ meta, file, [] ] }  // already in YAML
