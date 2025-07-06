@@ -66,6 +66,7 @@ workflow BOLTZ {
         .set { ch_input_by_ext }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     ch_input_by_ext.fasta
         .join(
             ch_input_by_ext.fasta
@@ -89,6 +90,15 @@ workflow BOLTZ {
 
 =======
 >>>>>>> fe3289c (update)
+=======
+    ch_samplesheet
+        .branch {
+            fasta: it[1].extension == "fasta" || it[1].extension == "fa"
+            yaml: it[1].extension == "yaml" || it[1].extension == "yml"
+        }
+        .set { ch_input_by_ext }
+
+>>>>>>> eef172e (WIP: integrating logic into boltz.nf for MSA to work on yaml and fasta)
     if (!msa_server){
         MSA(
             ch_samplesheet,
@@ -147,6 +157,7 @@ workflow BOLTZ {
         ch_prepare_fasta
     )
 
+<<<<<<< HEAD
     ch_input_by_ext.yaml
         .map { meta, file -> [ meta, file, [] ] }  // already in YAML
         .mix(BOLTZ_FASTA.out.formatted_fasta)    // newly converted from FASTA
@@ -155,6 +166,41 @@ workflow BOLTZ {
     RUN_BOLTZ(
         ch_boltz_input.map { it -> [it[0], it[1]] },
         ch_boltz_input.map { it -> it[2] },
+=======
+    // Prepare YAML input with a placeholder for MSA
+    def ch_boltz_input_yaml = ch_input_by_ext.yaml
+        .map { meta, file ->
+            meta.original_file = file
+            [meta, file, []]  // we leave msa as empty array here
+        }
+        .combine(BOLTZ_FASTA.out.formatted_fasta.first(), by: 0) // block until FASTA done
+        .map { yaml_entry, _ -> yaml_entry } // drop the dummy FASTA
+
+    // Now inject MSA back in
+    def ch_boltz_input_yaml_with_msa = ch_boltz_input_yaml
+        .map { meta, file, _ ->
+            def fasta_match = BOLTZ_FASTA.out.formatted_fasta
+                .filter { it[0].id == meta.id } // match by ID
+                .first()
+            fasta_match.map { unused_meta, unused_file, msa -> [meta, meta.original_file ?: file, msa] }
+
+        }
+        .flatten()
+
+    // Final input: YAMLs with MSA + converted FASTAs
+    ch_boltz_input_yaml_with_msa
+        .concat(BOLTZ_FASTA.out.formatted_fasta)
+        .set { ch_boltz_input }
+
+    ch_boltz_input_yaml_with_msa.view { "YAML w/ MSA: $it" }
+    
+    BOLTZ_FASTA.out.formatted_fasta.view { "FASTA: $it" }
+
+
+    RUN_BOLTZ(
+        ch_boltz_input.map{[it[0], it[1]]},
+        ch_boltz_input.map{it[2]},
+>>>>>>> eef172e (WIP: integrating logic into boltz.nf for MSA to work on yaml and fasta)
         ch_boltz_model,
         ch_boltz_ccd,
         ch_boltz2_aff,
