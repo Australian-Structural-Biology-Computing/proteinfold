@@ -1,5 +1,5 @@
 ARG CUDA=12.6.0
-FROM nvidia/cuda:${CUDA}-cudnn-devel-ubuntu24.04 AS builder
+FROM nvidia/cuda:${CUDA}-runtime-ubuntu24.04 AS builder
 # FROM directive resets ARGS, so we specify again (the value is retained if
 # previously set).
 ARG CUDA
@@ -15,11 +15,13 @@ ENV PYTHONPATH="/app/RoseTTAFold-All-Atom" \
     LD_LIBRARY_PATH="/conda/lib:/usr/local/cuda-$(cut -f1,2 -d. <<< ${CUDA})/lib64:$LD_LIBRARY_PATH"
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y wget git && \
-    wget -q -P /tmp "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh" && \
+    wget -q -P /tmp "https://github.com/conda-forge/miniforge/releases/download/24.11.0-0/Miniforge3-$(uname)-$(uname -m).sh" && \
     bash /tmp/Miniforge3-$(uname)-$(uname -m).sh -b -p /conda && \
     rm -rf /tmp/Miniforge3-$(uname)-$(uname -m).sh /var/lib/apt/lists/* /root/.cache && \
     git clone --single-branch --depth 1 https://github.com/Australian-Structural-Biology-Computing/RoseTTAFold-All-Atom.git /app/RoseTTAFold-All-Atom && \
     cd /app/RoseTTAFold-All-Atom && \
+    git fetch --depth 1 origin e8f94d6d6ddfb07da2119bcfa94359bc6912fd29 && \
+    git checkout e8f94d6d6ddfb07da2119bcfa94359bc6912fd29 && \
     /conda/bin/mamba env create --file=environment.yaml && \
     /conda/bin/mamba run -n RFAA bash -c \
         "python /app/RoseTTAFold-All-Atom/rf2aa/SE3Transformer/setup.py install && \
@@ -35,7 +37,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-instal
     rm -rf /root/.cache *.tar.gz && \
     apt-get remove --purge -y wget git && apt-get autoremove -y && apt-get clean -y
 
-FROM nvidia/cuda:${CUDA}-cudnn-runtime-ubuntu24.04
+FROM nvidia/cuda:${CUDA}-base-ubuntu24.04
 # FROM directive resets ARGS, so we specify again (the value is retained if
 # previously set).
 ARG CUDA

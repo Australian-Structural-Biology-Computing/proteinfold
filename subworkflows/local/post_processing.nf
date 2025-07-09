@@ -59,7 +59,6 @@ workflow POST_PROCESSING {
                     , remainder:true
                 )
             )
-
             ch_comparison_report_files = ch_comparison_report_files.mix(
                 ch_top_ranked_model
                 .filter{it[0]["model"] != "alphafold2"}
@@ -77,8 +76,6 @@ workflow POST_PROCESSING {
                     [it[0], it[2], it[3]]
                 }
                 .set { ch_comparison_report_input }
-
-            ch_comparison_report_input.view()
 
             COMPARE_STRUCTURES(
                 ch_comparison_report_input
@@ -129,6 +126,13 @@ workflow POST_PROCESSING {
         ch_multiqc_files = ch_multiqc_files.mix(ch_methods_description.collectFile(name: 'methods_description_mqc.yaml'))
         ch_multiqc_files = ch_multiqc_files.mix(ch_collated_versions)
 
+        ch_multiqc_rep
+            .combine(
+                ch_multiqc_files
+                    .collect()
+                    .map { [it] }
+            )
+
         MULTIQC (
             ch_multiqc_rep
                 .combine(
@@ -136,7 +140,7 @@ workflow POST_PROCESSING {
                         .collect()
                         .map { [it] }
                 )
-            .map { [ it[0], it[1] + it[2] ] },
+                .map { [ it[0], it[1] + it[2] ] },
             ch_multiqc_config,
             ch_multiqc_custom_config
                 .collect()

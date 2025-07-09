@@ -19,6 +19,10 @@ if (params.mode.toLowerCase().split(",").contains("alphafold2")) {
     include { PREPARE_ALPHAFOLD2_DBS } from './subworkflows/local/prepare_alphafold2_dbs'
     include { ALPHAFOLD2             } from './workflows/alphafold2'
 }
+if (params.mode.toLowerCase().split(",").contains("alphafold3")) {
+    include { PREPARE_ALPHAFOLD3_DBS } from './subworkflows/local/prepare_alphafold3_dbs'
+    include { ALPHAFOLD3             } from './workflows/alphafold3'
+}
 if (params.mode.toLowerCase().split(",").contains("colabfold")) {
     include { COLABFOLD             } from './workflows/colabfold'
 }
@@ -36,11 +40,12 @@ if (params.mode.toLowerCase().split(",").contains("helixfold3")) {
 }
 if (params.mode.toLowerCase().split(",").contains("boltz")) {
     include { PREPARE_BOLTZ_DBS } from './subworkflows/local/prepare_boltz_dbs'
-    include { BOLTZ } from './workflows/boltz'
+    include { BOLTZ             } from './workflows/boltz'
 }
 if (params.mode.toLowerCase().split(",").contains("colabfold") || params.mode.toLowerCase().split(",").contains("boltz")) {
     include { PREPARE_COLABFOLD_DBS } from './subworkflows/local/prepare_colabfold_dbs'
 }
+
 include { PIPELINE_INITIALISATION          } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { PIPELINE_COMPLETION              } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { getColabfoldAlphafold2Params     } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
@@ -66,8 +71,6 @@ params.colabfold_alphafold2_params_path = getColabfoldAlphafold2ParamsPath()
 // WORKFLOW: Run main analysis pipeline
 //
 
-ch_dummy_file = Channel.fromPath("$projectDir/assets/NO_FILE")
-
 workflow NFCORE_PROTEINFOLD {
 
     take:
@@ -83,6 +86,8 @@ workflow NFCORE_PROTEINFOLD {
     requested_modes                         = params.mode.toLowerCase().split(",")
     requested_modes_size                    = requested_modes.size()
 
+    ch_dummy_file = Channel.fromPath("$projectDir/assets/NO_FILE")
+
     //
     // WORKFLOW: Run alphafold2
     //
@@ -94,26 +99,26 @@ workflow NFCORE_PROTEINFOLD {
             params.alphafold2_db,
             params.full_dbs,
             params.bfd_path,
-            params.small_bfd_path,
+            params.alphafold2_small_bfd_path,
             params.alphafold2_params_path,
-            params.mgnify_path,
+            params.alphafold2_mgnify_path,
             params.pdb70_path,
-            params.pdb_mmcif_path,
+            params.alphafold2_pdb_mmcif_path,
             params.pdb_obsolete_path,
-            params.uniref30_alphafold2_path,
-            params.uniref90_path,
-            params.pdb_seqres_path,
-            params.uniprot_path,
+            params.alphafold2_uniref30_path,
+            params.alphafold2_uniref90_path,
+            params.alphafold2_pdb_seqres_path,
+            params.alphafold2_uniprot_path,
             params.bfd_link,
-            params.small_bfd_link,
+            params.alphafold2_small_bfd_link,
             params.alphafold2_params_link,
-            params.mgnify_link,
+            params.alphafold2_mgnify_link,
             params.pdb70_link,
-            params.pdb_mmcif_link,
+            params.alphafold2_pdb_mmcif_link,
             params.pdb_obsolete_link,
-            params.uniref30_alphafold2_link,
-            params.uniref90_link,
-            params.pdb_seqres_link,
+            params.alphafold2_uniref30_link,
+            params.alphafold2_uniref90_link,
+            params.alphafold2_pdb_seqres_link,
             params.uniprot_sprot_link,
             params.uniprot_trembl_link
         )
@@ -155,7 +160,74 @@ workflow NFCORE_PROTEINFOLD {
                                                             }.subList(0, Math.min(5, it[1].size()))
                                                     ]}
                                                     .join(ALPHAFOLD2.out.msa))
+
         ch_top_ranked_model         = ch_top_ranked_model.mix(ALPHAFOLD2.out.top_ranked_pdb)
+    }
+
+    //
+    // WORKFLOW: Run alphafold3
+    //
+    if(requested_modes.contains("alphafold3")) {
+        //
+        // SUBWORKFLOW: Prepare Alphafold3 DBs
+        //
+        PREPARE_ALPHAFOLD3_DBS (
+            params.alphafold3_db,
+            params.alphafold3_params_path,
+            params.alphafold3_small_bfd_path,
+            params.alphafold3_mgnify_path,
+            params.alphafold3_pdb_mmcif_path,
+            params.alphafold3_uniref90_path,
+            params.alphafold3_pdb_seqres_path,
+            params.alphafold3_uniprot_path,
+            params.alphafold3_small_bfd_link,
+            params.alphafold3_mgnify_link,
+            params.alphafold3_pdb_mmcif_link,
+            params.alphafold3_uniref90_link,
+            params.alphafold3_pdb_seqres_link,
+            params.uniprot_link
+        )
+        ch_versions = ch_versions.mix(PREPARE_ALPHAFOLD3_DBS.out.versions)
+
+        //
+        // WORKFLOW: Run nf-core/alphafold3 workflow
+        //
+        ALPHAFOLD3 (
+            ch_samplesheet,
+            ch_versions,
+            PREPARE_ALPHAFOLD3_DBS.out.params,
+            PREPARE_ALPHAFOLD3_DBS.out.small_bfd,
+            PREPARE_ALPHAFOLD3_DBS.out.mgnify,
+            PREPARE_ALPHAFOLD3_DBS.out.pdb_mmcif,
+            PREPARE_ALPHAFOLD3_DBS.out.uniref90,
+            PREPARE_ALPHAFOLD3_DBS.out.pdb_seqres,
+            PREPARE_ALPHAFOLD3_DBS.out.uniprot
+        )
+
+        ch_multiqc      = ch_multiqc.mix(ALPHAFOLD3.out.multiqc_report)
+        ch_versions     = ch_versions.mix(ALPHAFOLD3.out.versions)
+        ch_report_input = ch_report_input
+                            .mix(
+                                ALPHAFOLD3
+                                    .out
+                                    .pdb
+                                    .map {
+                                        [
+                                            it[0],
+                                            it[1].sort { path ->
+                                                def filename = path.name
+                                                def matcher = filename =~ /.*_ranked_(\d+)\.pdb/
+                                                if (matcher.matches()) {
+                                                    return matcher[0][1].toInteger()
+                                                } else {
+                                                    return 0  // fallback if no match
+                                                }
+                                            }.subList(0, Math.min(5, it[1].size()))
+                                        ]
+                                    }
+                                .join(ALPHAFOLD3.out.msa)
+                            )
+        ch_top_ranked_model = ch_top_ranked_model.mix(ALPHAFOLD3.out.top_ranked_pdb)
     }
 
     //
@@ -170,10 +242,10 @@ workflow NFCORE_PROTEINFOLD {
             params.colabfold_server,
             params.colabfold_alphafold2_params_path,
             params.colabfold_db_path,
-            params.uniref30_colabfold_path,
+            params.colabfold_uniref30_path,
             params.colabfold_alphafold2_params_link,
             params.colabfold_db_link,
-            params.uniref30_colabfold_link,
+            params.colabfold_uniref30_link,
             params.create_colabfold_index
         )
         ch_versions = ch_versions.mix(PREPARE_COLABFOLD_DBS.out.versions)
@@ -206,6 +278,7 @@ workflow NFCORE_PROTEINFOLD {
                                                     }.subList(0, Math.min(5, it[1].size()))
                                             ]}
                                             .join(COLABFOLD.out.msa))
+
         ch_top_ranked_model         = ch_top_ranked_model.mix(COLABFOLD.out.top_ranked_pdb)
     }
 
@@ -383,7 +456,6 @@ workflow NFCORE_PROTEINFOLD {
             ch_versions,
             PREPARE_BOLTZ_DBS.out.boltz_ccd,
             PREPARE_BOLTZ_DBS.out.boltz_model,
-            PREPARE_COLABFOLD_DBS.out.params,
             PREPARE_COLABFOLD_DBS.out.colabfold_db,
             PREPARE_COLABFOLD_DBS.out.uniref30,
             params.boltz_use_msa_server

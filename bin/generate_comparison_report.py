@@ -122,7 +122,7 @@ def align_structures(structures):
 
     def get_atom_ids(structure):
         # Note: this is a *set* of atom_ids due to the {} surrounding the comprehension
-        return {(atom.get_parent().get_id(), atom.name) for atom in structure.get_atoms()}
+        return {(atom.get_parent().get_parent().get_id(), atom.get_parent().get_id(), atom.name) for atom in structure.get_atoms() if atom.element != 'H'}
 
     # TODO: do we want to raise and error if the structures are not identical atomically, or keep the ability to sub-align?
     # Update the atoms shared between structures with progressive intersections
@@ -137,7 +137,7 @@ def align_structures(structures):
     #print(common_atoms)
     def extract_atoms(structure, atom_ids):
         # Note: this comprehension returns an atom *object* for each atom in the structure
-        return [atom for atom in structure.get_atoms() if (atom.get_parent().get_id(), atom.name) in atom_ids]
+        return [atom for atom in structure.get_atoms() if (atom.get_parent().get_parent().get_id(), atom.get_parent().get_id(), atom.name) in atom_ids]
 
     ref_atoms = extract_atoms(ref_structure, common_atoms)
     # The aligned structures will be the parsed structures aligned to the common atoms of the reference structure

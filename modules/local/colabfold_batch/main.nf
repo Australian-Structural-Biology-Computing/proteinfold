@@ -15,7 +15,7 @@ process COLABFOLD_BATCH {
 
     output:
     tuple val(meta), path ("${meta.id}_colabfold.pdb"), emit: top_ranked_pdb
-    tuple val(meta), path ("*_relaxed_rank_*.pdb")    , emit: pdb
+    tuple val(meta), path ("*relaxed_rank_*.pdb")     , emit: pdb
     tuple val(meta), path ("*_coverage.png")          , emit: msa
     tuple val(meta), path ("*_mqc.png")               , emit: multiqc
     path "versions.yml"                               , emit: versions
@@ -40,9 +40,14 @@ process COLABFOLD_BATCH {
         --model-type ${colabfold_model_preset} \\
         ${fasta} \\
         \$PWD
-    for i in `find *_relaxed_rank_001*.pdb`; do cp \$i `echo \$i | sed "s|_relaxed_rank_|\t|g" | cut -f1`"_colabfold.pdb"; done
     for i in `find *.png -maxdepth 0`; do cp \$i \${i%'.png'}_mqc.png; done
-    cp *_relaxed_rank_001*.pdb ${meta.id}_colabfold.pdb
+    if [ ! -e `find *_relaxed_rank_001_*.pdb` ]; then
+        #for i in `find *_relaxed_rank_001*.pdb`; do cp \$i `echo \$i | sed "s|_relaxed_rank_|\t|g" | cut -f1`"_colabfold.pdb"; done
+        cp *_relaxed_rank_001*.pdb ${meta.id}_colabfold.pdb
+    else
+        #for i in `find *_unrelaxed_rank_001*.pdb`; do cp \$i `echo \$i | sed "s|_unrelaxed_rank_|\t|g" | cut -f1`"_colabfold.pdb"; done
+        cp *_unrelaxed_rank_001*.pdb ${meta.id}_colabfold.pdb
+    fi
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

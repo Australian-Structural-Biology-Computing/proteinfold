@@ -63,6 +63,11 @@ workflow PIPELINE_INITIALISATION {
     )
 
     //
+    // Custom validation for pipeline parameters
+    //
+    validateInputParameters()
+
+    //
     // Create channel from input file provided through params.input
     //
     ch_samplesheet = Channel.fromList(samplesheetToList(params.input, "assets/schema_input.json"))
@@ -153,6 +158,15 @@ workflow PIPELINE_COMPLETION {
     FUNCTIONS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
+
+//
+// Check and validate pipeline parameters
+//
+def validateInputParameters() {
+    if (params.mode.toLowerCase().split(",").contains("alphafold3")) {
+        alphafold3Warn(log)
+    }
+}
 
 //
 // Get link to Colabfold Alphafold2 parameters
@@ -261,4 +275,15 @@ def validateFasta(fasta) {
             log.warn "The header ${header} contains special characters. They have been automatically removed."
         }
     }
+}
+
+//
+// Print a warning when using Alphafold3
+//
+def alphafold3Warn(log) {
+    log.warn "=============================================================================\n" +
+        "  You are using AlphaFold3 mode.\n" +
+        "  Be aware that the predicted structures can not be used for commercial purposes.\n" +
+        "  More information here: \"https://github.com/google-deepmind/alphafold3/blob/main/README.md#alphafold-3-source-code-and-model-parameters.\"\n" +
+        "==================================================================================="
 }

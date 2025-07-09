@@ -137,7 +137,7 @@ workflow PREPARE_HELIXFOLD3_DBS {
             ARIA2_UNIPROT_TREMBL.out.db
         )
         ch_helixfold3_uniprot = COMBINE_UNIPROT.out.ch_db
-        ch_version =  ch_versions.mix(COMBINE_UNIPROT.out.versions)
+        ch_versions =  ch_versions.mix(COMBINE_UNIPROT.out.versions)
     }
 
     emit:

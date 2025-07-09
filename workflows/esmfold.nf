@@ -59,12 +59,12 @@ workflow ESMFOLD {
     RUN_ESMFOLD
         .out
         .pdb
-    .map{
-        meta = it[0].clone();
-        meta.model = "esmfold";
-        [meta, it[1]]
-    }
-    .set{ch_pdb_final}
+        .map{
+            meta = it[0].clone();
+            meta.model = "esmfold";
+            [meta, it[1]]
+        }
+        .set{ch_pdb_final}
 
     RUN_ESMFOLD
         .out
