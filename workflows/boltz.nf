@@ -243,6 +243,8 @@ workflow BOLTZ {
         .msa
         .map{it[0].model = "boltz"; it}
         .set {ch_msa}
+        .map{it[0].model = "boltz"; it}
+        .set {ch_msa}
 
     RUN_BOLTZ
         .out
