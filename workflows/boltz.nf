@@ -93,7 +93,8 @@ workflow BOLTZ {
         }
         .set { ch_input_by_ext }
 
-    if (!msa_server){
+     if (!msa_server){
+
         MSA(
             ch_samplesheet,
             ch_colabfold_db,
@@ -239,6 +240,9 @@ workflow BOLTZ {
         it
     }
     .set {ch_msa}
+        .msa
+        .map{it[0].model = "boltz"; it}
+        .set {ch_msa}
 
     RUN_BOLTZ
         .out

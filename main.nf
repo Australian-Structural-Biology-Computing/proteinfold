@@ -549,12 +549,9 @@ workflow NFCORE_PROTEINFOLD {
             PREPARE_BOLTZ_DBS.out.boltz2_mols,
             PREPARE_COLABFOLD_DBS.out.colabfold_db,
             PREPARE_COLABFOLD_DBS.out.uniref30,
-<<<<<<< HEAD
             params.use_msa_server
-=======
             params.boltz_use_msa_server,
             params.mmseq_batch_size
->>>>>>> fe3289c (update)
         )
         ch_multiqc                  = ch_multiqc.mix(BOLTZ.out.multiqc_report)
         ch_versions                 = ch_versions.mix(BOLTZ.out.versions)

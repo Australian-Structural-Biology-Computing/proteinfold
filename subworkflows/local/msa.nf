@@ -52,7 +52,7 @@ workflow MSA {
         .map{[["id": it.baseName], it]}
         .set {ch_input_seqs}
 
-        ch_input_seqs.view()
+        //ch_input_seqs.view()
 
         MMSEQS_COLABFOLDSEARCH (
             ch_input_seqs,
