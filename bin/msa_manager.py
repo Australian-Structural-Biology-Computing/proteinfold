@@ -46,6 +46,13 @@ def parse_msa(msa_path, output_dir, meta_id):
             homologs_lengths = [int(x.strip()) for x in first_line.replace('#',"").split()[0].split(",")]
             sequence_groups = [[[], []] for _ in range(len(homologs_lengths))]
             is_multimer = True
+            print("Error: File might not have multiple A3M sections.")
+            return
+
+        homologs_lengths = [int(x.strip()) for x in first_line.replace("#", "").split()[0].split(",")]
+        sequence_groups = [[[], []] for _ in range(len(homologs_lengths))]
+        #arities = [int(x.strip()) for x in first_line.replace("#", "").split()[1].split(",")]
+        #max_arity = max(arities)
 
     with open(msa_path, "r") as file:
         if is_multimer:
@@ -99,6 +106,9 @@ def parse_msa(msa_path, output_dir, meta_id):
             out_file.write("key,sequence\n")
             if len(homologs_lengths)==1: #Homo-oligomer: all sequences are paired
                 paired_sequences = sequence_groups[seq_index][0]+sequence_groups[seq_index][1]
+
+                print(sequence_groups)
+
                 for i, seq in enumerate(paired_sequences):
                     out_file.write(f"{i},{seq}\n")
             else:

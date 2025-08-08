@@ -82,7 +82,7 @@ process BOLTZ_FASTA {
                         this_msa = unique_proteins[sequence]
                         msa = f"|{os.path.basename(msa_files[this_msa])}"
                         if msa[1:] not in msa_files:
-                            print(f"Can not find msa file {os.path.basename(msa_files[counter])}")
+                            print(f"Can not find msa file {os.path.basename(msa_files[this_msa])}")
                             exit(1)
                 fasta_data += f">{all_combinations[counter]}|{entity_type}{msa}\\n{sequence}\\n"
                 counter += 1
@@ -103,7 +103,7 @@ process BOLTZ_FASTA {
                 this_msa = unique_proteins[sequence]
                 msa = f"|{os.path.basename(msa_files[this_msa])}"
                 if msa[1:] not in msa_files:
-                    print(f"Can not find msa file {os.path.basename(msa_files[counter])}")
+                    print(f"Can not find msa file {os.path.basename(msa_files[this_msa])}")
                     exit(1)
         fasta_data += f">{all_combinations[counter]}|{entity_type}{msa}\\n{sequence}\\n"
 
