@@ -119,7 +119,14 @@ workflow BOLTZ {
 
         SPLIT_MSA(
             MMSEQS_COLABFOLDSEARCH.out.a3m
+        MSA.out.formated_input
+            .set{ch_input}
+        ch_input.view()
+
+        SPLIT_MSA(
+            MSA.out.a3m
         )
+        MSA.out.a3m.view()
         ch_versions = ch_versions.mix(SPLIT_MSA.out.versions)
         ch_input.monomer
             .join(SPLIT_MSA.out.msa_csv)
@@ -130,7 +137,8 @@ workflow BOLTZ {
             .mix(
                 ch_input.multimer.join(SPLIT_MSA.out.msa_csv)
             ).set{ch_prepare_fasta}
-
+        ch_input.join(SPLIT_MSA.out.msa_csv)
+            .set{ch_prepare_fasta}
     }else{
         ch_input_by_ext.fasta
             .join(
