@@ -31,6 +31,8 @@ process MMSEQS_COLABFOLDSEARCH {
         ./db \\
         --af3-json \\
         "results/"
+        "result/" \\
+        --unpack 1
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
