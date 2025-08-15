@@ -55,6 +55,19 @@ def parse_msa(msa_path, output_dir, meta_id):
         #max_arity = max(arities)
 
     with open(msa_path, "r") as file:
+            #print("Error: File might not have multiple A3M sections.")
+            #return
+            homologs_lengths = [len(file.readline().strip('\n'))]
+            sequence_groups = [[[],[]]]
+            is_multimer = True
+        else:
+            homologs_lengths = [int(x.strip()) for x in first_line.replace("#", "").split()[0].split(",")]
+            sequence_groups = [[[], []] for _ in range(len(homologs_lengths))]
+            #arities = [int(x.strip()) for x in first_line.replace("#", "").split()[1].split(",")]
+            #max_arity = max(arities)
+            is_multimer = False
+
+    with open(msa_path, "r") as file:        
         if is_multimer:
             file.readline()
         header_line = file.readline().strip()[1:]
