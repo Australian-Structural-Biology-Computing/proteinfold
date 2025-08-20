@@ -179,14 +179,13 @@ To provide the predownloaded AlphaFold3 databases and parameters you can specify
 ```
 </details>
 
-Colabfold mode using use your own custom MMSeqs2 API server (`--colabfold_server local`) can be run using the following command:
+Colabfold mode can be used with local database search using the following command:
 
 ```bash
 nextflow run nf-core/proteinfold \
       --input samplesheet.csv \
       --outdir <OUTDIR> \
       --mode colabfold \
-      --colabfold_server local \
       --colabfold_db <null (default) | DB_PATH> \
       --num_recycles_colabfold 3 \
       --use_amber <true/false> \
@@ -203,8 +202,8 @@ nextflow run nf-core/proteinfold \
       --input samplesheet.csv \
       --outdir <OUTDIR> \
       --mode colabfold
-      --colabfold_server webserver \
-      --host_url <custom MMSeqs2 API Server URL> \
+      --use_msa_server \
+      --msa_server_url <custom MMSeqs2 API Server URL> \
       --colabfold_db <null (default) | DB_PATH> \
       --num_recycles_colabfold 3 \
       --use_amber <true/false> \
@@ -391,10 +390,7 @@ nextflow run nf-core/proteinfold \
 ```console
 ## Optional parameters with default values:
     --helixfold3_max_template_date=2038-01-19
-    --model_name allatom_demo
     --preset 'reduced_dbs'
-    --init_model './init_models/HelixFold3-240814.pdparams'
-    --logging_level 'ERROR'
     --precision 'bf16'
     --infer_times 4
 ```
@@ -574,3 +570,30 @@ We recommend adding the following line to your environment to limit this (typica
 ```bash
 NXF_OPTS='-Xms1g -Xmx4g'
 ```
+
+## Boltz mode
+
+To run the pipeline in Boltz mode, use the following command:
+
+```bash
+nextflow run nf-core/proteinfold \
+      --input samplesheet.csv \
+      --outdir <OUTDIR> \
+      --mode boltz \
+      --boltz_use_msa_server \
+      --use_gpu <true/false> \
+      -profile <docker/singularity/podman/shifter/charliecloud/conda/institute>
+```
+
+### Boltz parameter descriptions
+
+| Parameter                | Default | Description                                         |
+| ------------------------ | ------- | --------------------------------------------------- |
+| `--boltz_model`          | `null`  | The model to use for prediction. Default is Boltz-2 |
+| `--use_msa_server`       | `null`  | Use MSA server to generate MSAs (flag)              |
+| `--msa_server_url`       | `null`  | MSA server URL                                      |
+| `--boltz_use_potentials` | `null`  | Use inference time potentials (flag)                |
+
+> You can override any of these parameters via the command line or a params file.
+
+---

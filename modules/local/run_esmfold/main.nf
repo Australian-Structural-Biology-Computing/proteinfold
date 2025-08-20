@@ -43,6 +43,7 @@ process RUN_ESMFOLD {
         $args
 
     mv  *.pdb ${meta.id}_esmfold.pdb
+
     extract_metrics.py --name ${meta.id} \\
         --structs ${meta.id}_esmfold.pdb
 

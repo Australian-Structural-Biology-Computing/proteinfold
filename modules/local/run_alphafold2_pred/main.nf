@@ -22,6 +22,7 @@ process RUN_ALPHAFOLD2_PRED {
     path ('uniref90/*')
     path ('pdb_seqres/*')
     path ('uniprot/*')
+    // TODO: do we ever really want to be dragging arounda  meta2? Can't we just augment meta fields for tracebility?
     tuple val(meta2), path(features)
 
     output:
@@ -32,9 +33,9 @@ process RUN_ALPHAFOLD2_PRED {
     // TODO: re-label multiqc -> plddt so multiqc channel can take in all metrics
     tuple val(meta), path ("${meta.id}_plddt.tsv")          , emit: multiqc
     // TODO: alphafold2_model_preset == "monomer" the pae file won't exist.
-    // Default is monomer_ptm which does calculate metrics. Good default, metrics worth it for minor performance loss
-    // Nevertheless PAE has to be optional since not all alphafold2 NN models are handled to generate PAE
     tuple val(meta), path ("${meta.id}_*_pae.tsv")          , optional: true, emit: paes
+    tuple val(meta), path ("${meta.id}_ptm.tsv")            , optional: true, emit: ptms
+    tuple val(meta), path ("${meta.id}_iptm.tsv")           , optional: true, emit: iptms
     path "versions.yml"                                     , emit: versions
 
     when:
@@ -42,24 +43,24 @@ process RUN_ALPHAFOLD2_PRED {
 
     script:
     // Exit if running this module with -profile conda / -profile mamba
+    // Note: --pkls ${fasta.baseName}/*.pkl redundantly processes the features.pkl file. The use of input: features makes the conceptural separation clear
     if (workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1) {
         error("Local RUN_ALPHAFOLD2_PRED module does not support Conda. Please use Docker / Singularity / Podman instead.")
     }
     def args = task.ext.args ?: ''
     """
     if [ -d params/alphafold_params_* ]; then ln -r -s params/alphafold_params_*/* params/; fi
-    python3 /app/alphafold/run_predict.py \
-        --fasta_paths=${fasta} \
-        --model_preset=${alphafold2_model_preset} \
-        --output_dir=\$PWD \
-        --data_dir=\$PWD \
-        --msa_path=${features} \
-        $args
+    python3 /app/alphafold/run_predict.py \\
+        --fasta_paths=${fasta} \\
+        --model_preset=${alphafold2_model_preset} \\
+        --output_dir=\$PWD \\
+        --data_dir=\$PWD \\
+        --msa_path=${features} $args
 
     cp "${fasta.baseName}"/ranked_0.pdb ./"${meta.id}"_alphafold2.pdb
 
     extract_metrics.py --name ${meta.id} \\
-        --pkls ${features} \\
+        --pkls ${features} ${fasta.baseName}/*.pkl \\
         --structs ${fasta.baseName}/ranked*.pdb
 
     cat <<-END_VERSIONS > versions.yml

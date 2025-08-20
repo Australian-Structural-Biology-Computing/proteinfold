@@ -29,10 +29,11 @@ process COLABFOLD_BATCH {
         error("Local COLABFOLD_BATCH module does not support Conda. Please use Docker / Singularity / Podman instead.")
     }
     def args = task.ext.args ?: ''
-    def VERSION = '1.5.2' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
 
     """
-    ln -r -s params/alphafold_params_*/* params/
+    ln -s \$(realpath params/alphafold_params_*/*) params/
+    touch params/download_finished.txt
+
     colabfold_batch \\
         $args \\
         --num-recycle ${numRec} \\
@@ -42,21 +43,18 @@ process COLABFOLD_BATCH {
         \$PWD
     for i in `find *.png -maxdepth 0`; do cp \$i \${i%'.png'}_mqc.png; done
     if [ ! -e `find *_relaxed_rank_001_*.pdb` ]; then
-        #for i in `find *_relaxed_rank_001*.pdb`; do cp \$i `echo \$i | sed "s|_relaxed_rank_|\t|g" | cut -f1`"_colabfold.pdb"; done
         cp *_relaxed_rank_001*.pdb ${meta.id}_colabfold.pdb
     else
-        #for i in `find *_unrelaxed_rank_001*.pdb`; do cp \$i `echo \$i | sed "s|_unrelaxed_rank_|\t|g" | cut -f1`"_colabfold.pdb"; done
         cp *_unrelaxed_rank_001*.pdb ${meta.id}_colabfold.pdb
     fi
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        colabfold_batch: $VERSION
+        colabfold_batch: \$(conda run -n colabfold pip list | grep "^colabfold" | awk '{print \$2}')
     END_VERSIONS
     """
 
     stub:
-    def VERSION = '1.5.2' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     """
     touch ./"${meta.id}"_colabfold.pdb
     touch ./"${meta.id}"_mqc.png
@@ -68,7 +66,7 @@ process COLABFOLD_BATCH {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        colabfold_batch: $VERSION
+        colabfold_batch: \$(conda run -n colabfold pip list | grep "^colabfold" | awk '{print \$2}')
     END_VERSIONS
     """
 }

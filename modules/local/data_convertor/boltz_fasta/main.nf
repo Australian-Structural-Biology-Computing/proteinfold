@@ -24,31 +24,76 @@ process BOLTZ_FASTA {
     #!/usr/bin/env python3
     import os, sys
     import string
+    import re
     #def safe_filename(file: str) -> str:
     #    return "".join([c if c.isalnum() or c in ["_", ".", "-"] else "_" for c in file]) + ".a3m"
 
     all_combinations = list(string.ascii_uppercase) + list(string.ascii_lowercase) + [str(x) for x in range(0, 10)]
     msa_files = [${msa_files}]
-    seq_type = "protein"
+    ENTITY_TYPES = ["protein", "ccd", "smiles", "dna", "rna"]
+
+    def infer_entity_type(header, sequence):
+        header_lower = header.lower()
+        for entity in ENTITY_TYPES:
+            if entity in header_lower:
+                return entity
+        seq = sequence.strip()
+        seq_set = set(seq)
+        # RNA: only A,C,U,G,N
+        if len(seq_set - set("ACUGN")) == 0:
+            return "rna"
+        # DNA: only A,C,T,G,N
+        if len(seq_set - set("ACTGN")) == 0:
+            return "dna"
+        # Protein: only 20 AA, not just A,C,T,G,U,N
+        protein_letters = set("ACDEFGHIKLMNPQRSTVWY")
+        if len(seq_set - protein_letters) == 0 and not (seq_set <= set("ACUGTN")):
+            return "protein"
+        # SMILES: fallback
+        if re.fullmatch(r"[A-Za-z0-9@+\\-\\[\\]\\(\\)=#\\\$%]+", seq):
+            return "smiles"
+        return "unknown"
+
     os.makedirs("output_fasta", exist_ok=True)
     counter = 0
     with open("${fasta}", "r") as f:
         lines = f.readlines()
+
     msa = ""
     fasta_data = ""
+    seq_lines = []
+    header = None
+
     for line in lines:
         line = line.strip()
         if line.startswith(">"):
-            if len(msa_files) > 0:
-                msa = f"|{os.path.basename(msa_files[counter])}"
-                if msa[1:] not in msa_files:
-                    print(f"Can not find msa file {os.path.basename(msa_files[counter])}")
-                    exit(1)
-
-            fasta_data += f">{all_combinations[counter]}|{seq_type}{msa}\\n"
-            counter += 1
+            # Write previous entry if exists
+            if header is not None:
+                sequence = "".join(seq_lines)
+                entity_type = infer_entity_type(header, sequence)
+                msa = ""
+                if len(msa_files) > 0:
+                    msa = f"|{os.path.basename(msa_files[counter])}"
+                    if msa[1:] not in msa_files:
+                        print(f"Can not find msa file {os.path.basename(msa_files[counter])}")
+                        exit(1)
+                fasta_data += f">{all_combinations[counter]}|{entity_type}{msa}\\n{sequence}\\n"
+                counter += 1
+            header = line
+            seq_lines = []
         else:
-            fasta_data += f"{line}\\n"
+            seq_lines.append(line)
+    # Write last entry
+    if header is not None:
+        sequence = "".join(seq_lines)
+        entity_type = infer_entity_type(header, sequence)
+        msa = ""
+        if len(msa_files) > 0:
+            msa = f"|{os.path.basename(msa_files[counter])}"
+            if msa[1:] not in msa_files:
+                print(f"Can not find msa file {os.path.basename(msa_files[counter])}")
+                exit(1)
+        fasta_data += f">{all_combinations[counter]}|{entity_type}{msa}\\n{sequence}\\n"
 
     if len(fasta_data) > 0:
         with open(f"output_fasta/${meta.id}.fasta", "w") as outfile:
