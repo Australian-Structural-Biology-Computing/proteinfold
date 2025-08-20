@@ -48,6 +48,9 @@ workflow BOLTZ {
     ch_versions     // channel: [ path(versions.yml) ]
     ch_boltz_ccd    // channel: [ path(boltz_ccd) ]
     ch_boltz_model  // channel: [ path(model) ]
+    ch_boltz2_aff   // channel: [ path(boltz2_aff) ]
+    ch_boltz2_conf  // channel: [ path(boltz2_conf) ]
+    ch_mols         // channel: [ path(mols) ]
     ch_colabfold_db // channel: [ path(colabfold_db) ]
     ch_uniref30     // channel: [ path(uniref30) ]
     msa_server
@@ -70,16 +73,16 @@ workflow BOLTZ {
                     ]
                 }
         )
-    .map{
-        def meta = it[0].clone()
-        meta.cnt = it[2]
-        [meta, it[1]]
-    }
-    .branch{
-        multimer: it[0].cnt > 1
-        monomer: it[0].cnt == 1
-    }
-    .set{ch_input}
+        .map{
+            def meta = it[0].clone()
+            meta.cnt = it[2]
+            [meta, it[1]]
+        }
+        .branch{
+            multimer: it[0].cnt > 1
+            monomer: it[0].cnt == 1
+        }
+        .set{ch_input}
 
     if (!msa_server){
         MULTIFASTA_TO_CSV(
@@ -126,7 +129,10 @@ workflow BOLTZ {
         ch_boltz_input.map{[it[0], it[1]]},
         ch_boltz_input.map{it[2]},
         ch_boltz_model,
-        ch_boltz_ccd
+        ch_boltz_ccd,
+        ch_boltz2_aff,
+        ch_boltz2_conf,
+        ch_mols
     )
 
     RUN_BOLTZ
