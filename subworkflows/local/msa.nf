@@ -57,30 +57,33 @@ workflow MSA {
         }
 //        .map{it[1]}
 //        .unique()
+        .map { meta, fasta -> 
+            //def csv_lines = batch.collect {meta, fasta -> 
+            def sequences = fasta.name.endsWith(".yaml") || fasta.name.endsWith(".yml")
+                ? getYamlSequences(fasta.text)
+                : getFastaSequences(fasta.text)
+
+            "${meta.id},${sequences.collect { it.sequence }.join(':')}"
+            //}
+        }
         .buffer( size: mmseq_batch_size, remainder: true )
-        .map { batch ->
-
-            def batch_id = "input_seqs_${batch_itr++}"
-            def indexed_batch = batch.withIndex().collect { item, i -> [i, item[0], item[1]] }
-
-            def csv_lines = indexed_batch.collect {i, meta, fasta -> 
-                def sequences = fasta.name.endsWith(".yaml") || fasta.name.endsWith(".yml")
-                    ? getYamlSequences(fasta.text)
-                    : getFastaSequences(fasta.text)
-
-                "${meta.id},${sequences.collect { it.sequence }.join(':')}"
-            }
+        .collectFile {
+            batch_itr += 1;
+            [ "input_seqs_${batch_itr}.csv", "id,sequence\n" + it.join("\n") + '\n' ]
         
-            def csv_file = file("${batch_id}.csv")
-            csv_file.text = "id,sequence\n" + csv_lines.join('\n') + '\n'
+            //def csv_file = file("${batch_id}.csv")
+            //csv_file.text = "id,sequence\n" + csv_lines.join('\n') + '\n'
 
-            return [batch_id, indexed_batch, csv_file]
+            //return [batch_id, indexed_batch, csv_file]
+            //return [batch_id, csv_file]
 
         }
-        .map { [["id": it[0], "indexed_batch": it[1]], it[2]] }
+        //.map { [["id": it[0]], it[1]] }
+        .map { [["id": it.baseName], it] }
+        //.map { [["id": it[0], "indexed_batch": it[1]], it[2]] }
         .set {ch_input_seqs}
 
-        ch_input_seqs.view({"input: $it"})
+        //ch_input_seqs.view({"input: $it"})
 
         MMSEQS_COLABFOLDSEARCH (
             ch_input_seqs,
@@ -92,14 +95,14 @@ workflow MSA {
         
         //ch_input_full.view({"orig input: $it"})
 
-        ch_input_full
-            .map{ [it[0].id, it[0]] }.view({"left: $it"})
+        //ch_input_full
+        //    .map{ [it[0].id, it[0]] }.view({"left: $it"})
 
         //MMSEQS_COLABFOLDSEARCH.out.a3m.view({"raw: $it"})
-        MMSEQS_COLABFOLDSEARCH.out.a3m
-            .map{ it[1] }
-            .flatten()
-            .map{ [it.baseName, it] }.view({"right: $it"})
+        //MMSEQS_COLABFOLDSEARCH.out.a3m
+        //    .map{ it[1] }
+        //    .flatten()
+        //    .map{ [it.baseName, it] }.view({"right: $it"})
 
         ch_a3m = ch_a3m.mix(
             ch_input_full
