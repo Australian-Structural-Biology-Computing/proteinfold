@@ -62,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [[PR #370](https://github.com/nf-core/proteinfold/pull/370)] - Fix extract chain metrics.
 - [[#367](https://github.com/nf-core/proteinfold/issues/367)] - Boltz post-processing crashes.
 - [[#368](https://github.com/nf-core/proteinfold/issues/368)] - Helixfold3 iPTM output missing when dealing with monomers make the process to fail.
+- [[PR #377](https://github.com/nf-core/proteinfold/pull/377)] - Fix sequence msa synch for af2 split.
 
 ### Parameters
 
