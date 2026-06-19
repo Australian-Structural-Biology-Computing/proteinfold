@@ -1,0 +1,67 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: "chai1"
+description: Run Chai-1 structure prediction on a single FASTA input.
+keywords:
+  - structure prediction
+  - protein folding
+  - chai1
+tools:
+  - "chai1":
+      description: "Multimodal biomolecular structure prediction model from Chai Discovery."
+      homepage: "https://www.chai.xyz/"
+      documentation: "https://github.com/chaidiscovery/chai-lab"
+      tool_dev_url: "https://github.com/chaidiscovery/chai-lab"
+      licence: ["Apache-2.0"]
+
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1' ]`
+    - fasta:
+        type: file
+        description: Input FASTA file for one sample.
+        pattern: "*.{fa,fasta}"
+  - - chai1_conformers:
+        type: file
+        description: Chai-1 conformer database bundle.
+  - - chai1_models:
+        type: file
+        description: Chai-1 model weights directory contents.
+  - - chai1_esm:
+        type: file
+        description: Chai-1 ESM checkpoint.
+
+output:
+  - pdb:
+      - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1' ]`
+      - "*_chai1.cif":
+          type: file
+          description: Top-ranked Chai-1 predicted structure in CIF format.
+          pattern: "*_chai1.cif"
+  - multiqc:
+      - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1' ]`
+      - "*_plddt_mqc.tsv":
+          type: file
+          description: Chai-1 per-residue pLDDT table formatted for MultiQC.
+          pattern: "*_plddt_mqc.tsv"
+  - versions:
+      - "versions.yml":
+          type: file
+          description: File containing software versions
+          pattern: "versions.yml"
+
+authors:
+  - "@jscgh"
+maintainers:
+  - "@jscgh"

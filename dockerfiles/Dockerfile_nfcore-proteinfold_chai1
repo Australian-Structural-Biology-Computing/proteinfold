@@ -1,0 +1,40 @@
+ARG CUDA=12.2.2
+FROM nvidia/cuda:${CUDA}-base-ubuntu20.04
+
+# FROM directive resets ARGS, so we specify again (the value is retained if previously set).
+ARG CUDA
+
+LABEL authors="Joshua Caley" \
+    title="nfcore/proteinfold_chai1" \
+    Version="dev" \
+    description="Docker image containing all software requirements to run the RUN_CHAI1 module using the nf-core/proteinfold pipeline"
+
+# Use bash to support string substitution.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# Add environment variables
+ENV LD_LIBRARY_PATH="/usr/local/cuda-$(cut -f1,2 -d. <<< ${CUDA})/lib64:$LD_LIBRARY_PATH"
+ENV CONDA_DIR="/opt/conda"
+ENV PATH="$CONDA_DIR/bin:$PATH"
+
+RUN apt-get update --quiet \
+    && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y --quiet \
+    wget && \
+    wget --quiet https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh -O /tmp/miniforge.sh \
+    && bash /tmp/miniforge.sh -b -p $CONDA_DIR && \
+    mamba create -n chai1 -c conda-forge -c bioconda -c nvidia \
+    python=3.12 pip=25 cuda=${CUDA} gcc_linux-64=14.1.0 -y \
+    && mamba run -n chai1 bash -c \
+        "pip install --no-cache-dir chai_lab==0.6.0" \
+    && mamba clean --all --force-pkgs-dirs --yes \
+    && rm -rf /tmp/miniforge.sh /var/lib/apt/lists/* /root/.cache \
+    && apt-get remove --purge -y wget && apt-get autoremove -y && apt-get clean -y
+
+ENV CONDA_DEFAULT_ENV=chai1
+ENV PATH="$CONDA_DIR/envs/chai1/bin:$PATH"
+
+# Add SETUID bit to the ldconfig binary so that non-root users can run it.
+RUN chmod u+s /sbin/ldconfig.real
+
+# Default to using Conda environment when running the container
+ENTRYPOINT ["mamba run -n chai1"]

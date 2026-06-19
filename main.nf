@@ -22,6 +22,7 @@ include { PREPARE_ROSETTAFOLD_ALL_ATOM_DBS } from './subworkflows/local/prepare_
 include { PREPARE_HELIXFOLD3_DBS           } from './subworkflows/local/prepare_helixfold3_dbs'
 include { PREPARE_BOLTZ_DBS                } from './subworkflows/local/prepare_boltz_dbs'
 include { PREPARE_ROSETTAFOLD2NA_DBS       } from './subworkflows/local/prepare_rosettafold2na_dbs'
+include { PREPARE_CHAI1_DBS                } from './subworkflows/local/prepare_chai1_dbs'
 
 include { PREPARE_COLABFOLD_DBS  as PREPARE_COLABFOLD_DBS_COLABFOLD } from './subworkflows/local/prepare_colabfold_dbs'
 include { PREPARE_COLABFOLD_DBS  as PREPARE_COLABFOLD_DBS_BOLTZ     } from './subworkflows/local/prepare_colabfold_dbs'
@@ -34,6 +35,7 @@ include { ROSETTAFOLD_ALL_ATOM             } from './workflows/rosettafold_all_a
 include { HELIXFOLD3                       } from './workflows/helixfold3'
 include { BOLTZ                            } from './workflows/boltz'
 include { ROSETTAFOLD2NA                   } from './workflows/rosettafold2na'
+include { CHAI1                            } from './workflows/chai1'
 
 include { PIPELINE_INITIALISATION          } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { PIPELINE_COMPLETION              } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
@@ -470,6 +472,50 @@ workflow NFCORE_PROTEINFOLD {
                                 .join(HELIXFOLD3.out.chainwise_ipsae)
                             )
         ch_top_ranked_model = ch_top_ranked_model.mix(HELIXFOLD3.out.top_ranked_pdb)
+    }
+
+    //
+    // WORKFLOW: Run chai1
+    //
+    if (requested_modes.contains("chai1")) {
+
+        //
+        // SUBWORKFLOW: Prepare Chai1 DBs
+        //
+        PREPARE_CHAI1_DBS (
+            params.chai1_db,
+            params.chai1_conformers_path,
+            params.chai1_models_path,
+            params.chai1_esm_path,
+            params.chai1_conformers_link,
+            params.chai1_models_link,
+            params.chai1_esm_link
+        )
+        ch_versions = ch_versions.mix(PREPARE_CHAI1_DBS.out.versions)
+
+        //
+        // WORKFLOW: Run Chai1
+        //
+        CHAI1 (
+            ch_samplesheet,
+            ch_versions,
+            PREPARE_CHAI1_DBS.out.chai1_conformers,
+            PREPARE_CHAI1_DBS.out.chai1_models,
+            PREPARE_CHAI1_DBS.out.chai1_esm
+        )
+        ch_multiqc          = ch_multiqc.mix(CHAI1.out.multiqc_report)
+        ch_versions         = ch_versions.mix(CHAI1.out.versions)
+        ch_report_input     = ch_report_input.mix(
+            CHAI1.out.pdb
+                .map { meta, pdb -> [ meta, [ pdb ] ] }
+                .combine(ch_dummy_file)
+                .combine(ch_dummy_file_pae)
+                .combine(ch_dummy_file)
+                .combine(ch_dummy_file)
+                .combine(ch_dummy_file)
+                .combine(ch_dummy_file)
+        )
+        ch_top_ranked_model = ch_top_ranked_model.mix(CHAI1.out.pdb)
     }
 
     //

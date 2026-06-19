@@ -51,19 +51,19 @@ workflow POST_PROCESSING {
         if (requested_modes_size > 1){
             def dummy_file = file("$projectDir/assets/NO_FILE", checkIfExists: true)
 
-            def esm = ch_top_ranked_model.filter { it ->it[0].model == 'esmfold' }
-            def not_esm = ch_top_ranked_model.filter { it -> it[0].model != 'esmfold' }
+            def no_coverage = ch_top_ranked_model.filter { it -> it[0].model in ['esmfold', 'chai1'] }
+            def with_coverage = ch_top_ranked_model.filter { it -> !(it[0].model in ['esmfold', 'chai1']) }
 
-            esm = esm
-                    .map { meta, pdb ->
-                        [meta, pdb, dummy_file]
-                    }
+            no_coverage = no_coverage
+                .map { meta, pdb ->
+                    [meta, pdb, dummy_file]
+                }
 
-            not_esm = not_esm
-                        .map { it ->  [it[0], it[1]] }
-                        .join(GENERATE_REPORT.out.sequence_coverage)
+            with_coverage = with_coverage
+                .map { it -> [it[0], it[1]] }
+                .join(GENERATE_REPORT.out.sequence_coverage)
 
-            ch_comparison_report_files = not_esm.mix(esm)
+            ch_comparison_report_files = with_coverage.mix(no_coverage)
 
             ch_comparison_report_files
                 .map { it ->

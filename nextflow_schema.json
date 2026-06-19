@@ -34,10 +34,10 @@
                 "mode": {
                     "type": "string",
                     "default": "alphafold2",
-                    "description": "Specifies the mode in which the pipeline will be run. mode can be any combination of ['alphafold2', 'alphafold3', 'colabfold', 'esmfold', 'rosettafold_all_atom', 'boltz', 'helixfold3', 'rosettafold2na'] separated by a comma (',') with no spaces.",
+                    "description": "Specifies the mode in which the pipeline will be run. mode can be any combination of ['alphafold2', 'alphafold3', 'colabfold', 'esmfold', 'rosettafold_all_atom', 'boltz', 'helixfold3', 'rosettafold2na', 'chai1'] separated by a comma (',') with no spaces.",
                     "fa_icon": "fas fa-cogs",
-                    "pattern": "^(alphafold2|alphafold3|colabfold|esmfold|rosettafold_all_atom|helixfold3|boltz|rosettafold2na|)(,(alphafold2|alphafold3|colabfold|esmfold|rosettafold_all_atom|helixfold3|boltz|rosettafold2na)?,?)*(?<!,)$",
-                    "errorMessage": "Mode must be a comma-separated list containing any combination of 'alphafold2', 'alphafold3', 'colabfold', 'esmfold', 'rosettafold_all_atom', 'boltz', or 'helixfold3' with no spaces."
+                    "pattern": "^(alphafold2|alphafold3|colabfold|esmfold|rosettafold_all_atom|helixfold3|boltz|rosettafold2na|chai1|)(,(alphafold2|alphafold3|colabfold|esmfold|rosettafold_all_atom|helixfold3|boltz|rosettafold2na|chai1)?,?)*(?<!,)$",
+                    "errorMessage": "Mode must be a comma-separated list containing any combination of 'alphafold2', 'alphafold3', 'colabfold', 'esmfold', 'rosettafold_all_atom', 'helixfold3', 'boltz', 'rosettafold2na', or 'chai1' with no spaces."
                 },
                 "use_gpu": {
                     "type": "boolean",
@@ -1265,6 +1265,48 @@
                     "description": "Link to Maxit Suite for HelixFold3"
                 }
             }
+        },
+        "chai1_dbs_and_parameters_options": {
+            "title": "Chai1 DBs and parameters options",
+            "type": "object",
+            "description": "Parameters used to provide the paths or links required for Chai1 inference assets.",
+            "default": "",
+            "properties": {
+                "chai1_db": {
+                    "type": "string",
+                    "description": "Path to Chai1 database directory"
+                },
+                "chai1_conformers_path": {
+                    "type": "string",
+                    "default": "null/*",
+                    "description": "Path to Chai1 conformers asset"
+                },
+                "chai1_models_path": {
+                    "type": "string",
+                    "default": "null/models_v2/*",
+                    "description": "Path to Chai1 model weights"
+                },
+                "chai1_esm_path": {
+                    "type": "string",
+                    "default": "null/esm",
+                    "description": "Path to Chai1 ESM checkpoint"
+                },
+                "chai1_conformers_link": {
+                    "type": "string",
+                    "default": "https://chaiassets.com/chai1-inference-dependencies/conformers_v1.apkl",
+                    "description": "Download URL for the Chai1 conformers asset"
+                },
+                "chai1_models_link": {
+                    "type": "string",
+                    "default": "https://chaiassets.com/chai1-inference-dependencies/models_v2/",
+                    "description": "Download URL for the Chai1 model weights"
+                },
+                "chai1_esm_link": {
+                    "type": "string",
+                    "default": "https://chaiassets.com/chai1-inference-dependencies/esm2/traced_sdpa_esm2_t36_3B_UR50D_fp16.pt",
+                    "description": "Download URL for the Chai1 ESM checkpoint"
+                }
+            }
         }
     },
     "allOf": [
@@ -1348,6 +1390,9 @@
         },
         {
             "$ref": "#/$defs/helixfold3_dbs_and_parameters_paths_options"
+        },
+        {
+            "$ref": "#/$defs/chai1_dbs_and_parameters_options"
         }
     ]
 }
