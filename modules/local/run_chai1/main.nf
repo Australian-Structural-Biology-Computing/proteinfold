@@ -1,8 +1,9 @@
 process RUN_CHAI1 {
     tag "$meta.id"
     label 'process_medium'
+    label 'process_gpu'
 
-    container "jscrh/chai:dev"
+    container "nf-core/proteinfold_chai1:dev"
 
     input:
     tuple val(meta), path(fasta)
@@ -11,22 +12,22 @@ process RUN_CHAI1 {
     path('esm')
 
     output:
-    tuple val(meta), path ("${meta.id}_chai1.cif")    , emit: pdb
-    tuple val(meta), path ("${meta.id}_plddt_mqc.tsv"), emit: multiqc
-    path "versions.yml"                               , emit: versions
+    tuple val(meta), path("${meta.id}_chai1.cif"), emit: top_ranked_pdb
+    tuple val(meta), path("${meta.id}_plddt_mqc.tsv"), emit: multiqc
+    path "versions.yml", emit: versions
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
-    // Exit if running this module with -profile conda / -profile mamba
+    // Chai-Lab requires a CUDA-enabled container.
     if (workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1) {
         error("Local RUN_CHAI1 module does not support Conda. Please use Docker / Singularity / Podman / Apptainer instead.")
     }
     def args = task.ext.args ?: ''
     """
     export CHAI_DOWNLOADS_DIR="./"
-    mamba run -n chai1 chai-lab fold \
+    chai-lab fold \
         ${meta.id}.fasta \
         ${meta.id} \
         $args
@@ -45,8 +46,8 @@ process RUN_CHAI1 {
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         python: \$(python --version | sed 's/Python //g')
-        chai_lab: \$(conda run -n chai1 python -c "import chai_lab; print(chai_lab.__version__)")
-        torch: \$(conda run -n chai1 python -c "import torch; print(torch.__version__)")
+        chai_lab: \$(python -c "import chai_lab; print(chai_lab.__version__)")
+        torch: \$(python -c "import torch; print(torch.__version__)")
     END_VERSIONS
     """
 
@@ -63,9 +64,7 @@ process RUN_CHAI1 {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        python: \$(python --version | sed 's/Python //g')
-        chai_lab: \$(conda run -n chai1 python -c "import chai_lab; print(chai_lab.__version__)")
-        torch: \$(conda run -n chai1 python -c "import torch; print(torch.__version__)")
+        chai_lab: 0.6.1
     END_VERSIONS
     """
 }

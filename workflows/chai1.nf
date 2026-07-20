@@ -56,7 +56,7 @@ workflow CHAI1 {
         }
         .set { ch_multiqc_report }
 
-    modeChannel(RUN_CHAI1.out.pdb, "chai1").set { ch_pdb_final }
+    modeChannel(RUN_CHAI1.out.top_ranked_pdb, "chai1").set { ch_pdb_final }
 
     emit:
     versions       = ch_versions

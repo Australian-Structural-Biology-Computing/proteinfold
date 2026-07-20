@@ -1,6 +1,5 @@
----
 # yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
-name: "chai1"
+name: "run_chai1"
 description: Run Chai-1 structure prediction on a single FASTA input.
 keywords:
   - structure prediction
@@ -35,7 +34,7 @@ input:
         description: Chai-1 ESM checkpoint.
 
 output:
-  - pdb:
+  - top_ranked_structure:
       - meta:
           type: map
           description: |
