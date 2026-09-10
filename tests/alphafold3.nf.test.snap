@@ -1,7 +1,33 @@
 {
     "-profile test_alphafold3_standard": {
         "content": [
-            13,
+            9,
+            {
+                "FASTA_TO_ALPHAFOLD3_JSON": {
+                    "python": "3.13.7"
+                },
+                "GENERATE_REPORT": {
+                    "python": "3.12.7",
+                    "generate_report.py": "Python 3.12.7"
+                },
+                "RUN_ALPHAFOLD3_DATAPIPELINE": {
+                    "python": "3.12.3",
+                    "alphafold3": "8a84535f4f5caeb01a5a1b3fc7ee03251c6035cd",
+                    "hmmer": 3.4
+                },
+                "RUN_ALPHAFOLD3_INFERENCE": {
+                    "python": "3.12.3",
+                    "alphafold3": "8a84535f4f5caeb01a5a1b3fc7ee03251c6035cd",
+                    "jax": "0.10.2",
+                    "jaxlib": "0.10.2",
+                    "numpy": "2.4.1",
+                    "biopython": 1.87,
+                    "rdkit": "2025.09.4"
+                },
+                "Workflow": {
+                    "nf-core/proteinfold": "v2.1.0dev"
+                }
+            },
             [
                 "alphafold3",
                 "alphafold3/T1024",
@@ -95,10 +121,10 @@
                 "test_alphafold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-05-26T16:11:56.123456",
         "meta": {
-            "nf-test": "0.9.5",
+            "nf-test": "0.9.3",
             "nextflow": "25.10.4"
-        }
+        },
+        "timestamp": "2026-07-28T09:04:45.824405833"
     }
 }

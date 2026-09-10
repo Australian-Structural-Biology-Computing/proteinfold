@@ -5,7 +5,7 @@ process RUN_ALPHAFOLD3_INFERENCE {
     tag "$meta.id"
     label 'process_medium'
     label 'process_gpu'
-    container "nf-core/proteinfold_alphafold3_standard:2.0.0"
+    container "nf-core/proteinfold_alphafold3_standard:2.1.0"
 
     input:
     tuple val(meta), path(data_json)
@@ -55,6 +55,7 @@ process RUN_ALPHAFOLD3_INFERENCE {
         --output_dir=\$PWD \\
         --run_data_pipeline=false \\
         --run_inference=true \\
+        --force_output_dir=true \\
         $args
 
     ### Move the rest of the models and rename them according to their rank
@@ -64,7 +65,7 @@ process RUN_ALPHAFOLD3_INFERENCE {
     cp -n "\${name}/\${name}_model.cif" "${prefix}_alphafold3.cif"
 
     ## Sort the rows by ranking_score in descending order
-    sorted_csv=\$(head -n 1 "\${name}/ranking_scores.csv"; tail -n +2 "\${name}/ranking_scores.csv" | sort -t, -k3 -nr)
+    sorted_csv=\$(head -n 1 "\${name}/\${name}_ranking_scores.csv"; tail -n +2 "\${name}/\${name}_ranking_scores.csv" | sort -t, -k3 -nr)
     rank=0
 
     ## Create raw directory for intermediate files
@@ -72,7 +73,7 @@ process RUN_ALPHAFOLD3_INFERENCE {
 
     ## Generate files with rank tag in raw directory
     echo "\$sorted_csv" | tail -n +2 | while IFS=',' read -r seed sample ranking_score; do
-        cp -n "\${name}/seed-\${seed}_sample-\${sample}/model.cif" "raw/ranked_\${rank}_seed_\${seed}_sample_\${sample}.cif"
+        cp -n "\${name}/seed-\${seed}_sample-\${sample}/\${name}_seed-\${seed}_sample-\${sample}_model.cif" "raw/ranked_\${rank}_seed_\${seed}_sample_\${sample}.cif"
         rank=\$((rank + 1))
     done
 
