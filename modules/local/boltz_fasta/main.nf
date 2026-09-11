@@ -11,7 +11,11 @@ process BOLTZ_FASTA {
     tuple val(meta), path(fasta)
 
     output:
+<<<<<<< HEAD
     tuple val(meta), path ("output_fasta/*.fasta"), emit: formatted_fasta
+=======
+    tuple val(meta), path ("output_fasta/*.fasta"), path(msa), emit: formatted_fasta
+>>>>>>> 776722aa (Remove modelCIF work, only topic channels migration)
     tuple val("${task.process}"), val('python'), eval("python3 --version | sed 's/Python //g'"), emit: versions_python, topic: versions
 
     when:
@@ -20,7 +24,11 @@ process BOLTZ_FASTA {
     script:
     def args = task.ext.args ?: ''
     """
+<<<<<<< HEAD
     fasta_to_boltz.py ${fasta} ${meta.id}
+=======
+    fasta_to_boltz.py ${fasta} ${meta.id} ${msa_files}
+>>>>>>> 776722aa (Remove modelCIF work, only topic channels migration)
     """
 
     stub:

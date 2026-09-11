@@ -125,7 +125,10 @@ PY
     touch "${meta.id}_rosettafold2na.pdb"
     touch raw/model_00.pdb
     touch "${meta.id}_plddt_mqc.tsv"
+<<<<<<< HEAD
     touch "${meta.id}_rosettafold2na_msa.tsv"
+=======
+>>>>>>> 776722aa (Remove modelCIF work, only topic channels migration)
     touch "${meta.id}_0_pae.tsv"
     """
 }

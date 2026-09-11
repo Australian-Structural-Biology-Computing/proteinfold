@@ -27,22 +27,23 @@ workflow ALPHAFOLD3 {
 
     take:
     ch_samplesheet       // channel: samplesheet read in from --input
+<<<<<<< HEAD
     ch_alphafold3_params // channel: path(alphafold3_params)
+=======
+    ch_alphafold3_params // channel: path(alphafold2_params)
+>>>>>>> 776722aa (Remove modelCIF work, only topic channels migration)
     ch_small_bfd         // channel: path(small_bfd)
     ch_mgnify            // channel: path(mgnify)
     ch_mmcif_files       // channel: path(mmcif_files)
     ch_uniref90          // channel: path(uniref90)
     ch_pdb_seqres        // channel: path(pdb_seqres)
     ch_uniprot           // channel: path(uniprot)
-    ch_nt_rna            // channel: path(ntrna)
-    ch_rfam              // channel: path(rfam)
-    ch_rnacentral        // channel: path(rnacentral)
 
     main:
     ch_structure_final      = channel.empty()
     ch_top_ranked_structure = channel.empty()
-    ch_msa_final            = channel.empty()
-    ch_multiqc_report       = channel.empty()
+    ch_msa_final           = channel.empty()
+    ch_multiqc_report      = channel.empty()
 
     ch_samplesheet
         .branch { it ->
@@ -64,20 +65,32 @@ workflow ALPHAFOLD3 {
         ch_mmcif_files,
         ch_uniref90,
         ch_pdb_seqres,
-        ch_uniprot,
-        ch_nt_rna,
-        ch_rfam,
-        ch_rnacentral
+        ch_uniprot
     )
 
-    //
-    // MODULE: Run AlphaFold3 inference using pre-computed data JSON
-    //
-    RUN_ALPHAFOLD3_INFERENCE (
-        RUN_ALPHAFOLD3_DATAPIPELINE.out.data_json,
-        ch_alphafold3_params
+    // Convert mmcif to pdbs
+    RUN_ALPHAFOLD3
+            .out
+            .cif
+            .groupTuple()
+            .map {
+                meta, files ->
+                [ meta, files.flatten() ]
+            }
+
+    // Convert models mmcifs to pdbs
+    MMCIF2PDB_MODELS (
+        RUN_ALPHAFOLD3
+            .out
+            .cif
+            .groupTuple()
+            .map {
+                meta, files ->
+                [ meta, files.flatten() ]
+            }
     )
 
+<<<<<<< HEAD
     // Convert models mmcifs to pdbs
     //MMCIF2PDB_MODELS (
     //    RUN_ALPHAFOLD3
@@ -117,6 +130,35 @@ workflow ALPHAFOLD3 {
  //         [ meta, it[1] ]
  //     }
  //     .set { ch_top_ranked_structure }
+=======
+    MMCIF2PDB_MODELS
+        .out
+        .pdb
+        .map { it ->
+            def meta   = it[0].clone();
+            meta.model = "alphafold3";
+            def files = (it[1] instanceof List) ? it[1] : [ it[1] ]
+            [ meta, files ]
+        }
+        .set { ch_structure_final }
+
+    // Convert top ranked mmcif to pdb
+    MMCIF2PDB_TOP_RANKED (
+        RUN_ALPHAFOLD3
+            .out
+            .top_ranked_cif
+    )
+
+    MMCIF2PDB_TOP_RANKED
+        .out
+        .pdb
+        .map { it ->
+            def meta = it[0].clone();
+            meta.model = "alphafold3";
+            [ meta, it[1] ]
+        }
+        .set { ch_top_ranked_structure }
+>>>>>>> 776722aa (Remove modelCIF work, only topic channels migration)
 
     // Prepare msa input
     RUN_ALPHAFOLD3_INFERENCE
@@ -192,9 +234,9 @@ workflow ALPHAFOLD3 {
         .set { ch_chainwise_ipsae_final }
 
     emit:
-    top_ranked_pdb  = ch_top_ranked_structure  // channel: [ meta, /path/to/*.cif ] (common output label)
-    pdb             = ch_structure_final       // channel: [ meta, /path/to/*.cif, ...,/path/to/*.cif ] (common output label)
-    msa             = ch_msa_final             // channel: [ meta, /path/to/*_alphafold3_msa.tsv ]
+    top_ranked_pdb  = ch_top_ranked_structure // channel: [ meta, /path/to/*.cif ] (common output label)
+    pdb             = ch_structure_final      // channel: [ meta, /path/to/*.cif, ...,/path/to/*.cif ] (common output label)
+    msa             = ch_msa_final            // channel: [ meta, /path/to/*_alphafold3_msa.tsv ]
     pae             = ch_pae_final             // channel: [ meta, path/to/*_pae.tsv ]
     iptm            = ch_iptm_final            // channel: [ meta, path/to/*_iptm.tsv ]
     ipsae           = ch_ipsae_final           // channel: [ meta, path/to/*_ipsae.tsv ]

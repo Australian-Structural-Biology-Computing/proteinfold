@@ -76,13 +76,17 @@ workflow BOLTZ {
                 ch_colabfold_db,
                 ch_uniref30
         )
+<<<<<<< HEAD
 
         // TODO: doing this to make DSL2 linkt happy. Wiring the MSA in seemed to be missing but I haven't studied the logic -KR
         MMSEQS_COLABFOLDSEARCH.out.msa.set { ch_split_msa_input }
+=======
+>>>>>>> 776722aa (Remove modelCIF work, only topic channels migration)
 
         SPLIT_MSA(
             ch_split_msa_input
         )
+<<<<<<< HEAD
 
         // TODO: linter complains if a channel not used in the following path. So using this LLM to set ch_input
         ch_boltz_yaml_input
@@ -92,6 +96,8 @@ workflow BOLTZ {
         }
         .set { ch_input }
 
+=======
+>>>>>>> 776722aa (Remove modelCIF work, only topic channels migration)
         ch_input.monomer
             .join(SPLIT_MSA.out.msa_csv)
             .mix(
