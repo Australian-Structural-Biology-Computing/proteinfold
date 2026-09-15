@@ -191,6 +191,7 @@ workflow NFCORE_PROTEINFOLD {
         //
         ALPHAFOLD3 (
             ch_samplesheet,
+            channel.empty(),
             PREPARE_ALPHAFOLD3_DBS.out.params,
             PREPARE_ALPHAFOLD3_DBS.out.small_bfd,
             PREPARE_ALPHAFOLD3_DBS.out.mgnify,
