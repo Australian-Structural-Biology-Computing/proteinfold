@@ -60,7 +60,6 @@ workflow BOLTZ {
 
     // Accept input FASTA and prepare input in Boltz YAML format
     BOLTZ_FASTA(ch_boltz_fasta_input)
-    ch_versions = ch_versions.mix(BOLTZ_FASTA.out.versions)
 
     // Downstream operations are independent of original input type
     BOLTZ_FASTA.out.boltz_yaml
@@ -78,14 +77,15 @@ workflow BOLTZ {
                 ch_uniref30
         )
 
+        MMSEQS_COLABFOLDSEARCH.out.json
+            .join(ch_boltz_yaml_input)
+            .set { ch_split_msa_input }
+
         SPLIT_MSA(
             ch_split_msa_input
         )
-        ch_input.monomer
-            .join(SPLIT_MSA.out.msa_csv)
-            .mix(
-                ch_input.multimer.join(SPLIT_MSA.out.msa_csv)
-            ).set{ch_prepare_fasta}
+
+        SPLIT_MSA.out.boltz_data.set { ch_boltz_input }
 
     }else{
         ch_boltz_yaml_input

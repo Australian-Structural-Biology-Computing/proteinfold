@@ -197,7 +197,10 @@ workflow NFCORE_PROTEINFOLD {
             PREPARE_ALPHAFOLD3_DBS.out.pdb_mmcif,
             PREPARE_ALPHAFOLD3_DBS.out.uniref90,
             PREPARE_ALPHAFOLD3_DBS.out.pdb_seqres,
-            PREPARE_ALPHAFOLD3_DBS.out.uniprot
+            PREPARE_ALPHAFOLD3_DBS.out.uniprot,
+            PREPARE_ALPHAFOLD3_DBS.out.nt_rna,
+            PREPARE_ALPHAFOLD3_DBS.out.rfam,
+            PREPARE_ALPHAFOLD3_DBS.out.rnacentral
         )
 
         ch_multiqc      = ch_multiqc.mix(ALPHAFOLD3.out.multiqc_report)
@@ -566,25 +569,9 @@ workflow NFCORE_PROTEINFOLD {
     ch_report_template     = channel.value(file("$projectDir/assets/report_template.html", checkIfExists: true))
     ch_comparison_template = channel.value(file("$projectDir/assets/comparison_template.html", checkIfExists: true))
 
-    // Inject msa_tool into meta based on the program — a fact of the workflow
-    // branch, not of any individual process, so it belongs at the join point.
-    // Single join point to save the headache of carrying it around in meta in _all_ metrics channels - KR
-    def msaToolMap = [
-        alphafold2:           'jackhmmer',
-        alphafold3:           'jackhmmer',
-        colabfold:            'mmseqs2',
-        boltz:                'mmseqs2',
-        helixfold3:           'jackhmmer',
-        rosettafold2na:       'hhblits',
-        rosettafold_all_atom: 'hhblits',
-        esmfold:              'None',
-    ]
-    ch_report_input = ch_report_input.map { tupleData ->
-        def meta = tupleData[0]
-        def m = meta.clone()
-        m.msa_tool = msaToolMap.get(meta.model, 'None')
-        [m] + tupleData.drop(1)
-    }
+    ch_multiqc_config              = channel.of(file("$projectDir/assets/multiqc_config.yml", checkIfExists: true))
+    ch_multiqc_custom_config       = params.multiqc_config ? channel.of(file(params.multiqc_config, checkIfExists: true)) : channel.empty()
+    ch_multiqc_methods_description = params.multiqc_methods_description ? file(params.multiqc_methods_description, checkIfExists: true) : file("$projectDir/assets/methods_description_template.yml", checkIfExists: true)
 
     POST_PROCESSING(
         params.skip_visualisation,

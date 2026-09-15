@@ -42,6 +42,7 @@ process RUN_ROSETTAFOLD2NA {
         ln -s /app/RoseTTAFold2NA/run_RF2NA.sh ./
         mkdir ./input_prep
         ln -s /app/RoseTTAFold2NA/input_prep/* ./input_prep
+        ln -s /app/RoseTTAFold2NA/network/* ./network
     fi
 
     # RF2NA hard-codes the UniRef30_2020_06 database prefix. Allow a staged
@@ -126,5 +127,6 @@ PY
     touch raw/model_00.pdb
     touch "${meta.id}_plddt_mqc.tsv"
     touch "${meta.id}_0_pae.tsv"
+    touch "${meta.id}_rosettafold2na_msa.tsv"
     """
 }
