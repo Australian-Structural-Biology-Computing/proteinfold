@@ -573,6 +573,24 @@ workflow NFCORE_PROTEINFOLD {
     ch_multiqc_custom_config       = params.multiqc_config ? channel.of(file(params.multiqc_config, checkIfExists: true)) : channel.empty()
     ch_multiqc_methods_description = params.multiqc_methods_description ? file(params.multiqc_methods_description, checkIfExists: true) : file("$projectDir/assets/methods_description_template.yml", checkIfExists: true)
 
+    // Inject msa_tool into meta based on selected model for report provenance.
+    def msaToolMap = [
+        alphafold2:           'jackhmmer',
+        alphafold3:           'jackhmmer',
+        colabfold:            'mmseqs2',
+        boltz:                'mmseqs2',
+        helixfold3:           'jackhmmer',
+        rosettafold2na:       'hhblits',
+        rosettafold_all_atom: 'hhblits',
+        esmfold:              'None',
+    ]
+    ch_report_input = ch_report_input.map { tupleData ->
+        def meta = tupleData[0]
+        def m = meta.clone()
+        m.msa_tool = msaToolMap.get(meta.model, 'None')
+        [m] + tupleData.drop(1)
+    }
+
     POST_PROCESSING(
         params.skip_visualisation,
         requested_modes_size,
