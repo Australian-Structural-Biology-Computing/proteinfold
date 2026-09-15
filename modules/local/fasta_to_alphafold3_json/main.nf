@@ -12,7 +12,7 @@ process FASTA_TO_ALPHAFOLD3_JSON {
 
     output:
     tuple val(meta), path("*.json"), emit: json
-    tuple val("${task.process}"), val('python'), eval("python3 --version | sed 's/Python //g'"), emit: versions_python, topic: versions
+    path "versions.yml"            , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -25,11 +25,20 @@ process FASTA_TO_ALPHAFOLD3_JSON {
         ${fasta} \\
         ${prefix} \\
         $args
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        python: \$(python3 --version | sed 's/Python //g')
+    END_VERSIONS
     """
 
     stub:
     def prefix  = task.ext.prefix ?: "${meta.id}"
     """
     touch ${prefix}.json
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        python: \$(python3 --version | sed 's/Python //g')
+    END_VERSIONS
     """
 }
