@@ -31,7 +31,7 @@ process RUN_HELIXFOLD3 {
     tuple val(meta), path ("${meta.id}_helixfold3.cif")    , emit: main_cif
     tuple val(meta), path ("raw/ranked*.pdb")              , emit: pdb
     tuple val(meta), path ("${meta.id}_plddt.tsv")     , emit: plddt
-    tuple val(meta), path ("${meta.id}_msa.tsv"), emit: msa
+    tuple val(meta), path ("${meta.id}_helixfold3_msa.tsv"), emit: msa
     // If ${meta.id}-rank*/all_results.json" doesn't have PAE vales in the key, this will be empty
     tuple val(meta), path ("${meta.id}_1_pae.tsv")          , emit: pae
     tuple val(meta), path ("${meta.id}_*_pae.tsv")          , emit: paes
@@ -98,7 +98,7 @@ process RUN_HELIXFOLD3 {
         cp "${fasta.baseName}/${fasta.baseName}-rank\$i/predicted_structure.pdb" "raw/ranked_\$i.pdb"
     done
 
-    touch "${meta.id}_msa.tsv"
+    mv "${meta.id}_msa.tsv" "${meta.id}_helixfold3_msa.tsv"
     mv "${fasta.baseName}" raw/
 
     cat <<-END_VERSIONS > versions.yml
@@ -116,7 +116,7 @@ process RUN_HELIXFOLD3 {
     touch "${meta.id}_helixfold3.cif"
     touch "${meta.id}_helixfold3.pdb"
     touch "${meta.id}_plddt.tsv"
-    touch "${meta.id}_msa.tsv"
+    touch "${meta.id}_helixfold3_msa.tsv"
     touch "${meta.id}_ptm.tsv"
     touch "${meta.id}_iptm.tsv"
     touch "${meta.id}_ipsae.tsv"

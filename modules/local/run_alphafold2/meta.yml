@@ -114,7 +114,7 @@ output:
     - - meta:
           type: map
           description: Groovy Map containing sample information
-      - "*_msa.tsv":
+      - "*_alphafold2_msa.tsv":
           type: file
           description: Tab-separated file containing multiple sequence alignment statistics and metrics
           pattern: "*.tsv"

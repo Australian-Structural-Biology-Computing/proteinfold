@@ -21,7 +21,7 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
     path ("raw/**")                                                  , emit: raw
     tuple val(meta), path ("${meta.id}_rosettafold_all_atom.pdb")    , emit: pdb
     tuple val(meta), path ("${meta.id}_plddt.tsv")               , emit: plddt
-    tuple val(meta), path ("${meta.id}_msa.tsv"), emit: msa
+    tuple val(meta), path ("${meta.id}_rosettafold_all_atom_msa.tsv"), emit: msa
     // I think there should always be PAE from the .pt PyTorch model. extract_metrics.py has condition import torch to handle this
     tuple val(meta), path ("${meta.id}_*_pae.tsv")                   , emit: paes
     tuple val(meta), path ("${meta.id}_0_pae.tsv")                   , emit: pae
@@ -52,7 +52,7 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
         --a3ms "\$yaml_name"/*/t000_.msa0.a3m \\
         --pts "\$yaml_name"_aux.pt
 
-    touch "${meta.id}_msa.tsv"
+    mv "${meta.id}_msa.tsv" "${meta.id}_rosettafold_all_atom_msa.tsv"
 
     mkdir -p raw
     if [[ -d "\$yaml_name" ]]; then
@@ -74,7 +74,7 @@ process RUN_ROSETTAFOLD_ALL_ATOM {
     touch "${meta.id}_rosettafold_all_atom.pdb"
     touch "${meta.id}.pdb"
     touch "${meta.id}_plddt.tsv"
-    touch "${meta.id}_msa.tsv"
+    touch "${meta.id}_rosettafold_all_atom_msa.tsv"
     touch "${meta.id}_0_pae.tsv"
     mkdir -p raw
     touch raw/${meta.id}_aux.pt
