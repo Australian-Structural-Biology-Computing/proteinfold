@@ -4,7 +4,6 @@
 include { UNTAR           } from '../../modules/nf-core/untar/main'
 include { GUNZIP          } from '../../modules/nf-core/gunzip/main'
 include { ARIA2           } from '../../modules/nf-core/aria2/main'
-include { UNZIP           } from '../../modules/nf-core/unzip/main'
 include { ZSTD_DECOMPRESS } from '../../modules/local/zstd_decompress/main.nf'
 
 workflow ARIA2_UNCOMPRESS {
@@ -31,17 +30,6 @@ workflow ARIA2_UNCOMPRESS {
         ch_db = GUNZIP (ARIA2.out.downloaded_file).gunzip.map { it -> it[1] }
     } else if (source_url.toString().endsWith('.zst')) {
         ch_db = ZSTD_DECOMPRESS (ARIA2.out.downloaded_file).decompressed.map { it -> it[1] }
-    } else if (source_url.toString().endsWith('.zip')) {
-        ch_db = UNZIP (ARIA2.out.downloaded_file)
-                    .unzipped_archive
-                    .map { _meta, dir ->
-                        def targetDir = dir.listFiles().find { it.isDirectory() }
-                        // Find the .pdparams file in that directory
-                        def pdparamsFile = targetDir.listFiles().find { it ->
-                            it.getName().endsWith('.pdparams')
-                        }
-                        [ pdparamsFile ]
-                    }
     } else {
         ch_db = ARIA2.out.downloaded_file.map { it -> it[1] }
     }
