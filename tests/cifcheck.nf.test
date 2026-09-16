@@ -3,6 +3,7 @@ nextflow_process {
     name "Test Process CIFCHECK"
     script "../modules/local/cifcheck/main.nf"
     process "CIFCHECK"
+    outdir = "$outputDir"
 
     tag "cifcheck"
 
@@ -29,7 +30,7 @@ nextflow_process {
         when {
             process {
                 """
-                input[0] = [ [ id: 'real' ], file("$projectDir/assets/ma-atiya1-gk-01-AUGMENTED.cif", checkIfExists: true) ]
+                input[0] = [ [ id: 'real' ], file("$projectDir/tests/test_data/modelcif/ma-atiya1-gk-01-AUGMENTED.cif", checkIfExists: true) ]
                 """
             }
         }
