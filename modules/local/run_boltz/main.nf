@@ -23,15 +23,15 @@ process RUN_BOLTZ {
     tuple val(meta), path ("${meta.id}_boltz.cif")                            , emit: top_ranked_pdb
     tuple val(meta), path ("boltz_results_${meta.id}/predictions/${meta.id}/*.cif")             , emit: pdb
     tuple val(meta), path ("boltz_results_${meta.id}/predictions/${meta.id}/plddt_*model_0.npz"), emit: plddt_npz
-    tuple val(meta), path ("boltz_results_${meta.id}/predictions/${meta.id}/pae_*model_0.npz")  , emit: pae
-    tuple val(meta), path ("${meta.id}_boltz_msa.tsv")                        , emit: msa_raw
-    tuple val(meta), path ("${meta.id}_*_pae.tsv")                            , emit: pae_raw
-    tuple val(meta), path ("${meta.id}_ptm.tsv")                              , emit: ptm_raw
-    tuple val(meta), path ("${meta.id}_iptm.tsv")                             , optional: true, emit: iptm_raw
-    tuple val(meta), path ("${meta.id}_ipsae.tsv")                            , optional: true, emit: ipsae_raw
-    tuple val(meta), path ("${meta.id}_chainwise_ptm.tsv")                    , emit: summary_chainwise_ptm_raw
-    tuple val(meta), path ("${meta.id}_chainwise_iptm.tsv")                   , optional: true, emit: chainwise_iptm_raw
-    tuple val(meta), path ("${meta.id}_chainwise_ipsae.tsv")                  , optional: true, emit: chainwise_ipsae_raw
+    tuple val(meta), path ("boltz_results_${meta.id}/predictions/${meta.id}/pae_*model_0.npz")  , emit: pae_npz
+    tuple val(meta), path ("${meta.id}_boltz_msa.tsv")                        , emit: msa
+    tuple val(meta), path ("${meta.id}_*_pae.tsv")                            , emit: pae
+    tuple val(meta), path ("${meta.id}_ptm.tsv")                              , emit: ptm
+    tuple val(meta), path ("${meta.id}_iptm.tsv")                             , optional: true, emit: iptm
+    tuple val(meta), path ("${meta.id}_ipsae.tsv")                            , optional: true, emit: ipsae
+    tuple val(meta), path ("${meta.id}_chainwise_ptm.tsv")                    , emit: chainwise_ptm
+    tuple val(meta), path ("${meta.id}_chainwise_iptm.tsv")                   , optional: true, emit: chainwise_iptm
+    tuple val(meta), path ("${meta.id}_chainwise_ipsae.tsv")                  , optional: true, emit: chainwise_ipsae
     path "versions.yml", emit: versions
 
     when:

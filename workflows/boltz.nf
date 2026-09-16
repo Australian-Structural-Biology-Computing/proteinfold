@@ -129,7 +129,7 @@ workflow BOLTZ {
 
     RUN_BOLTZ
         .out
-        .msa_raw
+        .msa
         .map { it ->
             def meta = it[0].clone();
             meta.model = "boltz"
@@ -139,7 +139,7 @@ workflow BOLTZ {
 
     RUN_BOLTZ
         .out
-        .pae_raw
+        .pae
         .map { it ->
             def meta = it[0].clone();
             meta.model = "boltz"
@@ -149,7 +149,7 @@ workflow BOLTZ {
 
     RUN_BOLTZ
         .out
-        .iptm_raw
+        .iptm
         .map { it ->
             def meta = it[0].clone();
             meta.model = "boltz"
@@ -159,7 +159,7 @@ workflow BOLTZ {
 
     RUN_BOLTZ
         .out
-        .ipsae_raw
+        .ipsae
         .map { it ->
             def meta = it[0].clone();
             meta.model = "boltz"
@@ -169,7 +169,7 @@ workflow BOLTZ {
 
     RUN_BOLTZ
         .out
-        .chainwise_iptm_raw
+        .chainwise_iptm
         .map { it ->
             def meta = it[0].clone();
             meta.model = "boltz"
@@ -179,7 +179,7 @@ workflow BOLTZ {
 
     RUN_BOLTZ
         .out
-        .chainwise_ipsae_raw
+        .chainwise_ipsae
         .map { it ->
             def meta = it[0].clone();
             meta.model = "boltz"
