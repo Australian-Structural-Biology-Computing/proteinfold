@@ -44,7 +44,7 @@ process ASSEMBLE_MODELCIF {
         --msa_tool ${meta.msa_tool ?: 'None'} \
         $args
 
-    cat <<-END_VERSIONS > versions.yml
+    cat <<-END_VERSIONS >| versions.yml
     "${task.process}":
         python: \$(python3 --version | sed 's/Python //g')
         modelcif: \$(python3 -c "import modelcif; print(modelcif.__version__)" 2>/dev/null || echo "unknown")

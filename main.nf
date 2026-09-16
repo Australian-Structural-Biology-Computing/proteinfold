@@ -34,6 +34,7 @@ include { ROSETTAFOLD_ALL_ATOM             } from './workflows/rosettafold_all_a
 include { HELIXFOLD3                       } from './workflows/helixfold3'
 include { BOLTZ                            } from './workflows/boltz'
 include { ROSETTAFOLD2NA                   } from './workflows/rosettafold2na'
+include { ASSEMBLE_MODELCIF                 } from './modules/local/assemble_modelcif'
 
 include { PIPELINE_INITIALISATION          } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { PIPELINE_COMPLETION              } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
@@ -60,11 +61,20 @@ workflow NFCORE_PROTEINFOLD {
     ch_versions          = channel.empty()
     ch_report_input      = channel.empty()
     ch_top_ranked_model  = channel.empty()
+    ch_modelcif_input    = channel.empty()
     requested_modes      = params.mode.toLowerCase().split(",")
     requested_modes_size = requested_modes.size()
 
+    if (requested_modes.contains("colabfold") && params.colabfold_use_templates && !params.use_msa_server) {
+        error("`--colabfold_use_templates` requires `--use_msa_server` in ColabFold mode.")
+    }
+
     ch_dummy_file = channel.fromPath("$projectDir/assets/NO_FILE")
     ch_dummy_file_pae = channel.fromPath("$projectDir/assets/NO_FILE_PAE")
+    ch_dummy_file_msa = channel.fromPath("$projectDir/assets/DUMMY_MSA.tsv")
+    ch_dummy_file_pae = channel.fromPath("$projectDir/assets/DUMMY_PAE.tsv")
+    ch_dummy_file_ptm = channel.fromPath("$projectDir/assets/DUMMY_PTM.tsv")
+    ch_dummy_file_iptm = channel.fromPath("$projectDir/assets/DUMMY_IPTM.tsv")
 
     //
     // WORKFLOW: Run alphafold2
@@ -156,7 +166,7 @@ workflow NFCORE_PROTEINFOLD {
     }
 
     //
-    // WORKFLOW: Run alphafold3
+    // WORKFLOW: Run alphafold3 (data pipeline + inference as separate steps)
     //
     if(requested_modes.contains("alphafold3")) {
 
@@ -214,7 +224,7 @@ workflow NFCORE_PROTEINFOLD {
                                             it[0],
                                             it[1].sort { path ->
                                                 def filename = path.name
-                                                def matcher = filename =~ /.*_ranked_(\d+)\.pdb/
+                                                def matcher = filename =~ /.*_ranked_(\d+)\.(?:pdb|cif|mmcif)/
                                                 if (matcher.matches()) {
                                                     return matcher[0][1].toInteger()
                                                 } else {
@@ -222,7 +232,7 @@ workflow NFCORE_PROTEINFOLD {
                                                 }
                                             }.subList(0, Math.min(5, it[1].size() as int))
                                         ]
-                                }
+                                    }
                                 .join(ALPHAFOLD3.out.msa)
                                 .join(ALPHAFOLD3.out.pae)
                                 .join(ALPHAFOLD3.out.iptm)
@@ -322,6 +332,23 @@ workflow NFCORE_PROTEINFOLD {
 
         ch_multiqc      = ch_multiqc.mix(ESMFOLD.out.multiqc_report.collect())
         ch_versions     = ch_versions.mix(ESMFOLD.out.versions)
+
+        ch_modelcif_input = ch_modelcif_input.mix(
+            ESMFOLD.out.pdb
+                .combine(ch_dummy_file_msa)
+                .join(ESMFOLD.out.plddt)
+                .combine(ch_dummy_file_pae)
+                .combine(ch_dummy_file_ptm)
+                .combine(ch_dummy_file_iptm)
+                .combine(ESMFOLD.out.versions.first())
+                .map { meta, structs, msa, plddt, pae, ptm, iptm, versions_yml ->
+                    [ meta, structs, msa, plddt, pae, ptm, iptm, versions_yml ]
+                }
+        )
+        ch_modelcif_input.view { meta, structs, msa, plddt, pae, ptm, iptm, versions_yml ->
+            "ESMFOLD MODELCIF tuple: id=${meta.id} model=${meta.model ?: 'unset'} structs=${structs} msa=${msa} plddt=${plddt} pae=${pae} ptm=${ptm} iptm=${iptm} versions=${versions_yml}"
+        }
+
         ch_report_input = ch_report_input.mix(
             ESMFOLD.out.pdb
                 .combine(ch_dummy_file)
@@ -542,7 +569,6 @@ workflow NFCORE_PROTEINFOLD {
             params.boltz2_conf_link,
             params.boltz2_mols_link
         )
-        ch_versions = ch_versions.mix(PREPARE_BOLTZ_DBS.out.versions)
 
         PREPARE_COLABFOLD_DBS_BOLTZ (
             params.colabfold_db,
@@ -555,7 +581,8 @@ workflow NFCORE_PROTEINFOLD {
             params.colabfold_uniref30_link,
             params.colabfold_create_index
         )
-        ch_versions = ch_versions.mix(PREPARE_COLABFOLD_DBS_BOLTZ.out.versions)
+
+        ch_versions = ch_versions.mix(PREPARE_BOLTZ_DBS.out.versions)
 
         BOLTZ(
             ch_samplesheet,
@@ -582,15 +609,16 @@ workflow NFCORE_PROTEINFOLD {
         )
         ch_top_ranked_model         = ch_top_ranked_model.mix(BOLTZ.out.top_ranked_pdb)
     }
-    //
     // POST PROCESSING: generate visualisation reports
     //
     ch_report_template     = channel.value(file("$projectDir/assets/report_template.html", checkIfExists: true))
     ch_comparison_template = channel.value(file("$projectDir/assets/comparison_template.html", checkIfExists: true))
 
-    // Inject msa_tool into meta based on the program — a fact of the workflow
-    // branch, not of any individual process, so it belongs at the join point.
-    // Single join point to save the headache of carrying it around in meta in _all_ metrics channels - KR
+    ch_multiqc_config              = channel.of(file("$projectDir/assets/multiqc_config.yml", checkIfExists: true))
+    ch_multiqc_custom_config       = params.multiqc_config ? channel.of(file(params.multiqc_config, checkIfExists: true)) : channel.empty()
+    ch_multiqc_methods_description = params.multiqc_methods_description ? file(params.multiqc_methods_description, checkIfExists: true) : file("$projectDir/assets/methods_description_template.yml", checkIfExists: true)
+
+    // Inject msa_tool into meta based on selected model for report provenance.
     def msaToolMap = [
         alphafold2:           'jackhmmer',
         alphafold3:           'jackhmmer',
@@ -601,15 +629,16 @@ workflow NFCORE_PROTEINFOLD {
         rosettafold_all_atom: 'hhblits',
         esmfold:              'None',
     ]
-    ch_report_input = ch_report_input.map { meta, structs, msa, pae ->
+    ch_report_input = ch_report_input.map { tupleData ->
+        def meta = tupleData[0]
         def m = meta.clone()
         m.msa_tool = msaToolMap.get(meta.model, 'None')
-        [ m, structs, msa, pae ]
+        [m] + tupleData.drop(1)
     }
 
-    ch_multiqc_config              = channel.of(file("$projectDir/assets/multiqc_config.yml", checkIfExists: true))
-    ch_multiqc_custom_config       = params.multiqc_config ? channel.of(file(params.multiqc_config, checkIfExists: true)) : channel.empty()
-    ch_multiqc_methods_description = params.multiqc_methods_description ? file(params.multiqc_methods_description, checkIfExists: true) : file("$projectDir/assets/methods_description_template.yml", checkIfExists: true)
+    ASSEMBLE_MODELCIF(
+        ch_modelcif_input
+    )
 
     POST_PROCESSING(
         params.skip_visualisation,
