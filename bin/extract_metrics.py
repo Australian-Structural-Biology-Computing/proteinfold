@@ -364,8 +364,6 @@ def read_paired_a3m(name, a3m_file):
     write_tsv(f"{name}_msa.tsv", format_msa_rows(msa_rows))
 
 def read_a3m(name, a3m_files):
-    # RosettaFold-All-Atom
-    #TODO: DRY with unpaired below for Boltz
     msa_rows = {}
     for a3m_file in a3m_files: #Should already be alphabetical by chain
         msa_rows[a3m_file] = a3m_to_int(a3m_file)
@@ -376,8 +374,6 @@ def read_a3m(name, a3m_files):
         temp_row.extend(msa_rows[a3m_file][0])
     final_rows.append(temp_row)
 
-    # Un-paired TODO: get pairing code from RF-AA source
-    # https://github.com/baker-laboratory/RoseTTAFold-All-Atom/blob/main/rf2aa/data/parsers.py#L405
     msa_widths = [len(msa_rows[chain][0]) for chain in a3m_files]
     msa_heights = [len(msa_rows[chain]) for chain in a3m_files]
 
@@ -643,17 +639,6 @@ def read_json(name, json_files, struct_files=None):
         write_tsv(f"{name}_chainwise_ipsae.tsv", format_pair_score_rows(chainwise_ipsae))
 
 
-def read_pt(name, pt_files):
-    import torch # moved to a conditional import since too bulky import if not used
-    for pt_file in pt_files:
-        with open(pt_file, 'rb') as f:   # TODO: point to [protein]_aux.pt
-            data = torch.load(f, map_location="cpu")
-            if 'pae' in data:
-                # The pt file contains a tensor that needs to be cast as an array
-                # Squeeze leading dimension (batch?)
-                write_tsv(f"{name}_0_pae.tsv", format_pae_rows(np.squeeze(data["pae"].numpy())))
-        break
-
 def read_colabfold_metrics(name, colabfold_metrics_files, struct_files=None):
     ptm_rows = []
     iptm_rows = []
@@ -721,8 +706,6 @@ def main():
         read_npz(args.name, args.npzs, args.structs)
     if args.jsons:
         read_json(args.name, args.jsons, args.structs)
-    if args.pts:
-        read_pt(args.name, args.pts)
     if args.structs:
         extract_structs_plddt_to_tsv(args.name, args.structs)
     if args.colabfold_metrics_files:
