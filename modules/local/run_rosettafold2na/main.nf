@@ -20,8 +20,8 @@ process RUN_ROSETTAFOLD2NA {
     path ("raw/**")                                           , emit: raw
     tuple val(meta), path("${meta.id}_rosettafold2na.pdb")    , emit: top_ranked_pdb
     tuple val(meta), path("raw/*.pdb")                        , emit: pdb
-    tuple val(meta), path("${meta.id}_plddt_mqc.tsv")         , emit: multiqc
-    tuple val(meta), path("${meta.id}_rosettafold2na_msa.tsv"), emit: msa
+    tuple val(meta), path("${meta.id}_plddt.tsv")         , emit: plddt
+    tuple val(meta), path("${meta.id}_msa.tsv"), emit: msa
     tuple val(meta), path("${meta.id}_0_pae.tsv")             , emit: pae
     path "versions.yml"                                       , emit: versions
 
@@ -112,7 +112,7 @@ PY
     extract_metrics.py --name ${meta.id} \
         --structs "${meta.id}_rf2na_output/models/model_00.pdb" ${'$'}A3M_ARGS
 
-    mv "${meta.id}_msa.tsv" "${meta.id}_rosettafold2na_msa.tsv"
+    touch "${meta.id}_msa.tsv"
 
     ## Move rf2na output directory to raw for save_intermediates
     mv ${meta.id}_rf2na_output/* raw/
@@ -130,9 +130,9 @@ END_VERSIONS
     mkdir -p raw
     touch "${meta.id}_rosettafold2na.pdb"
     touch raw/model_00.pdb
-    touch "${meta.id}_plddt_mqc.tsv"
+    touch "${meta.id}_plddt.tsv"
     touch "${meta.id}_0_pae.tsv"
-    touch "${meta.id}_rosettafold2na_msa.tsv"
+    touch "${meta.id}_msa.tsv"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

@@ -13,8 +13,8 @@ process COLABFOLD_BATCH {
     path ("raw/**")                                         , emit: raw
     tuple val(meta), path ("${meta.id}_colabfold.pdb")      , emit: top_ranked_pdb
     tuple val(meta), path ("raw/*relaxed_rank_*.pdb")       , emit: pdb
-    tuple val(meta), path ("${meta.id}_colabfold_msa.tsv")  , emit: msa
-    tuple val(meta), path ("${meta.id}_plddt_mqc.tsv")      , emit: multiqc
+    tuple val(meta), path ("${meta.id}_msa.tsv")  , emit: msa
+    tuple val(meta), path ("${meta.id}_plddt.tsv")      , emit: plddt
     tuple val(meta), path ("${meta.id}_*_pae.tsv")          , optional: true, emit: paes
     tuple val(meta), path ("${meta.id}_1_pae.tsv")          , optional: true, emit: pae
     tuple val(meta), path ("${meta.id}_ptm.tsv")            , optional: true, emit: ptms
@@ -67,7 +67,7 @@ process COLABFOLD_BATCH {
     touch "${meta.id}_iptm.tsv" "${meta.id}_ipsae.tsv" "${meta.id}_chainwise_iptm.tsv" "${meta.id}_chainwise_ipsae.tsv"
 
     cp raw/*_coverage.png ${meta.id}_seq_coverage.png
-    mv "${meta.id}_msa.tsv" "${meta.id}_colabfold_msa.tsv"
+    touch "${meta.id}_msa.tsv"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -101,8 +101,8 @@ process COLABFOLD_BATCH {
     touch ./${meta.id}_ipsae.tsv
     touch ./${meta.id}_chainwise_iptm.tsv
     touch ./${meta.id}_chainwise_ipsae.tsv
-    touch ./${meta.id}_plddt_mqc.tsv
-    touch ./${meta.id}_colabfold_msa.tsv
+    touch ./${meta.id}_plddt.tsv
+    touch ./${meta.id}_msa.tsv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
