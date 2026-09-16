@@ -189,7 +189,7 @@ workflow BOLTZ {
 
     RUN_BOLTZ
         .out
-        .multiqc
+        .plddt
         .map { it -> it[1] }
         .collect(sort: true)
         .map { it ->  [ [ "model": "boltz"], it.flatten() ] }

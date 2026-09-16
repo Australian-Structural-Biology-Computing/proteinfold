@@ -66,7 +66,7 @@ workflow ESMFOLD {
 
     RUN_ESMFOLD
         .out
-        .multiqc
+        .plddt
         .map { it -> it[1] }
         .toSortedList()
         .map { it ->

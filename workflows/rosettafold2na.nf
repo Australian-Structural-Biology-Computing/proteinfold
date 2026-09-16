@@ -47,7 +47,7 @@ workflow ROSETTAFOLD2NA {
 
     RUN_ROSETTAFOLD2NA
         .out
-        .multiqc
+        .plddt
         .map { it -> it[1] }
         .toSortedList()
         .map { it ->

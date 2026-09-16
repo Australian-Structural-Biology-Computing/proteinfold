@@ -66,7 +66,7 @@ workflow ROSETTAFOLD_ALL_ATOM {
 
     RUN_ROSETTAFOLD_ALL_ATOM
         .out
-        .multiqc
+        .plddt
         .map { it -> it[1] }
         .toSortedList()
         .map { it ->

@@ -79,7 +79,7 @@ workflow HELIXFOLD3 {
 
     RUN_HELIXFOLD3
         .out
-        .multiqc
+        .plddt
         .map { it ->  it[1] }
         .toSortedList()
         .map { it ->

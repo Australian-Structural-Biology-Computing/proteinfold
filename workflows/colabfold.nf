@@ -111,7 +111,7 @@ workflow COLABFOLD {
 
     COLABFOLD_BATCH
         .out
-        .multiqc
+        .plddt
         .map { it -> it[1] }
         .toSortedList()
         .map { it ->
