@@ -1,5 +1,5 @@
-ARG CUDA_VERSION=12.2.2
-FROM nvidia/cuda:${CUDA_VERSION}-cudnn8-runtime-ubuntu20.04
+ARG CUDA_VERSION=12.9.1
+FROM nvidia/cuda:${CUDA_VERSION}-base-ubuntu24.04
 # FROM directive resets ARGS, so we specify again (the value is retained if
 # previously set).
 ARG CUDA_VERSION
@@ -69,10 +69,10 @@ RUN wget -q -P /app/alphafold/alphafold/common/ \
 # Install pip packages.
 RUN pip3 install --upgrade pip --no-cache-dir \
     && pip3 install -r /app/alphafold/requirements.txt --no-cache-dir \
+    && pip3 uninstall --yes jax jaxlib \
     && pip3 install --upgrade --no-cache-dir \
-      jax==0.4.26 \
-      jaxlib==0.4.26+cuda12.cudnn89 \
-      -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+      "jax[cuda12]==0.5.3" \
+      "jaxlib==0.5.3"
 
 # Add SETUID bit to the ldconfig binary so that non-root users can run it.
 RUN chmod u+s /sbin/ldconfig.real
@@ -83,5 +83,8 @@ RUN ln -sf /usr/lib/x86_64-linux-gnu/libffi.so.7 /opt/conda/lib/libffi.so.7
 # Run ldconfig to ensure GPUs are visible at runtime.
 # See https://github.com/NVIDIA/nvidia-docker/issues/1399
 RUN ldconfig
+
+ENV XLA_FLAGS="--xla_gpu_cuda_data_dir=/usr/local/cuda"
+ENV CUDA_ROOT="/usr/local/cuda"
 
 WORKDIR /app/alphafold
