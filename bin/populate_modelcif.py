@@ -61,7 +61,7 @@ def parse_args(args=None):
     parser.add_argument('--versions_yml', default=None, help='versions.yml emitted by the upstream run_* module.')
     parser.add_argument('--software_details', default=None, help='Optional path to DUMMY YAML file for software + protocol step metadata -- pre-wiring into upstream logic.')
     parser.add_argument('--output',       default=None)
-    parser.add_argument('--all-structs',  action='store_true', help='Include all parseable files passed via --structs as models. Default when this flag is not present is that only the first structure is used.')
+    parser.add_argument('--all-structs',  action='store_true', help='Include all parseable files passed via --structs as models. This is enabled automatically when more than one structure file is supplied.')
     parser.add_argument('--write_binary', action='store_true', help='Write BinaryCIF (.bcif) output instead of text mmCIF. Requires the msgpack package.')
     return parser.parse_args(args)
 
@@ -329,7 +329,7 @@ def build_modelcif(
     sw_version=None,
     msa_tool=None,
     software_details=None,
-    all_structs=False,
+    all_structs=None,
 ):
     """
     Build a modelcif.System from ranked structure files and QA metric .tsv files.
@@ -367,6 +367,8 @@ def build_modelcif(
     modelcif.System
     """
     software_details = software_details or {}
+    if all_structs is None:
+        all_structs = len(struct_files) > 1
 
     selected_struct_files = []
     biopy_structs = []
@@ -639,9 +641,10 @@ def main(args=None):
     software_details = _read_software_details_yml(args.software_details)
     # Nextflow emits the string 'None' when no msa_tool is known; normalise to Python None.
     msa_tool = None if args.msa_tool in (None, 'None') else args.msa_tool
+    all_structs = args.all_structs or len(args.structs) > 1
     system = build_modelcif(
         struct_files=args.structs,
-        all_structs=args.all_structs,
+        all_structs=all_structs,
         plddt_file=args.plddt,
         msa_file=args.msa,
         pae_file=args.pae,
