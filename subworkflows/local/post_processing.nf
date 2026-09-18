@@ -134,13 +134,11 @@ workflow POST_PROCESSING {
 
         MULTIQC (
             ch_multiqc_rep
-                .view { v -> "DEBUG ch_multiqc_rep: $v" }
                 // wrap each collected list in an outer list so combine() only unwraps one level,
                 // otherwise it spreads the inner list elements into separate tuple positions
-                .combine(ch_multiqc_files.collect().map { [it] }.view { v -> "DEBUG ch_multiqc_files.collect(): $v" })
-                .combine(ch_multiqc_config.collect().ifEmpty([]).map { [it] }.view { v -> "DEBUG ch_multiqc_config.collect(): $v" })
-                .combine(ch_multiqc_custom_config.collect().ifEmpty([]).map { [it] }.view { v -> "DEBUG ch_multiqc_custom_config.collect(): $v" })
-                .view { v -> "DEBUG post-combine tuple: $v" }
+                .combine(ch_multiqc_files.collect().map { [it] })
+                .combine(ch_multiqc_config.collect().ifEmpty([]).map { [it] })
+                .combine(ch_multiqc_custom_config.collect().ifEmpty([]).map { [it] })
                 .map { meta, rep_files, extra_files, config_file, custom_config_file ->
                     [
                         meta,
@@ -151,7 +149,6 @@ workflow POST_PROCESSING {
                         []
                     ]
                 }
-                .view { v -> "DEBUG MULTIQC input: $v" }
         )
         ch_multiqc_report = MULTIQC.out.report.toList()
     }
