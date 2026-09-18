@@ -18,9 +18,6 @@ nextflow_pipeline {
         [name: 'esmfold',           displayName: 'ESMFold',     ext: '.pdb', tags: ['esmfold']],
         [name: 'colabfold',         displayName: 'ColabFold',   ext: '.pdb', tags: ['colabfold']],
         [name: 'boltz',             displayName: 'Boltz',       ext: '.pdb', tags: ['boltz']],
-        [name: 'rosettafold2na',    displayName: 'RoseTTAFold2NA', ext: '.pdb', tags: ['rosettafold2na']],
-        [name: 'rosettafold_all_atom', displayName: 'RoseTTAFold-AA', ext: '.pdb', tags: ['rosettafold_all_atom', 'rosettafold']],
-        [name: 'helixfold3',        displayName: 'HelixFold3',  ext: '.pdb', tags: ['helixfold3']],
     ]
 
     // ==================== Shared Python runner ====================
@@ -349,10 +346,7 @@ except Exception as e:
                             line.split('\t').each { val ->
                                 try {
                                     def v = Float.parseFloat(val)
-                                    // HelixFold3 somehow produces values just above 31.75 (the max PAE in AlphaFold). Raising the limit slightly unless HelixFold3 gets deprecated
-                                    // Reporting 31.75 is intentionally kept as to not suggest 32 is what we expect
-                                    // TODO: revert this max to 31.75 if HelixFold3 is removed - KR
-                                    assert v >= 0 && v <= 32.10:          "PAE value ${v} outside 0-31.75 range in ${f.name}"
+                                    assert v >= 0 && v <= 31.75:          "PAE value ${v} outside 0-31.75 range in ${f.name}"
                                     assert !v.isNaN() && !v.isInfinite(): "PAE has NaN/inf value in ${f.name}"
                                 } catch (NumberFormatException e) {
                                     assert false: "PAE value '${val}' is not a valid float in ${f.name}"
