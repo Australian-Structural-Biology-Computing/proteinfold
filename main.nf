@@ -129,7 +129,7 @@ workflow NFCORE_PROTEINFOLD {
             PREPARE_ALPHAFOLD2_DBS.out.pdb_seqres,
             PREPARE_ALPHAFOLD2_DBS.out.uniprot
         )
-        ch_multiqc          = ch_multiqc.mix(ALPHAFOLD2.out.multiqc_report.collect())
+        ch_multiqc          = ch_multiqc.mix(ALPHAFOLD2.out.multiqc_report)
         ch_versions         = ch_versions.mix(ALPHAFOLD2.out.versions)
         ch_report_input     = ch_report_input
                                 .mix(ALPHAFOLD2
@@ -327,7 +327,7 @@ workflow NFCORE_PROTEINFOLD {
             params.esmfold_num_recycles
         )
 
-        ch_multiqc      = ch_multiqc.mix(ESMFOLD.out.multiqc_report.collect())
+        ch_multiqc      = ch_multiqc.mix(ESMFOLD.out.multiqc_report.view { v -> "DEBUG ESMFOLD.out.multiqc_report: $v" })
         ch_versions     = ch_versions.mix(ESMFOLD.out.versions)
         ch_report_input = ch_report_input.mix(
             ESMFOLD.out.pdb
@@ -375,7 +375,7 @@ workflow NFCORE_PROTEINFOLD {
             PREPARE_ROSETTAFOLD_ALL_ATOM_DBS.out.pdb100,
             PREPARE_ROSETTAFOLD_ALL_ATOM_DBS.out.rfaa_paper_weights
         )
-        ch_multiqc                              = ch_multiqc.mix(ROSETTAFOLD_ALL_ATOM.out.multiqc_report.collect())
+        ch_multiqc                              = ch_multiqc.mix(ROSETTAFOLD_ALL_ATOM.out.multiqc_report)
         ch_versions                             = ch_versions.mix(ROSETTAFOLD_ALL_ATOM.out.versions)
         ch_report_input                         = ch_report_input.mix(ROSETTAFOLD_ALL_ATOM.out.pdb
                                                                     .join(ROSETTAFOLD_ALL_ATOM.out.msa)
@@ -449,7 +449,7 @@ workflow NFCORE_PROTEINFOLD {
             PREPARE_HELIXFOLD3_DBS.out.helixfold3_init_models,
             PREPARE_HELIXFOLD3_DBS.out.helixfold3_maxit_src
         )
-        ch_multiqc          = ch_multiqc.mix(HELIXFOLD3.out.multiqc_report.collect())
+        ch_multiqc          = ch_multiqc.mix(HELIXFOLD3.out.multiqc_report)
         ch_versions         = ch_versions.mix(HELIXFOLD3.out.versions)
         ch_report_input     = ch_report_input
                                 .mix(HELIXFOLD3.out.pdb.map { it ->
@@ -514,7 +514,7 @@ workflow NFCORE_PROTEINFOLD {
             PREPARE_ROSETTAFOLD2NA_DBS.out.rna,
             PREPARE_ROSETTAFOLD2NA_DBS.out.rosettafold2na_weights
         )
-        ch_multiqc                              = ch_multiqc.mix(ROSETTAFOLD2NA.out.multiqc_report.collect())
+        ch_multiqc                              = ch_multiqc.mix(ROSETTAFOLD2NA.out.multiqc_report)
         ch_versions                             = ch_versions.mix(ROSETTAFOLD2NA.out.versions)
         ch_report_input                         = ch_report_input
                                                     .mix(
