@@ -1,2 +1,0 @@
-[multiqc.modules.v1]
-proteinfold = multiqc_proteinfold.proteinfold:MultiqcModule
