@@ -230,7 +230,7 @@ except Exception as e:
                 def structDirCandidates = [
                     file("${params.outdir}/${_name}/top_ranked_structures")
                 ]
-                // AlphaFold2 now publishes under <outdir>/alphafold2/<alphafold2_mode>/top_ranked_structures.
+                // AlphaFold2 publishes under <outdir>/alphafold2/split_msa_prediction/top_ranked_structures.
                 if (_name == 'alphafold2') {
                     def nestedDirs = modeOutputDir.listFiles()?.findAll { it.isDirectory() } ?: []
                     structDirCandidates.addAll(nestedDirs.collect { new File(it, 'top_ranked_structures') })
