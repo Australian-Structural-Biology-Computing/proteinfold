@@ -21,8 +21,7 @@ process COMBINE_UNIPROT {
     """
     set -e
 
-    cat ${uniprot_sprot} >> ${uniprot_trembl}
-    mv ${uniprot_trembl} uniprot.fasta
+    cat ${uniprot_trembl} ${uniprot_sprot} > uniprot.fasta
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

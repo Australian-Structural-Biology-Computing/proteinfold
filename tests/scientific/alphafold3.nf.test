@@ -1,0 +1,40 @@
+nextflow_pipeline {
+
+    name "Scientific validation: AlphaFold3"
+    script "../../main.nf"
+    tag "scientific"
+    tag "gpu"
+    tag "real"
+    tag "alphafold3"
+    profile "test_full_alphafold3,gpu"
+
+    test("AlphaFold3: validate structures and metrics") {
+        options "--mode alphafold3 --use_gpu"
+
+        when {
+            params {
+                input        = file("${projectDir}/tests/fixtures/samplesheet.csv", checkIfExists: true)
+                outdir      = "$outputDir"
+                alphafold3_db = System.getenv("PROTEINFOLD_TEST_DB")
+                alphafold3_params_path = System.getenv("PROTEINFOLD_AF3_PARAMS")
+            }
+        }
+
+        then {
+            assert params.alphafold3_db: "Set PROTEINFOLD_TEST_DB to the local ProteinFold microDB root"
+            assert params.alphafold3_params_path: "Set PROTEINFOLD_AF3_PARAMS to the licensed af3.bin model parameters"
+            assert workflow.success: "AlphaFold3 workflow failed (exit ${workflow.exitStatus})"
+            def validator = new File("tests/scientific/validate_outputs.py").absolutePath
+            def command = ["python3", validator, "--mode", "alphafold3", "--display-name", "AlphaFold3",
+                           "--extension", ".cif", "--outdir", params.outdir.toString(),
+                           "--samplesheet", params.input.toString()]
+            def process = command.execute()
+            def stdout = new StringBuffer()
+            def stderr = new StringBuffer()
+            process.consumeProcessOutput(stdout, stderr)
+            assert process.waitFor() == 0: "${stdout}\n${stderr}"
+            println stdout
+            assert file("${params.outdir}/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml").size() > 0
+        }
+    }
+}

@@ -3,6 +3,8 @@ nextflow_pipeline {
     name "Test pipeline"
     script "../main.nf"
     tag "pipeline"
+    tag "stub"
+    tag "alphafold2"
 
     test("-profile test") {
 

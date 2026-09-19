@@ -1,0 +1,60 @@
+nextflow_process {
+
+    name "Test Process RUN_ALPHAFOLD2_MSA"
+    script "../main.nf"
+    process "RUN_ALPHAFOLD2_MSA"
+    config "./nextflow.config"
+
+    tag "modules"
+    tag "modules_local"
+    tag "run_alphafold2_msa"
+    tag "alphafold2"
+    tag "cpu"
+    tag "real"
+    profile "test_nostub"
+
+    test("creates deterministic AlphaFold2 features with micro databases") {
+        when {
+            process {
+                """
+                def db = System.getenv('PROTEINFOLD_TEST_DB')
+                assert db: 'PROTEINFOLD_TEST_DB must point to the ProteinFold microDB root'
+
+                def dummyParams = file('dummy_params')
+                dummyParams.mkdirs()
+                file('dummy_params/unused').text = 'not used by the MSA-only process'
+
+                input[0] = [[id: 'ubiquitin'], file("${projectDir}/tests/fixtures/ubiquitin.fasta", checkIfExists: true), 'monomer_ptm']
+                input[1] = false
+                input[2] = 'uniref30_2302_db'
+                input[3] = files('dummy_params/*', checkIfExists: true)
+                input[4] = file('dummy_params/unused', checkIfExists: true)
+                input[5] = files("${db}/small_bfd/*", checkIfExists: true)
+                input[6] = files("${db}/mgnify/*", checkIfExists: true)
+                input[7] = files("${db}/pdb70/*", checkIfExists: true)
+                input[8] = file("${db}/pdb_mmcif/mmcif_files", checkIfExists: true)
+                input[9] = file("${db}/pdb_mmcif/obsolete.dat", checkIfExists: true)
+                input[10] = files("${db}/uniref30/*", checkIfExists: true)
+                input[11] = files("${db}/uniref90/*", checkIfExists: true)
+                input[12] = files("${db}/pdb_seqres/*", checkIfExists: true)
+                input[13] = files("${db}/uniprot/*", checkIfExists: true)
+                """
+            }
+        }
+
+        then {
+            def features = file(process.out.features[0][1])
+            def featuresSha256 = java.security.MessageDigest
+                .getInstance('SHA-256')
+                .digest(features.bytes)
+                .encodeHex()
+                .toString()
+            assertAll(
+                { assert process.success },
+                { assert features.size() > 0 },
+                { assert featuresSha256 == '212cb501978f2a93fab1c91b071a8329d92cc763efeb69b08a47caf6ad2449e5' },
+                { assert process.out.versions }
+            )
+        }
+    }
+}

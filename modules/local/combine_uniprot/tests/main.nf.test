@@ -1,0 +1,33 @@
+nextflow_process {
+
+    name "Test Process COMBINE_UNIPROT"
+    script "../main.nf"
+    process "COMBINE_UNIPROT"
+
+    tag "modules"
+    tag "modules_local"
+    tag "cpu"
+    tag "real"
+    tag "combine_uniprot"
+    profile "test_nostub"
+
+    test("combines reviewed and unreviewed UniProt FASTA files") {
+
+        when {
+            process {
+                """
+                input[0] = file("${projectDir}/tests/fixtures/modules/local/cpu/uniprot_sprot.fasta", checkIfExists: true)
+                input[1] = file("${projectDir}/tests/fixtures/modules/local/cpu/uniprot_trembl.fasta", checkIfExists: true)
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.ch_db[0]).text == ">tr|A00001|UNREVIEWED_TEST\nACDEFG\n>sp|P00001|REVIEWED_TEST\nMKTAYI\n" },
+                { assert process.out.versions }
+            )
+        }
+    }
+}

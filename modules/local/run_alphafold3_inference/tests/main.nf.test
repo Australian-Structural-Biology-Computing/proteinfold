@@ -1,0 +1,55 @@
+nextflow_process {
+
+    name "Test Process RUN_ALPHAFOLD3_INFERENCE"
+    script "../main.nf"
+    process "RUN_ALPHAFOLD3_INFERENCE"
+    config "./nextflow.config"
+
+    tag "modules"
+    tag "modules_local"
+    tag "run_alphafold3_inference"
+    tag "alphafold3"
+    tag "gpu"
+    tag "real"
+    profile "test_nostub"
+    profile "gpu"
+
+    test("predicts an AlphaFold3 structure from validated CPU data JSON") {
+        when {
+            process {
+                """
+                def dataJsonPath = System.getenv('PROTEINFOLD_AF3_DATA_JSON')
+                assert dataJsonPath: 'PROTEINFOLD_AF3_DATA_JSON must point to validated RUN_ALPHAFOLD3_DATAPIPELINE output'
+                def dataJson = file(dataJsonPath, checkIfExists: true)
+                def dataJsonSha256 = java.security.MessageDigest
+                    .getInstance('SHA-256')
+                    .digest(dataJson.bytes)
+                    .encodeHex()
+                    .toString()
+                assert dataJsonSha256 == '1e4503b48ffd630e5d6f99054bd5bc729267bb4c62ad39b341e2e4707f6fa562'
+
+                def paramsPath = System.getenv('PROTEINFOLD_AF3_PARAMS')
+                assert paramsPath: 'PROTEINFOLD_AF3_PARAMS must point to the licensed af3.bin model parameters'
+
+                input[0] = [[id: 'ubiquitin'], dataJson]
+                input[1] = file(paramsPath, checkIfExists: true)
+                """
+            }
+        }
+
+        then {
+            def topRanked = path(process.out.top_ranked_cif[0][1])
+            def plddt = path(process.out.multiqc[0][1])
+            def pae = path(process.out.pae[0][1])
+            assertAll(
+                { assert process.success },
+                { assert process.out.top_ranked_cif[0][0].id == 'ubiquitin' },
+                { assert topRanked.size() > 0 },
+                { assert topRanked.text.contains('_atom_site.') },
+                { assert plddt.size() > 0 },
+                { assert pae.size() > 0 },
+                { assert process.out.versions }
+            )
+        }
+    }
+}
