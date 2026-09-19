@@ -124,13 +124,6 @@
                     "description": "If true uses the full version of the BFD database otherwise, otherwise it uses its reduced version, small bfd",
                     "fa_icon": "fas fa-battery-full"
                 },
-                "alphafold2_mode": {
-                    "type": "string",
-                    "default": "split_msa_prediction",
-                    "description": "Specifies the mode in which AlphaFold2 will be run",
-                    "enum": ["standard", "split_msa_prediction"],
-                    "fa_icon": "fas fa-exchange-alt"
-                },
                 "alphafold2_model_preset": {
                     "type": "string",
                     "default": "monomer_ptm",
