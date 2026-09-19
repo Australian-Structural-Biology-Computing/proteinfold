@@ -86,7 +86,7 @@ workflow ALPHAFOLD2 {
 
         RUN_ALPHAFOLD2
             .out
-            .multiqc
+            .plddt
             .map { it -> it[1] }
             .toSortedList()
             .map { it ->
@@ -151,7 +151,7 @@ workflow ALPHAFOLD2 {
 
         RUN_ALPHAFOLD2_PRED
             .out
-            .multiqc
+            .plddt
             .map { it -> it[1] }
             .toSortedList()
             .map { it ->
