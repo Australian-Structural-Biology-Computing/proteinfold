@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Enhancements & fixes
 
+- Add modular CPU, GPU, and per-mode scientific nf-tests with deterministic fixtures and independently runnable inference stages.
+
 - [[PR #573](https://github.com/nf-core/proteinfold/pull/573)] - Adds affiliations for UNSW Structural Biology Facility (SBF).
 - [[PR #588](https://github.com/nf-core/proteinfold/pulls/588)] - Add `--random_seed` for AF2, Boltz, and ColabFold, removing and replacing `--alphafold2_random_seed`.
 - [[PR #592](https://github.com/nf-core/proteinfold/pull/592)] - Add iPTM and ipSAE TSV/report outputs, display chainwise interface scores in HTML reports.

@@ -1,0 +1,35 @@
+nextflow_process {
+
+    name "Test Process MULTIFASTA_TO_SINGLEFASTA"
+    script "../main.nf"
+    process "MULTIFASTA_TO_SINGLEFASTA"
+
+    tag "modules"
+    tag "modules_local"
+    tag "cpu"
+    tag "real"
+    tag "multifasta_to_singlefasta"
+    profile "test_nostub"
+
+    test("normalises a multi-FASTA to one colon-delimited sequence") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: 'mixed_sample' ],
+                    file("${projectDir}/tests/fixtures/modules/local/cpu/multichain.fasta", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.input_fasta[0][1]).text == ">mixed_sample\nMKTAYI:ACGT:ACGU\n" },
+                { assert process.out.versions }
+            )
+        }
+    }
+}

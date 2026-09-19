@@ -1,0 +1,35 @@
+nextflow_process {
+
+    name "Test Process ZSTD_DECOMPRESS"
+    script "../main.nf"
+    process "ZSTD_DECOMPRESS"
+    config "./nextflow.config"
+
+    tag "modules"
+    tag "modules_local"
+    tag "cpu"
+    tag "real"
+    tag "zstd_decompress"
+    profile "test_nostub"
+
+    test("decompresses a zstd archive") {
+
+        when {
+            process {
+                """
+                def archive = file('payload.zst')
+                archive.bytes = 'KLUv/SQb2QAAZGV0ZXJtaW5pc3RpYyB6c3RkIGZpeHR1cmUKSIAfrw=='.decodeBase64()
+                input[0] = [[ id: 'payload' ], archive]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.decompressed[0][1]).text == "deterministic zstd fixture\n" },
+                { assert process.out.versions }
+            )
+        }
+    }
+}

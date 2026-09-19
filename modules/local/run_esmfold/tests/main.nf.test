@@ -1,0 +1,44 @@
+nextflow_process {
+
+    name "Test Process RUN_ESMFOLD"
+    script "../main.nf"
+    process "RUN_ESMFOLD"
+    config "./nextflow.config"
+
+    tag "modules"
+    tag "modules_local"
+    tag "run_esmfold"
+    tag "esmfold"
+    tag "gpu"
+    tag "real"
+    profile "test_nostub"
+    profile "gpu"
+
+    test("predicts an ESMFold structure from a deterministic FASTA") {
+        when {
+            process {
+                """
+                def db = System.getenv('PROTEINFOLD_TEST_DB')
+                assert db: 'PROTEINFOLD_TEST_DB must point to the ProteinFold microDB root'
+
+                input[0] = [[id: 'ubiquitin'], file("${projectDir}/tests/fixtures/ubiquitin.fasta", checkIfExists: true)]
+                input[1] = files("${db}/params/esm*.pt", checkIfExists: true)
+                input[2] = 1
+                """
+            }
+        }
+
+        then {
+            def topRanked = path(process.out.top_ranked_pdb[0][1])
+            def plddt = path(process.out.multiqc[0][1])
+            assertAll(
+                { assert process.success },
+                { assert process.out.top_ranked_pdb[0][0].id == 'ubiquitin' },
+                { assert topRanked.size() > 0 },
+                { assert topRanked.text.contains('ATOM') },
+                { assert plddt.size() > 0 },
+                { assert process.out.versions }
+            )
+        }
+    }
+}

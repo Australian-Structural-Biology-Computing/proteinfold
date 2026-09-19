@@ -1,0 +1,39 @@
+nextflow_pipeline {
+
+    name "Scientific validation: Boltz"
+    script "../../main.nf"
+    tag "scientific"
+    tag "gpu"
+    tag "real"
+    tag "boltz"
+    profile "test_full_boltz,gpu"
+
+    test("Boltz: validate mmCIF structures and metrics") {
+        options "--mode boltz --use_gpu"
+
+        when {
+            params {
+                input      = file("${projectDir}/tests/fixtures/samplesheet.csv", checkIfExists: true)
+                outdir     = "$outputDir"
+                boltz_db     = System.getenv("PROTEINFOLD_TEST_DB")
+                colabfold_db = System.getenv("PROTEINFOLD_TEST_DB")
+            }
+        }
+
+        then {
+            assert params.boltz_db: "Set PROTEINFOLD_TEST_DB to the local ProteinFold microDB root"
+            assert workflow.success: "Boltz workflow failed (exit ${workflow.exitStatus})"
+            def validator = new File("tests/scientific/validate_outputs.py").absolutePath
+            def command = ["python3", validator, "--mode", "boltz", "--display-name", "Boltz",
+                           "--extension", ".cif", "--outdir", params.outdir.toString(),
+                           "--samplesheet", params.input.toString()]
+            def process = command.execute()
+            def stdout = new StringBuffer()
+            def stderr = new StringBuffer()
+            process.consumeProcessOutput(stdout, stderr)
+            assert process.waitFor() == 0: "${stdout}\n${stderr}"
+            println stdout
+            assert file("${params.outdir}/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml").size() > 0
+        }
+    }
+}
