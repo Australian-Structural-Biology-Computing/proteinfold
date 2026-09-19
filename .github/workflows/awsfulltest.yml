@@ -22,7 +22,6 @@ jobs:
         compute_env: ["gpu"]
         mode:
           [
-            "alphafold2_standard",
             "alphafold2_split",
             "alphafold2_multimer",
             "colabfold_local",
