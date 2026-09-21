@@ -14,6 +14,7 @@ nextflow_pipeline {
         when {
             params {
                 outdir      = "$outputDir"
+                input       = 'https://raw.githubusercontent.com/nf-core/test-datasets/proteinfold/testdata/samplesheet/v2.0/samplesheet.csv'
                 alphafold3_db = System.getenv("PROTEINFOLD_TEST_DB") ?: 's3://proteinfold-dataset/test-data/mini_dbs'
                 alphafold3_params_path = System.getenv("PROTEINFOLD_AF3_PARAMS")
             }
