@@ -3,8 +3,6 @@ nextflow_pipeline {
     name "Test alphafold3 download mode stub"
     script "../main.nf"
     tag "pipeline"
-    tag "stub"
-    tag "alphafold3"
     tag "test_alphafold3_download"
     profile "test_alphafold3_download"
     config "./nextflow.config"

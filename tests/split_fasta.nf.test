@@ -3,8 +3,6 @@ nextflow_pipeline {
     name "Test split_fasta mode stub"
     script "../main.nf"
     tag "pipeline"
-    tag "stub"
-    tag "colabfold"
     tag "test_split_fasta"
     profile "test_split_fasta"
 

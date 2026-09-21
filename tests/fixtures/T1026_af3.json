@@ -1,0 +1,14 @@
+{
+    "name": "T1026",
+    "sequences": [
+        {
+            "protein": {
+                "id": "A",
+                "sequence": "MVSNWNWSGKKGRRTPRRGYTRPFKSAVPTTRVVVHQSAVLKKDDVSGSEIKPEGDVARYKIRKVMLSCTLRMRPGELVNYLIVKCSSPIVNWSAAFTAPALMVKESCQDMITIIGKGKVESNGVAGSDCTKSFNKFIRLGAGISQTQHLYVVMYTSEAVKTVLEHRVYIEV"
+            }
+        }
+    ],
+    "modelSeeds": [11],
+    "dialect": "alphafold3",
+    "version": 1
+}

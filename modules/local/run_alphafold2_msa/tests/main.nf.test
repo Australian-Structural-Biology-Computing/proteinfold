@@ -8,36 +8,32 @@ nextflow_process {
     tag "modules"
     tag "modules_local"
     tag "run_alphafold2_msa"
-    tag "alphafold2"
-    tag "cpu"
-    tag "real"
     profile "test_nostub"
 
     test("creates deterministic AlphaFold2 features with micro databases") {
         when {
             process {
                 """
-                def db = System.getenv('PROTEINFOLD_TEST_DB')
-                assert db: 'PROTEINFOLD_TEST_DB must point to the ProteinFold microDB root'
+                def db = System.getenv('PROTEINFOLD_TEST_DB') ?: 's3://proteinfold-dataset/test-data/mini_dbs'
 
                 def dummyParams = file('dummy_params')
                 dummyParams.mkdirs()
                 file('dummy_params/unused').text = 'not used by the MSA-only process'
 
-                input[0] = [[id: 'ubiquitin'], file("${projectDir}/tests/fixtures/ubiquitin.fasta", checkIfExists: true), 'monomer_ptm']
+                input[0] = [[id: 'T1026'], file(params.pipelines_testdata_base_path + 'testdata/sequences/T1026.fasta', checkIfExists: true), 'monomer_ptm']
                 input[1] = false
                 input[2] = 'uniref30_2302_db'
                 input[3] = files('dummy_params/*', checkIfExists: true)
                 input[4] = file('dummy_params/unused', checkIfExists: true)
-                input[5] = files("${db}/small_bfd/*", checkIfExists: true)
-                input[6] = files("${db}/mgnify/*", checkIfExists: true)
-                input[7] = files("${db}/pdb70/*", checkIfExists: true)
-                input[8] = file("${db}/pdb_mmcif/mmcif_files", checkIfExists: true)
-                input[9] = file("${db}/pdb_mmcif/obsolete.dat", checkIfExists: true)
-                input[10] = files("${db}/uniref30/*", checkIfExists: true)
-                input[11] = files("${db}/uniref90/*", checkIfExists: true)
-                input[12] = files("${db}/pdb_seqres/*", checkIfExists: true)
-                input[13] = files("${db}/uniprot/*", checkIfExists: true)
+                input[5] = files(db + '/small_bfd/*', checkIfExists: true)
+                input[6] = files(db + '/mgnify/*', checkIfExists: true)
+                input[7] = files(db + '/pdb70/*', checkIfExists: true)
+                input[8] = file(db + '/pdb_mmcif/mmcif_files', checkIfExists: true)
+                input[9] = file(db + '/pdb_mmcif/obsolete.dat', checkIfExists: true)
+                input[10] = files(db + '/uniref30/*', checkIfExists: true)
+                input[11] = files(db + '/uniref90/*', checkIfExists: true)
+                input[12] = files(db + '/pdb_seqres/*', checkIfExists: true)
+                input[13] = files(db + '/uniprot/*', checkIfExists: true)
                 """
             }
         }
@@ -52,7 +48,7 @@ nextflow_process {
             assertAll(
                 { assert process.success },
                 { assert features.size() > 0 },
-                { assert featuresSha256 == '212cb501978f2a93fab1c91b071a8329d92cc763efeb69b08a47caf6ad2449e5' },
+                { assert featuresSha256 == '51bd8ba32a548c5a76e2f1fa0ce5ab0f38b7383baa0f5999dda6f2f1de5b513b' },
                 { assert process.out.versions }
             )
         }

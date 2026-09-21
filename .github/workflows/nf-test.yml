@@ -51,7 +51,6 @@ jobs:
           NFT_VER: ${{ env.NFT_VER }}
           SKIP_SCIENTIFIC: "true"
           SKIP_GPU: "true"
-          SKIP_CPU_INTEGRATION: "true"
         with:
           max_shards: 15
 
@@ -100,7 +99,6 @@ jobs:
           NXF_VERSION: ${{ matrix.NXF_VER }}
           SKIP_SCIENTIFIC: "true"
           SKIP_GPU: "true"
-          SKIP_CPU_INTEGRATION: "true"
         with:
           profile: ${{ matrix.profile }}
           shard: ${{ matrix.shard }}
