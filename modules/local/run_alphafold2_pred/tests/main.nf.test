@@ -8,9 +8,7 @@ nextflow_process {
     tag "modules"
     tag "modules_local"
     tag "run_alphafold2_pred"
-    tag "alphafold2"
     tag "gpu"
-    tag "real"
     profile "test_nostub"
     profile "gpu"
 
@@ -18,18 +16,17 @@ nextflow_process {
         when {
             process {
                 """
-                def db = System.getenv('PROTEINFOLD_TEST_DB')
-                assert db: 'PROTEINFOLD_TEST_DB must point to the ProteinFold microDB root'
+                def db = System.getenv('PROTEINFOLD_TEST_DB') ?: 's3://proteinfold-dataset/test-data/mini_dbs'
 
-                def featuresPath = System.getenv('PROTEINFOLD_AF2_FEATURES')
-                assert featuresPath: 'PROTEINFOLD_AF2_FEATURES must point to validated RUN_ALPHAFOLD2_MSA features.pkl'
+                def featuresPath = System.getenv('PROTEINFOLD_AF2_FEATURES') ?:
+                    "${projectDir}/tests/fixtures/cpu_outputs/alphafold2/T1026_features.pkl"
                 def features = file(featuresPath, checkIfExists: true)
                 def featuresSha256 = java.security.MessageDigest
                     .getInstance('SHA-256')
                     .digest(features.bytes)
                     .encodeHex()
                     .toString()
-                assert featuresSha256 == '212cb501978f2a93fab1c91b071a8329d92cc763efeb69b08a47caf6ad2449e5'
+                assert featuresSha256 == '51bd8ba32a548c5a76e2f1fa0ce5ab0f38b7383baa0f5999dda6f2f1de5b513b'
 
                 def unusedDb = file('unused_db')
                 unusedDb.text = 'Inference consumes the validated CPU artifact, not these database inputs.'
@@ -38,10 +35,10 @@ nextflow_process {
                 file('unused_mmcif/README').text = 'Not used during inference.'
 
                 def paramsPattern = db.startsWith('s3://') ?
-                    "${db}/params/alphafold_params_2022-12-06/*" :
-                    "${db}/params/alphafold_params/*"
+                    db + '/params/alphafold_params_2022-12-06/*' :
+                    db + '/params/alphafold_params/*'
 
-                input[0] = [[id: 'ubiquitin'], file("${projectDir}/tests/fixtures/ubiquitin.fasta", checkIfExists: true), features, 'monomer_ptm']
+                input[0] = [[id: 'T1026'], file(params.pipelines_testdata_base_path + 'testdata/sequences/T1026.fasta', checkIfExists: true), features, 'monomer_ptm']
                 input[1] = files(paramsPattern, checkIfExists: true)
                 input[2] = unusedDb
                 input[3] = unusedDb
@@ -62,7 +59,7 @@ nextflow_process {
             def plddt = path(process.out.multiqc[0][1])
             assertAll(
                 { assert process.success },
-                { assert process.out.top_ranked_pdb[0][0].id == 'ubiquitin' },
+                { assert process.out.top_ranked_pdb[0][0].id == 'T1026' },
                 { assert topRanked.size() > 0 },
                 { assert topRanked.text.contains('ATOM') },
                 { assert plddt.size() > 0 },
