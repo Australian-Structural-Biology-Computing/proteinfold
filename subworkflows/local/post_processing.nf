@@ -115,7 +115,6 @@ workflow POST_PROCESSING {
         ch_multiqc_files       = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
         ch_methods_description = channel.value(methodsDescriptionText(ch_multiqc_methods_description))
         ch_multiqc_files       = ch_multiqc_files.mix(ch_methods_description.collectFile(name: 'methods_description_mqc.yaml', sort: true))
-
         MULTIQC (
             ch_multiqc_rep
                 .combine(ch_multiqc_files.collect())

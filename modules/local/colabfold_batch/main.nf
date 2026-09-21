@@ -22,8 +22,8 @@ process COLABFOLD_BATCH {
     tuple val(meta), path ("${meta.id}_ipsae.tsv")          , optional: true, emit: ipsaes
     tuple val(meta), path ("${meta.id}_chainwise_iptm.tsv") , optional: true, emit: chainwise_iptms
     tuple val(meta), path ("${meta.id}_chainwise_ipsae.tsv"), optional: true, emit: chainwise_ipsaes
-    tuple val("${task.process}"), val('alphafold_colabfold'), eval("pip list | grep \"^alphafold-colabfold\" | awk '{print \$2}' 2>/dev/null || echo \"unknown\""), emit: versions_alphafold_colabfold, topic: versions
-    tuple val("${task.process}"), val('colabfold_batch'), eval("pip list | grep \"^colabfold\" | awk '{print \$2}' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold_batch, topic: versions
+    tuple val("${task.process}"), val('alphafold_colabfold'), eval("pip list | grep \"^alphafold-colabfold\" | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_alphafold_colabfold, topic: versions
+    tuple val("${task.process}"), val('colabfold_batch'), eval("pip list | grep \"^colabfold\" | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold_batch, topic: versions
 
     when:
     task.ext.when == null || task.ext.when

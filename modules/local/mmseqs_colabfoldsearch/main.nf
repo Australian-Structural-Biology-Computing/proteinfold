@@ -12,6 +12,7 @@ process MMSEQS_COLABFOLDSEARCH {
 
     output:
     tuple val(meta), path("**.a3m"), emit: a3m
+    tuple val(meta), path("**.json"), emit: json
     tuple val("${task.process}"), val('colabfold_search'), eval("pip list | grep \"^colabfold\" | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold_search, topic: versions
     tuple val("${task.process}"), val('mmseqs'), eval("mmseqs version"), emit: versions_mmseqs, topic: versions
 
@@ -46,5 +47,6 @@ process MMSEQS_COLABFOLDSEARCH {
     """
     mkdir results
     touch results/${meta.id}.a3m
+    touch results/${meta.id}.json
     """
 }

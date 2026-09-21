@@ -33,7 +33,7 @@ process RUN_BOLTZ {
     tuple val(meta), path ("${meta.id}_chainwise_ptm.tsv")                    , emit: summary_chainwise_ptm_raw
     tuple val(meta), path ("${meta.id}_chainwise_iptm.tsv")                   , optional: true, emit: chainwise_iptm_raw
     tuple val(meta), path ("${meta.id}_chainwise_ipsae.tsv")                  , optional: true, emit: chainwise_ipsae_raw
-    tuple val("${task.process}"), val('boltz'), eval("pip list | grep -i boltz | awk '{print \$2}' 2>/dev/null || echo \"unknown\""), emit: versions_boltz, topic: versions
+    tuple val("${task.process}"), val('boltz'), eval("pip list | grep -i boltz | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_boltz, topic: versions
 
     when:
     task.ext.when == null || task.ext.when
