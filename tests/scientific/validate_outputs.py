@@ -6,9 +6,16 @@ import csv
 import math
 import tempfile
 import urllib.request
+import warnings
 from pathlib import Path
 
 from Bio.PDB import MMCIFParser, PDBParser
+from Bio.PDB.PDBExceptions import PDBConstructionWarning
+
+warnings.filterwarnings("ignore", category=PDBConstructionWarning, message=".*Ignoring unrecognized record.*")
+warnings.filterwarnings("error", category=PDBConstructionWarning, message=".*discontinuous.*")
+warnings.filterwarnings("error", category=PDBConstructionWarning, message=".*duplicate.*")
+warnings.filterwarnings("error", category=PDBConstructionWarning, message=".*could not assign element.*")
 
 
 def input_ids(samplesheet: str) -> list[str]:
@@ -55,7 +62,7 @@ def parser_canary() -> None:
             raise AssertionError("Parser accepted malformed coordinates")
 
 
-def validate_structure(path: Path) -> None:
+def validate_structure(path: Path) -> int:
     if path.suffix == ".pdb":
         parser = PDBParser(QUIET=False)
     elif path.suffix in {".cif", ".mmcif"}:
@@ -64,24 +71,27 @@ def validate_structure(path: Path) -> None:
         raise AssertionError(f"Unsupported structure format: {path}")
     residues = list(parser.get_structure("prediction", path).get_residues())
     assert residues, f"Structure has no residues: {path}"
+    return len(residues)
 
 
-def validate_plddt(path: Path) -> None:
+def validate_plddt(path: Path) -> tuple[int, int, float]:
     rows = [line.split("\t") for line in path.read_text().splitlines()]
     assert len(rows) > 1, f"pLDDT file has no data rows: {path}"
     assert rows[0][0] == "Positions", f"Unexpected pLDDT header in {path}: {rows[0][0]}"
     values = []
     for row in rows[1:]:
-        assert len(row) == len(rows[0]), f"Inconsistent pLDDT columns in {path}"
+        assert len(row) == len(rows[0]), f"Inconsistent pLDDT column count in {path}"
         values.extend(float(value) for value in row[1:])
     assert values, f"pLDDT file contains no scores: {path}"
     assert all(math.isfinite(value) and 0 <= value <= 100 for value in values), (
         f"pLDDT values outside 0-100 or non-finite: {path}"
     )
-    assert sum(values) / len(values) >= 5.0, f"Suspiciously low mean pLDDT: {path}"
+    mean_plddt = sum(values) / len(values)
+    assert mean_plddt >= 5.0, f"Suspiciously low mean pLDDT: {path}"
+    return len(rows) - 1, len(values), mean_plddt
 
 
-def validate_pae(path: Path) -> None:
+def validate_pae(path: Path) -> tuple[int, int]:
     rows = [line.split("\t") for line in path.read_text().splitlines() if line]
     assert rows, f"Empty PAE matrix: {path}"
     assert all(len(row) == len(rows) for row in rows), f"PAE matrix is not square: {path}"
@@ -89,6 +99,7 @@ def validate_pae(path: Path) -> None:
     assert all(math.isfinite(value) and 0 <= value <= 31.75 for value in values), (
         f"PAE values outside 0-31.75 or non-finite: {path}"
     )
+    return len(rows), len(rows[0])
 
 
 def main() -> None:
@@ -114,7 +125,8 @@ def main() -> None:
             f"No {args.display_name} structure for input {identifier}; found {[path.name for path in structures]}"
         )
     for structure in structures:
-        validate_structure(structure)
+        residue_count = validate_structure(structure)
+        print(f"Validated structure: {structure.name} ({residue_count} residues)")
 
     plddt_files = sorted(mode_dir.rglob("*plddt.tsv"))
     assert plddt_files, f"{args.display_name} produced no pLDDT metrics"
@@ -123,11 +135,16 @@ def main() -> None:
             f"No {args.display_name} pLDDT metrics for input {identifier}"
         )
     for path in plddt_files:
-        validate_plddt(path)
+        position_count, score_count, mean_plddt = validate_plddt(path)
+        print(
+            f"Validated pLDDT: {path.name} "
+            f"({position_count} positions, {score_count} scores, mean={mean_plddt:.1f})"
+        )
 
     pae_files = sorted(path for path in mode_dir.rglob("*.tsv") if path.parent.name == "paes")
     for path in pae_files:
-        validate_pae(path)
+        row_count, column_count = validate_pae(path)
+        print(f"Validated PAE: {path.name} ({row_count}x{column_count} matrix)")
 
     print(
         f"Validated {args.display_name}: {len(ids)} inputs, {len(structures)} structures, "
