@@ -7,7 +7,7 @@
                         {
                             "id": "mixed"
                         },
-                        "ubq.a3m:md5,eee2295efe0f453bf93c82604b75b85d"
+                        "ubq.a3m:md5,48af8d06679fa8d083df615c1bbdafb4"
                     ]
                 ],
                 "1": [
@@ -15,18 +15,29 @@
                         {
                             "id": "mixed"
                         },
-                        "ubq.json:md5,69de0f3c4cf91de058ddaee98b431884"
+                        "ubq.json:md5,1d038ed924926e239647485dc3219dae"
                     ]
                 ],
                 "2": [
-                    "versions.yml:md5,4655c25b6d38ecaeb0960ba8d95c2a35"
+                    [
+                        "MMSEQS_COLABFOLDSEARCH",
+                        "colabfold_search",
+                        "1.6.1"
+                    ]
+                ],
+                "3": [
+                    [
+                        "MMSEQS_COLABFOLDSEARCH",
+                        "mmseqs",
+                        "74c9370d45ba10446fe049c3603bf5f877817e95"
+                    ]
                 ],
                 "a3m": [
                     [
                         {
                             "id": "mixed"
                         },
-                        "ubq.a3m:md5,eee2295efe0f453bf93c82604b75b85d"
+                        "ubq.a3m:md5,48af8d06679fa8d083df615c1bbdafb4"
                     ]
                 ],
                 "json": [
@@ -34,15 +45,26 @@
                         {
                             "id": "mixed"
                         },
-                        "ubq.json:md5,69de0f3c4cf91de058ddaee98b431884"
+                        "ubq.json:md5,1d038ed924926e239647485dc3219dae"
                     ]
                 ],
-                "versions": [
-                    "versions.yml:md5,4655c25b6d38ecaeb0960ba8d95c2a35"
+                "versions_colabfold_search": [
+                    [
+                        "MMSEQS_COLABFOLDSEARCH",
+                        "colabfold_search",
+                        "1.6.1"
+                    ]
+                ],
+                "versions_mmseqs": [
+                    [
+                        "MMSEQS_COLABFOLDSEARCH",
+                        "mmseqs",
+                        "74c9370d45ba10446fe049c3603bf5f877817e95"
+                    ]
                 ]
             }
         ],
-        "timestamp": "2026-09-21T12:14:39.574226666",
+        "timestamp": "2026-09-22T09:37:21.199651886",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.04.6"

@@ -40,16 +40,14 @@ nextflow_process {
 
         then {
             def features = file(process.out.features[0][1])
-            def featuresSha256 = java.security.MessageDigest
-                .getInstance('SHA-256')
-                .digest(features.bytes)
-                .encodeHex()
-                .toString()
             assertAll(
                 { assert process.success },
                 { assert features.size() > 0 },
-                { assert featuresSha256 == '51bd8ba32a548c5a76e2f1fa0ce5ab0f38b7383baa0f5999dda6f2f1de5b513b' },
-                { assert process.out.versions }
+                { assert snapshot(process.out.features).match() },
+                { assert process.out.versions_python },
+                { assert process.out.versions_alphafold2 },
+                { assert process.out.versions_numpy },
+                { assert process.out.versions_biopython }
             )
         }
     }

@@ -17,7 +17,7 @@ nextflow_process {
             process {
                 """
                 def dataJsonPath = System.getenv('PROTEINFOLD_AF3_DATA_JSON') ?:
-                    "${projectDir}/tests/fixtures/cpu_outputs/alphafold3/T1026_data.json"
+                    params.pipelines_testdata_base_path + 'testdata/cpu_outputs/alphafold3/T1026_data.json'
                 def dataJson = file(dataJsonPath, checkIfExists: true)
                 def dataJsonSha256 = java.security.MessageDigest
                     .getInstance('SHA-256')
