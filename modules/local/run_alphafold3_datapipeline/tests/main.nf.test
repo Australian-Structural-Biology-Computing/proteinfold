@@ -14,7 +14,7 @@ nextflow_process {
                 """
                 def db = System.getenv('PROTEINFOLD_TEST_DB') ?: 's3://proteinfold-dataset/test-data/mini_dbs'
 
-                input[0] = [[id: 'T1026'], file("${projectDir}/tests/fixtures/T1026_af3.json", checkIfExists: true)]
+                input[0] = [[id: 'T1026'], file(params.pipelines_testdata_base_path + 'testdata/sequences/alphafold3/T1026.json', checkIfExists: true)]
                 input[1] = files(db + '/small_bfd/*', checkIfExists: true)
                 input[2] = files(db + '/mgnify/*', checkIfExists: true)
                 input[3] = file(db + '/pdb_mmcif/mmcif_files', checkIfExists: true)
@@ -31,17 +31,12 @@ nextflow_process {
         then {
             def dataJson = file(process.out.data_json[0][1])
             def parsed = new groovy.json.JsonSlurper().parse(dataJson)
-            def dataJsonSha256 = java.security.MessageDigest
-                .getInstance('SHA-256')
-                .digest(dataJson.bytes)
-                .encodeHex()
-                .toString()
             assertAll(
                 { assert process.success },
                 { assert dataJson.size() > 0 },
                 { assert parsed.name == 'T1026' },
                 { assert parsed.sequences },
-                { assert dataJsonSha256 == 'b987a743a617ae18d8ef337efdb15cfda9cc953acbd57d0b6319caaffb5cafe1' },
+                { assert snapshot(process.out.data_json).match() },
                 { assert process.out.versions }
             )
         }

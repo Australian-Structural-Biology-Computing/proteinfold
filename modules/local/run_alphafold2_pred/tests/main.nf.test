@@ -19,7 +19,7 @@ nextflow_process {
                 def db = System.getenv('PROTEINFOLD_TEST_DB') ?: 's3://proteinfold-dataset/test-data/mini_dbs'
 
                 def featuresPath = System.getenv('PROTEINFOLD_AF2_FEATURES') ?:
-                    "${projectDir}/tests/fixtures/cpu_outputs/alphafold2/T1026_features.pkl"
+                    params.pipelines_testdata_base_path + 'testdata/cpu_outputs/alphafold2/T1026_features.pkl'
                 def features = file(featuresPath, checkIfExists: true)
                 def featuresSha256 = java.security.MessageDigest
                     .getInstance('SHA-256')
