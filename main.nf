@@ -441,6 +441,21 @@ workflow NFCORE_PROTEINFOLD {
         ch_top_ranked_model
     )
 
+    // Collect all version tuples emitted to the topic channel into the
+    // conventional pipeline-info report. This replaces the old explicit
+    // versions-channel plumbing while retaining the MultiQC-compatible file.
+    channel.topic('versions')
+        .unique()
+        .map { process_name, tool_name, version ->
+            "\"${process_name}:${tool_name}\": ${version}"
+        }
+        .collectFile(
+            storeDir: "${params.outdir}/pipeline_info",
+            name: 'nf_core_proteinfold_software_mqc_versions.yml',
+            newLine: true,
+            sort: true
+        )
+
     emit:
     multiqc_report = ch_multiqc
 }
