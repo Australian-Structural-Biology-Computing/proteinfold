@@ -13,15 +13,12 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and predicts pr
 - [Boltz](https://github.com/jwohlwend/boltz)
 - [ColabFold](https://github.com/sokrypton/ColabFold)
 - [ESMFold](https://github.com/facebookresearch/esm)
-- [RoseTTAFold2NA](https://github.com/uw-ipd/RoseTTAFold2NA)
-- [RoseTTAFold-All-Atom](https://github.com/baker-laboratory/RoseTTAFold-All-Atom/)
-- [HelixFold3](https://github.com/PaddlePaddle/PaddleHelix/tree/dev/apps/protein_folding/helixfold3)
 
 See main [README.md](https://github.com/nf-core/proteinfold/blob/master/README.md) for a condensed overview of the steps in the pipeline, and the bioinformatics tools used at each step.
 
 The directories listed below will be created in the output directory after the pipeline has finished. All paths are relative to the top-level results directory.
 
-Exact subdirectories depend on the selected mode(s). In a multi-mode run (for example `alphafold2,boltz,rosettafold_all_atom`) you will typically see top-level directories such as `alphafold2/`, `boltz/`, `rosettafold_all_atom/`, `multiqc/`, `reports/`, `compare/`, and `pipeline_info/`.
+Exact subdirectories depend on the selected mode(s). In a multi-mode run (for example `alphafold2,boltz`) you will typically see top-level directories such as `alphafold2/`, `boltz/`, `multiqc/`, `reports/`, `compare/`, and `pipeline_info/`.
 
 ### Prediction outputs (all modes)
 
@@ -30,11 +27,11 @@ User-facing outputs are largely consistent across modes.
 <details markdown="1">
 <summary>Common output patterns</summary>
 
-- `<MODE>/top_ranked_structures/<SEQUENCE NAME>.pdb`
+- `<MODE>/top_ranked_structures/<SEQUENCE NAME>.{pdb,cif}` (format depends on the selected mode)
 - `<MODE>/<SEQUENCE NAME>/<SEQUENCE NAME>_plddt.tsv`
 - `<MODE>/<SEQUENCE NAME>/paes/<SEQUENCE NAME>_<RANK>_pae.tsv` (when available)
 - `<MODE>/<SEQUENCE NAME>/<SEQUENCE NAME>_<MODE>_msa.tsv` (mode-specific MSA summary)
-- `<MODE>/<SEQUENCE NAME>/<SEQUENCE NAME>_{ptm,iptm}.tsv` and chainwise summaries (where applicable)
+- `<MODE>/<SEQUENCE NAME>/<SEQUENCE NAME>_{ptm,iptm,ipsae}.tsv` and chainwise summaries (where applicable)
 
 </details>
 
@@ -103,7 +100,7 @@ This allows easy sequence indentity calculation when processing as a `numpy` arr
 
 ### chain-wise (i)pTM (`{meta.id}_chainwise_[i]ptm.tsv`)
 
-(Asymmetrical) ipTM scores, rounded to 4 decimal places, with chain pair lettering as the row (`X:Y`), and the rank number as the column. A pTM value is a chain's own predicted Template Modelling score so lettering will be `X:X`.
+Chain-wise iPTM values, rounded to 4 decimal places, with chain-pair lettering as the row (`X:Y`) and rank number as the column. Where available, self-scores are included as `X:X`.
 
 ```
 0	1	2
@@ -111,12 +108,20 @@ A:B	0.2880	0.2750	0.2900
 B:A	0.2904	0.2801	0.2915
 ```
 
+In the HTML reports, chainwise iPTM and ipSAE are displayed as chain-by-chain matrices for each ranked model. Modes that do not emit these metrics omit the corresponding report sections.
+
+**IpTM Derivation and Attribution**
+
+- **Derived vs native values:** iPTM values may come either from the prediction program itself (when the program emits an `iptm` or chain-pair matrix) or be derived after-the-fact by running the `ipsae.py` utility included in this pipeline. Derived values are generated from the model's PAE/PAE-like output and are not guaranteed to be numerically identical to program-native iPTM values; they follow the ipSAE/ipTM algorithm used by the IPSAE project and are intended to provide a consistent interface-derived score when a native value is not available.
+- **Default cutoffs used when deriving:** when `extract_metrics.py` derives iPTM/ipSAE it invokes `ipsae.py` with a PAE cutoff of `10` and a distance cutoff of `15` (these are currently hard-coded in the extraction step). If you require different thresholds, compute iPTM/ipSAE externally or update the extraction call accordingly.
+- **Third-party attribution:** the `ipsae.py` utility bundled in `bin/` is derived from the IPSAE project by the Dunbrack Lab (https://github.com/DunbrackLab/IPSAE/). The original script includes an MIT-style header; keep that header intact if the file is redistributed. Please consult the IPSAE repository for full details and citation information.
+
 ### PAE (`{meta.id}_{rank_number}_pae.tsv`)
 
 Predicted alignment error of residues `j` aligned by residue `i`, rounded to 4 decimal places.
 The row number gives you the index of residue `i` and the column value within the row gives the index of residue `j` for the 2D PAE matrix.
 
-Each model prediction generates a separate file containing the rank number. The `_0_pae.tsv` file corresponds to the top ranked model, other ranked results are stored within the `paes/` folder.
+Each model prediction generates a separate file containing the rank number. Rank numbering follows the native convention of the underlying tool, so top-ranked models may appear as either `_0_pae.tsv` or `_1_pae.tsv` depending on the mode. Additional ranked results are stored within the `paes/` folder.
 
 ```
 0.2500	1.5710	3.9037	6.2177	8.4471	11.4583	12.9679	15.1237	18.0263	18.3868	18.9381	20.5747	19.3314	20.1825	21.6145	23.2190
@@ -204,7 +209,6 @@ Results generated by MultiQC collate QC metrics from the selected structure-pred
 
 Depending on the selected mode(s) and options, additional top-level directories may be present, for example:
 
-- `fasta2yaml/` (for YAML conversion inputs/outputs)
 - `mmseqs/results/` (for MMseqs2 outputs such as `.a3m` files)
 - `split/output_msa/` (for split-MSA intermediate CSV outputs)
 
@@ -216,11 +220,8 @@ Examples include:
 
 - `alphafold2/<MODE>/<SEQUENCE NAME>/raw/`
 - `colabfold/<SEQUENCE NAME>/raw/`
-- `boltz/<SEQUENCE NAME>/boltz_results_*/`
-- `rosettafold_all_atom/<SEQUENCE NAME>/raw/`
+- `boltz/<SEQUENCE NAME>/boltz_results_<SEQUENCE NAME>/`
 - `alphafold3/<SEQUENCE NAME>/raw/`
-- `helixfold3/<SEQUENCE NAME>/raw/`
-- `rosettafold2na/<SEQUENCE NAME>/raw/`
 
 These raw outputs are intended for advanced debugging, reproducibility and method-specific downstream analyses. For detailed, canonical tool-specific native output specifications, see:
 
@@ -229,6 +230,3 @@ These raw outputs are intended for advanced debugging, reproducibility and metho
 - [Boltz](https://github.com/jwohlwend/boltz/blob/main/docs/prediction.md#output)
 - [ColabFold](https://www.ebi.ac.uk/training/online/courses/alphafold/advanced-modeling-and-applications-of-predicted-protein-structures/customising-alphafold-structure-predictions/outputs-from-colabfold/)
 - [ESMFold](https://github.com/facebookresearch/esm)
-- [RosettaFold2NA](https://github.com/uw-ipd/RoseTTAFold2NA?tab=readme-ov-file#expected-outputs)
-- [RoseTTAFold-All-Atom](https://github.com/baker-laboratory/RoseTTAFold-All-Atom/?tab=readme-ov-file#understanding-model-outputs)
-- [HelixFold3](https://github.com/PaddlePaddle/PaddleHelix/tree/dev/apps/protein_folding/helixfold3#-understanding-model-output)

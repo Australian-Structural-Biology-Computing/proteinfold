@@ -1,41 +1,19 @@
 {
     "-profile test_alphafold3_standard": {
         "content": [
-            11,
+            9,
             {
-                "FASTA_TO_ALPHAFOLD3_JSON": {
-                    "python": "3.10.8"
-                },
-                "GENERATE_REPORT": {
-                    "python": "3.10.8",
-                    "generate_report.py": "Python 3.10.8"
-                },
-                "MMCIF2PDB_MODELS": {
-                    "python": "3.10.8"
-                },
-                "MMCIF2PDB_TOP_RANKED": {
-                    "python": "3.10.8"
-                },
-                "RUN_ALPHAFOLD3": {
-                    "python": "3.10.8",
-                    "alphafold3": "unknown",
-                    "jax": "unknown",
-                    "jaxlib": "unknown",
-                    "numpy": "unknown",
-                    "biopython": "unknown",
-                    "hmmer": null,
-                    "rdkit": "unknown"
-                },
-                "Workflow": {
-                    "nf-core/proteinfold": "v2.1.0dev"
-                }
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:generate_report.py": "3.12.7",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:python": "3.12.7"
             },
             [
                 "alphafold3",
                 "alphafold3/T1024",
                 "alphafold3/T1024/T1024_alphafold3_msa.tsv",
+                "alphafold3/T1024/T1024_chainwise_ipsae.tsv",
                 "alphafold3/T1024/T1024_chainwise_iptm.tsv",
-                "alphafold3/T1024/T1024_chainwise_ptm.tsv",
+                "alphafold3/T1024/T1024_data.json",
+                "alphafold3/T1024/T1024_ipsae.tsv",
                 "alphafold3/T1024/T1024_iptm.tsv",
                 "alphafold3/T1024/T1024_plddt.tsv",
                 "alphafold3/T1024/T1024_ptm.tsv",
@@ -43,8 +21,10 @@
                 "alphafold3/T1024/paes/T1024_0_pae.tsv",
                 "alphafold3/T1026",
                 "alphafold3/T1026/T1026_alphafold3_msa.tsv",
+                "alphafold3/T1026/T1026_chainwise_ipsae.tsv",
                 "alphafold3/T1026/T1026_chainwise_iptm.tsv",
-                "alphafold3/T1026/T1026_chainwise_ptm.tsv",
+                "alphafold3/T1026/T1026_data.json",
+                "alphafold3/T1026/T1026_ipsae.tsv",
                 "alphafold3/T1026/T1026_iptm.tsv",
                 "alphafold3/T1026/T1026_plddt.tsv",
                 "alphafold3/T1026/T1026_ptm.tsv",
@@ -52,70 +32,55 @@
                 "alphafold3/T1026/paes/T1026_0_pae.tsv",
                 "alphafold3/top_ranked_structures",
                 "alphafold3/top_ranked_structures/T1024.cif",
-                "alphafold3/top_ranked_structures/T1024.pdb",
                 "alphafold3/top_ranked_structures/T1026.cif",
-                "alphafold3/top_ranked_structures/T1026.pdb",
                 "fasta",
                 "fasta/T1024.json",
                 "fasta/T1026.json",
-                "mmcif2pdb",
-                "mmcif2pdb/T1024_ranked_1.cif.pdb",
-                "mmcif2pdb/T1024_ranked_2.cif.pdb",
-                "mmcif2pdb/T1024_ranked_3.cif.pdb",
-                "mmcif2pdb/T1024_ranked_4.cif.pdb",
-                "mmcif2pdb/T1024_ranked_5.cif.pdb",
-                "mmcif2pdb/T1026_ranked_1.cif.pdb",
-                "mmcif2pdb/T1026_ranked_2.cif.pdb",
-                "mmcif2pdb/T1026_ranked_3.cif.pdb",
-                "mmcif2pdb/T1026_ranked_4.cif.pdb",
-                "mmcif2pdb/T1026_ranked_5.cif.pdb",
                 "multiqc",
                 "multiqc/multiqc_data",
+                "multiqc/multiqc_data/.stub",
                 "multiqc/multiqc_plots",
+                "multiqc/multiqc_plots/.stub",
                 "multiqc/multiqc_report.html",
                 "pipeline_info",
                 "pipeline_info/nf_core_proteinfold_software_mqc_versions.yml",
                 "reports",
-                "reports/test_alphafold2_report.html"
+                "reports/T1024_alphafold3_report.html",
+                "reports/T1026_alphafold3_report.html"
             ],
             [
                 "T1024_alphafold3_msa.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1024_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_chainwise_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_chainwise_ptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1024_data.json:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1024_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_plddt.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_ptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_0_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_alphafold3_msa.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_chainwise_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_chainwise_ptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026_data.json:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_plddt.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_ptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_0_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024.cif:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026.cif:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026.json:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_ranked_1.cif.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_ranked_2.cif.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_ranked_3.cif.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_ranked_4.cif.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_ranked_5.cif.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_ranked_1.cif.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_ranked_2.cif.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_ranked_3.cif.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_ranked_4.cif.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_ranked_5.cif.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "test_alphafold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
+                ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
+                ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1024_alphafold3_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026_alphafold3_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-03-31T18:10:37.500286431",
+        "timestamp": "2026-09-22T16:37:39.0411434",
         "meta": {
             "nf-test": "0.9.5",
-            "nextflow": "25.10.4"
+            "nextflow": "26.04.6"
         }
     }
 }

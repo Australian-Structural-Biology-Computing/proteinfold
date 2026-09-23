@@ -29,8 +29,6 @@ workflow COLABFOLD {
 
     take:
     ch_samplesheet          // channel: samplesheet read in from --input
-    ch_versions            // channel: [ path(versions.yml) ]
-    colabfold_model_preset // string: Specifies the model preset to use for colabfold
     ch_colabfold_params    // channel: path(colabfold_params)
     ch_colabfold_db        // channel: path(colabfold_db)
     ch_uniref30            // channel: path(uniref30)
@@ -46,59 +44,55 @@ workflow COLABFOLD {
         MULTIFASTA_TO_CSV(
             ch_samplesheet
         )
-        ch_versions = ch_versions.mix(MULTIFASTA_TO_CSV.out.versions)
 
         COLABFOLD_BATCH(
-            MULTIFASTA_TO_CSV.out.input_csv,
-            colabfold_model_preset,
-            ch_colabfold_params,
-            [],
-            [],
+            MULTIFASTA_TO_CSV.out.input_csv
+                .combine(ch_colabfold_params),
             num_recycles
         )
-        ch_versions = ch_versions.mix(COLABFOLD_BATCH.out.versions)
 
     } else {
         //
         // MODULE: Run mmseqs
         //
-        //Multimer mode
         MULTIFASTA_TO_CSV(
             ch_samplesheet
         )
-        ch_versions = ch_versions.mix(MULTIFASTA_TO_CSV.out.versions)
         MMSEQS_COLABFOLDSEARCH (
             MULTIFASTA_TO_CSV.out.input_csv,
             ch_colabfold_db,
             ch_uniref30
         )
-        ch_versions = ch_versions.mix(MMSEQS_COLABFOLDSEARCH.out.versions)
 
         //
         // MODULE: Run colabfold
         //
         COLABFOLD_BATCH(
-            MMSEQS_COLABFOLDSEARCH.out.a3m,
-            colabfold_model_preset,
-            ch_colabfold_params,
-            ch_colabfold_db,
-            ch_uniref30,
+            MMSEQS_COLABFOLDSEARCH.out.a3m
+                .combine(ch_colabfold_params),
             num_recycles
         )
-        ch_versions    = ch_versions.mix(COLABFOLD_BATCH.out.versions)
     }
 
     modeChannel(COLABFOLD_BATCH.out.top_ranked_pdb, "colabfold").set { ch_top_ranked_pdb }
     modeChannel(COLABFOLD_BATCH.out.pdb, "colabfold", true).set { ch_pdb_final }
     modeChannel(COLABFOLD_BATCH.out.msa, "colabfold").set { ch_msa_final }
     modeChannel(COLABFOLD_BATCH.out.pae, "colabfold").set { ch_pae_final }
+    modeChannel(COLABFOLD_BATCH.out.iptms, "colabfold").set { ch_iptm_final }
+    modeChannel(COLABFOLD_BATCH.out.ipsaes, "colabfold").set { ch_ipsae_final }
+    modeChannel(COLABFOLD_BATCH.out.chainwise_iptms, "colabfold").set { ch_chainwise_iptm_final }
+    modeChannel(COLABFOLD_BATCH.out.chainwise_ipsaes, "colabfold").set { ch_chainwise_ipsae_final }
 
     emit:
     top_ranked_pdb = ch_top_ranked_pdb // channel: [ meta, /path/to/*.pdb ]
     pdb            = ch_pdb_final      // channel: [ id, /path/to/*.pdb ]
     msa            = ch_msa_final      // channel: [ meta, /path/to/*.pdb, /path/to/*_coverage.png ]
     pae            = ch_pae_final      // channel: [ id, /path/to/*_pae.tsv ]
-    versions       = ch_versions       // channel: [ path(versions.yml) ]
+    iptm           = ch_iptm_final     // channel: [ id, /path/to/*_iptm.tsv ]
+    ipsae          = ch_ipsae_final    // channel: [ id, /path/to/*_ipsae.tsv ]
+    chainwise_iptm = ch_chainwise_iptm_final // channel: [ id, /path/to/*_chainwise_iptm.tsv ]
+    chainwise_ipsae = ch_chainwise_ipsae_final // channel: [ id, /path/to/*_chainwise_ipsae.tsv ]
+    multiqc_report = ch_multiqc_report // channel: /path/to/multiqc_report.html
 }
 
 /*

@@ -7,7 +7,6 @@
 //
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../nf-core/utils_nfcore_pipeline'
-include { softwareVersionsToYAML } from '../nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText } from './utils_nfcore_proteinfold_pipeline'
 
 include { GENERATE_REPORT     } from '../../modules/local/generate_report'
@@ -22,11 +21,26 @@ workflow POST_PROCESSING {
     requested_modes_size
     ch_report_input
     ch_report_template
+<<<<<<< HEAD
     ch_versions
+=======
+    ch_comparison_template
+    skip_foldseek
+    foldseek_db
+    foldseek_db_path
+    skip_multiqc
+    outdir
+    ch_multiqc_rep
+    ch_multiqc_config
+    ch_multiqc_custom_config
+    multiqc_logo
+    ch_multiqc_methods_description
+>>>>>>> origin/dev
     ch_top_ranked_model
 
     main:
-    ch_comparison_report_files = channel.empty()
+    def ch_comparison_report_files = channel.empty()
+    def ch_multiqc_files = channel.empty()
 
     if (!params.skip_visualisation){
         ch_report_input
@@ -40,14 +54,35 @@ workflow POST_PROCESSING {
             ch_report_split.full,
             ch_report_template
         )
-        ch_versions = ch_versions.mix(GENERATE_REPORT.out.versions)
 
         if (requested_modes_size > 1){
+<<<<<<< HEAD
             // Multi-mode comparison: group top-ranked structures and MSA data from all modes
             ch_top_ranked_model
                 .join(ch_report_split.msa_only)
                 .map { meta, pdb, msa ->
                     [["id": meta.id], meta, pdb, msa]
+=======
+            def dummy_file = file("$projectDir/assets/NO_FILE", checkIfExists: true)
+
+            def esm = ch_top_ranked_model.filter { it ->it[0].model == 'esmfold' }
+            def not_esm = ch_top_ranked_model.filter { it -> it[0].model != 'esmfold' }
+
+            esm = esm
+                    .map { meta, pdb ->
+                        [meta, pdb, dummy_file]
+                    }
+
+            not_esm = not_esm
+                        .map { it ->  [it[0], it[1]] }
+                        .join(GENERATE_REPORT.out.sequence_coverage)
+
+            ch_comparison_report_files = not_esm.mix(esm)
+
+            ch_comparison_report_files
+                .map { it ->
+                    [["id": it[0].id], it[0], it[1], it[2]]
+>>>>>>> origin/dev
                 }
                 .groupTuple(by: [0], size: requested_modes_size)
                 .map { key, model_meta_list, pdbs, msas ->
@@ -68,7 +103,6 @@ workflow POST_PROCESSING {
                 ch_split.allfiles,
                 ch_report_template
             )
-            ch_versions = ch_versions.mix(COMPARE_STRUCTURES.out.versions)
         }
     }
 
@@ -86,6 +120,7 @@ workflow POST_PROCESSING {
     }
 
     //
+<<<<<<< HEAD
     // Collate and save software versions
     //
     softwareVersionsToYAML(ch_versions)
@@ -97,10 +132,13 @@ workflow POST_PROCESSING {
         ).set { ch_collated_versions }
 
     //
+=======
+>>>>>>> origin/dev
     // MODULE: MultiQC
     //
     ch_multiqc_report = channel.empty()
 
+<<<<<<< HEAD
     if (!params.skip_multiqc) {
         ch_multiqc_config        = channel.fromPath("$projectDir/assets/multiqc_config.yml", checkIfExists: true).first()
         ch_multiqc_custom_config = params.multiqc_config   ? channel.fromPath(params.multiqc_config).first()                                                                       : channel.empty()
@@ -122,11 +160,33 @@ workflow POST_PROCESSING {
             ch_multiqc_logo.toList(),
             [],
             []
+=======
+    if (!skip_multiqc) {
+        ch_summary_params      = paramsSummaryMap(workflow, parameters_schema: "nextflow_schema.json")
+        ch_workflow_summary    = channel.value(paramsSummaryMultiqc(ch_summary_params))
+        ch_multiqc_files       = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
+        ch_methods_description = channel.value(methodsDescriptionText(ch_multiqc_methods_description))
+        ch_multiqc_files       = ch_multiqc_files.mix(ch_methods_description.collectFile(name: 'methods_description_mqc.yaml', sort: true))
+        MULTIQC (
+            ch_multiqc_rep
+                .combine(ch_multiqc_files.collect())
+                .combine(ch_multiqc_config.collect().ifEmpty([]))
+                .combine(ch_multiqc_custom_config.collect().ifEmpty([]))
+                .map { meta, report_files, methods_file, workflow_file, config_file ->
+                    [
+                        meta,
+                        report_files + [methods_file, workflow_file],  // All multiqc input files
+                        config_file,
+                        multiqc_logo ? file(multiqc_logo, checkIfExists: true) : [],
+                        [],
+                        []
+                    ]
+                }
+>>>>>>> origin/dev
         )
         ch_multiqc_report = MULTIQC.out.report.toList()
     }
 
     emit:
-    versions       = ch_versions
     multiqc_report = ch_multiqc_report
 }

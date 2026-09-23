@@ -19,6 +19,7 @@
 //
 include { MULTIQC } from '../modules/nf-core/multiqc/main'
 include { BOLTZ_FASTA } from '../modules/local/boltz_fasta'
+include { BOLTZ_YAML_TO_COLABFOLD_FASTA } from '../modules/local/boltz_yaml_to_colabfold_fasta'
 include { SPLIT_MSA } from '../modules/local/split_msa'
 include { MMSEQS_COLABFOLDSEARCH } from '../modules/local/mmseqs_colabfoldsearch'
 include { MULTIFASTA_TO_CSV      } from '../modules/local/multifasta_to_csv'
@@ -46,7 +47,6 @@ workflow BOLTZ {
 
     take:
     ch_samplesheet  // channel: samplesheet read from --input
-    ch_versions     // channel: [ path(versions.yml) ]
     ch_boltz_ccd    // channel: [ path(boltz_ccd) ]
     ch_boltz_model  // channel: [ path(model) ]
     ch_boltz2_aff   // channel: [ path(boltz2_aff) ]
@@ -65,67 +65,42 @@ workflow BOLTZ {
         .set { ch_input_by_ext }
 
     ch_input_by_ext.fasta
-        .join(
-            ch_input_by_ext.fasta
-                .map { meta, file ->
-                    [
-                        meta,
-                        file.text.findAll { letter -> letter == ">" }.size()
-                    ]
-                }
-        )
-        .map { it ->
-            def meta = it[0].clone()
-            meta.cnt = it[2]
-            [meta, it[1]]
-        }
-        .branch { it ->
-            multimer: it[0].cnt > 1
-            monomer: it[0].cnt == 1
-        }
-        .set{ch_input}
+        .set{ch_boltz_fasta_input}
+
+    // Accept input FASTA and prepare input in Boltz YAML format
+    BOLTZ_FASTA(ch_boltz_fasta_input)
+
+    // Downstream operations are independent of original input type
+    BOLTZ_FASTA.out.boltz_yaml
+        .mix(ch_input_by_ext.yaml)
+        .set { ch_boltz_yaml_input }
 
     if (!msa_server){
-        MULTIFASTA_TO_CSV(
-            ch_input.multimer
+        BOLTZ_YAML_TO_COLABFOLD_FASTA(
+            ch_boltz_yaml_input
         )
-        ch_versions = ch_versions.mix(MULTIFASTA_TO_CSV.out.versions)
 
         MMSEQS_COLABFOLDSEARCH (
-                ch_input.monomer.mix(MULTIFASTA_TO_CSV.out.input_csv),
+                BOLTZ_YAML_TO_COLABFOLD_FASTA.out.query_fasta,
                 ch_colabfold_db,
                 ch_uniref30
         )
-        ch_versions = ch_versions.mix(MMSEQS_COLABFOLDSEARCH.out.versions)
+
+        MMSEQS_COLABFOLDSEARCH.out.json
+            .join(ch_boltz_yaml_input)
+            .set { ch_split_msa_input }
 
         SPLIT_MSA(
-            MMSEQS_COLABFOLDSEARCH.out.a3m
+            ch_split_msa_input
         )
-        ch_versions = ch_versions.mix(SPLIT_MSA.out.versions)
-        ch_input.monomer
-            .join(SPLIT_MSA.out.msa_csv)
-            .mix(
-                ch_input.multimer.join(SPLIT_MSA.out.msa_csv)
-            ).set{ch_prepare_fasta}
+
+        SPLIT_MSA.out.boltz_data.set { ch_boltz_input }
 
     }else{
-        ch_input
-            .multimer
-            .mix(ch_input.monomer)
-            .map { it ->
-                [it[0], it[1], []]
-            }
-            .set{ch_prepare_fasta}
+        ch_boltz_yaml_input
+            .map { meta, yaml -> [meta, yaml, []] }
+            .set{ch_boltz_input}
     }
-
-    BOLTZ_FASTA(
-            ch_prepare_fasta
-        )
-
-    ch_input_by_ext.yaml
-        .map { meta, file -> [ meta, file, [] ] }  // already in YAML
-        .mix(BOLTZ_FASTA.out.formatted_fasta)    // newly converted from FASTA
-        .set { ch_boltz_input }
 
     RUN_BOLTZ(
         ch_boltz_input,
@@ -141,14 +116,15 @@ workflow BOLTZ {
     modeChannel(RUN_BOLTZ.out.msa, "boltz").set { ch_msa }
     modeChannel(RUN_BOLTZ.out.pae, "boltz").set { ch_pae }
 
-    ch_versions       = ch_versions.mix(RUN_BOLTZ.out.versions)
-
     emit:
-    versions        = ch_versions
     msa             = ch_msa
     structures_npz     = RUN_BOLTZ.out.structures_npz
     confidence      = RUN_BOLTZ.out.confidence
     top_ranked_pdb  = ch_top_ranked_pdb
     pdb             = ch_pdb
     pae             = ch_pae
+    iptm            = ch_iptm
+    ipsae           = ch_ipsae
+    chainwise_iptm  = ch_chainwise_iptm
+    chainwise_ipsae = ch_chainwise_ipsae
 }
