@@ -22,6 +22,15 @@ include { BOLTZ_FASTA } from '../modules/local/boltz_fasta'
 include { BOLTZ_YAML_TO_COLABFOLD_FASTA } from '../modules/local/boltz_yaml_to_colabfold_fasta'
 include { SPLIT_MSA } from '../modules/local/split_msa'
 include { MMSEQS_COLABFOLDSEARCH } from '../modules/local/mmseqs_colabfoldsearch'
+include { MULTIFASTA_TO_CSV      } from '../modules/local/multifasta_to_csv'
+//
+// SUBWORKFLOW: Consisting entirely of nf-core/modules
+//
+include { paramsSummaryMap       } from 'plugin/nf-schema'
+include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
+include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
+include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
+include { modeChannel            } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
 
 //
 // MODULE: Boltz
@@ -102,98 +111,15 @@ workflow BOLTZ {
         ch_mols
     )
 
-    RUN_BOLTZ
-        .out
-        .pdb
-        .map { it ->
-            def meta = it[0].clone();
-            meta.model = "boltz"
-            [ meta, it[1] ]
-        }
-        .set {ch_pdb}
-
-    RUN_BOLTZ
-        .out
-        .top_ranked_pdb
-        .map { it ->
-            def meta = it[0].clone();
-            meta.model = "boltz"
-            [ meta, it[1] ]
-        }
-        .set { ch_top_ranked_pdb }
-
-    RUN_BOLTZ
-        .out
-        .msa_raw
-        .map { it ->
-            def meta = it[0].clone();
-            meta.model = "boltz"
-            [ meta, it[1] ]
-        }
-        .set { ch_msa }
-
-    RUN_BOLTZ
-        .out
-        .pae_raw
-        .map { it ->
-            def meta = it[0].clone();
-            meta.model = "boltz"
-            [ meta, it[1] ]
-        }
-        .set { ch_pae }
-
-    RUN_BOLTZ
-        .out
-        .iptm_raw
-        .map { it ->
-            def meta = it[0].clone();
-            meta.model = "boltz"
-            [ meta, it[1] ]
-        }
-        .set { ch_iptm }
-
-    RUN_BOLTZ
-        .out
-        .ipsae_raw
-        .map { it ->
-            def meta = it[0].clone();
-            meta.model = "boltz"
-            [ meta, it[1] ]
-        }
-        .set { ch_ipsae }
-
-    RUN_BOLTZ
-        .out
-        .chainwise_iptm_raw
-        .map { it ->
-            def meta = it[0].clone();
-            meta.model = "boltz"
-            [ meta, it[1] ]
-        }
-        .set { ch_chainwise_iptm }
-
-    RUN_BOLTZ
-        .out
-        .chainwise_ipsae_raw
-        .map { it ->
-            def meta = it[0].clone();
-            meta.model = "boltz"
-            [ meta, it[1] ]
-        }
-        .set { ch_chainwise_ipsae }
-
-    RUN_BOLTZ
-        .out
-        .multiqc
-        .map { it -> it[1] }
-        .collect(sort: true)
-        .map { it ->  [ [ "model": "boltz"], it.flatten() ] }
-        .set { ch_multiqc_report  }
+    modeChannel(RUN_BOLTZ.out.pdb, "boltz").set { ch_pdb }
+    modeChannel(RUN_BOLTZ.out.top_ranked_pdb, "boltz").set { ch_top_ranked_pdb }
+    modeChannel(RUN_BOLTZ.out.msa, "boltz").set { ch_msa }
+    modeChannel(RUN_BOLTZ.out.pae, "boltz").set { ch_pae }
 
     emit:
     msa             = ch_msa
+    structures_npz     = RUN_BOLTZ.out.structures_npz
     confidence      = RUN_BOLTZ.out.confidence
-    multiqc_report  = ch_multiqc_report
     top_ranked_pdb  = ch_top_ranked_pdb
     pdb             = ch_pdb
     pae             = ch_pae

@@ -202,11 +202,12 @@ def validateInputParameters() {
     }
 }
 
-def modeChannel(ch, mode) {
+def modeChannel(ch, mode, asList = false) {
     return ch.map { meta, value ->
         def meta_clone = meta.clone()
         meta_clone.model = mode
-        [ meta_clone, value ]
+        def v = asList ? ((value instanceof List) ? value : [value]) : value
+        [ meta_clone, v ]
     }
 }
 

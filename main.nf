@@ -200,6 +200,7 @@ workflow NFCORE_PROTEINFOLD {
         ch_multiqc      = ch_multiqc.mix(ALPHAFOLD3.out.multiqc_report)
         ch_report_input = ch_report_input
                             .mix(
+                                ALPHAFOLD3.out.pdb
                                 ALPHAFOLD3
                                     .out
                                     .pdb
@@ -258,6 +259,10 @@ workflow NFCORE_PROTEINFOLD {
             params.colabfold_num_recycles
         )
 
+        ch_versions         = ch_versions.mix(COLABFOLD.out.versions)
+        ch_report_input = ch_report_input
+                            .mix(
+                                COLABFOLD.out.pdb
         ch_multiqc          = ch_multiqc.mix(COLABFOLD.out.multiqc_report)
         ch_report_input     = ch_report_input
                                 .mix(COLABFOLD.out.pdb.map { it ->
@@ -404,7 +409,6 @@ workflow NFCORE_PROTEINFOLD {
     }
 
     POST_PROCESSING(
-        params.skip_visualisation,
         requested_modes_size,
         ch_report_input,
         ch_report_template,
@@ -438,7 +442,7 @@ workflow NFCORE_PROTEINFOLD {
         )
 
     emit:
-    multiqc_report = ch_multiqc
+    multiqc_report = POST_PROCESSING.out.multiqc_report
 }
 
 /*

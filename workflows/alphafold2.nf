@@ -11,6 +11,8 @@ include { RUN_ALPHAFOLD2_MSA  } from '../modules/local/run_alphafold2_msa'
 include { RUN_ALPHAFOLD2_PRED } from '../modules/local/run_alphafold2_pred'
 include { resolveModelPresetByFastaEntities } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
 
+include { modeChannel         } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IMPORT NF-CORE MODULES/SUBWORKFLOWS
@@ -122,37 +124,10 @@ workflow ALPHAFOLD2 {
     ch_chainwise_iptm = ch_chainwise_iptm.mix(RUN_ALPHAFOLD2_PRED.out.chainwise_iptms)
     ch_chainwise_ipsae = ch_chainwise_ipsae.mix(RUN_ALPHAFOLD2_PRED.out.chainwise_ipsaes)
 
-    ch_pdb
-        .map { it ->
-            def meta = it[0].clone();
-            meta.model = "alphafold2";
-            def files = (it[1] instanceof List) ? it[1] : [ it[1] ]
-            [ meta, files ]
-        }
-        .set { ch_pdb_final }
-
-    ch_msa
-        .map { it ->
-            def meta = it[0].clone();
-            meta.model = "alphafold2";
-            [ meta, it[1] ]
-        }
-        .set { ch_msa_final }
-
-    ch_pae
-        .map { it ->
-            def meta = it[0].clone();
-            meta.model = "alphafold2";
-            [ meta, it[1] ]
-        }
-        .set { ch_pae_final }
-
-    ch_top_ranked_pdb_final = ch_top_ranked_pdb
-                                .map { it ->
-                                    def meta = it[0].clone();
-                                    meta.model = "alphafold2";
-                                    [ meta, it[1] ]
-                                }
+    modeChannel(ch_pdb, "alphafold2", true).set { ch_pdb_final }
+    modeChannel(ch_msa, "alphafold2").set { ch_msa_final }
+    modeChannel(ch_pae, "alphafold2").set { ch_pae_final }
+    ch_top_ranked_pdb_final = modeChannel(ch_top_ranked_pdb, "alphafold2")
 
     ch_iptm
         .map { it ->

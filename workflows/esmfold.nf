@@ -61,17 +61,7 @@ workflow ESMFOLD {
         ch_num_recycles
     )
 
-    RUN_ESMFOLD
-        .out
-        .multiqc
-        .map { it -> it[1] }
-        .toSortedList()
-        .map { it ->
-            [ [ "model": "esmfold"], it.flatten() ]
-        }
-        .set { ch_multiqc_report  }
-
-    modeChannel(RUN_ESMFOLD.out.pdb, "esmfold").set { ch_pdb_final }
+    modeChannel(RUN_ESMFOLD.out.pdb, "esmfold", true).set { ch_pdb_final }
 
     emit:
     pdb            = ch_pdb_final      // channel: [ id, /path/to/*.pdb ]

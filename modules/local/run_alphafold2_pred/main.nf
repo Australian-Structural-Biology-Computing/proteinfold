@@ -23,14 +23,22 @@ process RUN_ALPHAFOLD2_PRED {
     path ('uniprot/*')
 
     output:
+<<<<<<< HEAD
+    path ("raw/**")                                         , emit: raw
+    tuple val(meta), path ("${meta.id}_alphafold2.pdb")     , emit: top_ranked_pdb
+    tuple val(meta), path ("raw/ranked*.pdb")               , emit: pdb
+    tuple val(meta), path ("${meta.id}_plddt.tsv")          , emit: plddt
+    tuple val(meta), path ("${meta.id}_alphafold2_msa.tsv") , emit: msa
+=======
     path ("raw/**")                                        , emit: raw
     tuple val(meta), path ("${meta.id}_alphafold2.pdb")    , emit: top_ranked_pdb
     tuple val(meta), path ("raw/ranked*.pdb")              , emit: pdb
     tuple val(meta), path ("${meta.id}_alphafold2_msa.tsv"), emit: msa
     tuple val(meta), path ("${meta.id}_plddt_mqc.tsv")     , emit: multiqc
+>>>>>>> origin/dev
     //Note: alphafold2_model_preset == "monomer" the pae file won't exist.
-    tuple val(meta), path ("${meta.id}_*_pae.tsv")          , optional: true, emit: paes
     tuple val(meta), path ("${meta.id}_0_pae.tsv")          , optional: true, emit: pae
+    tuple val(meta), path ("${meta.id}_*_pae.tsv")          , optional: true, emit: paes
     tuple val(meta), path ("${meta.id}_ptm.tsv")            , optional: true, emit: ptms
     tuple val(meta), path ("${meta.id}_iptm.tsv")           , optional: true, emit: iptms
     tuple val(meta), path ("${meta.id}_ipsae.tsv")          , optional: true, emit: ipsaes
@@ -82,9 +90,14 @@ process RUN_ALPHAFOLD2_PRED {
     touch "${meta.id}_0_pae.tsv"
     touch "${meta.id}_ptm.tsv"
     touch "${meta.id}_iptm.tsv"
+<<<<<<< HEAD
+    touch "${meta.id}_chainwise_ptm.tsv"
+    touch "${meta.id}_chainwise_iptm.tsv"
+=======
     touch "${meta.id}_ipsae.tsv"
     touch "${meta.id}_chainwise_iptm.tsv"
     touch "${meta.id}_chainwise_ipsae.tsv"
+>>>>>>> origin/dev
     mkdir "raw/"
     touch "raw/ranked_0.pdb"
     touch "raw/ranked_1.pdb"
