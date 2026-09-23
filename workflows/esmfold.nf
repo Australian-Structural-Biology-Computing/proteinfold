@@ -72,9 +72,11 @@ workflow ESMFOLD {
         .set { ch_multiqc_report  }
 
     modeChannel(RUN_ESMFOLD.out.pdb, "esmfold").set { ch_pdb_final }
+    modeChannel(RUN_ESMFOLD.out.plddt, "esmfold").set { ch_plddt_final }
 
     emit:
     pdb            = ch_pdb_final      // channel: [ id, /path/to/*.pdb ]
+    plddt          = ch_plddt_final
     multiqc_report = ch_multiqc_report // channel: /path/to/multiqc_report.html
 }
 

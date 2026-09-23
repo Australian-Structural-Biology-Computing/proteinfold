@@ -1,0 +1,2 @@
+# Keep these large validation dictionaries local to this branch only.
+*.sdb

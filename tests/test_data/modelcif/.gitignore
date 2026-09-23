@@ -1,0 +1,2 @@
+# Keep these large modelCIF fixtures local to this branch only.
+*.cif

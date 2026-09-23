@@ -28,6 +28,9 @@ include { ALPHAFOLD3                       } from './workflows/alphafold3'
 include { COLABFOLD                        } from './workflows/colabfold'
 include { ESMFOLD                          } from './workflows/esmfold'
 include { BOLTZ                            } from './workflows/boltz'
+              
+include { ASSEMBLE_MODELCIF                 } from './modules/local/assemble_modelcif'
+
 
 include { PIPELINE_INITIALISATION          } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { PIPELINE_COMPLETION              } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
@@ -53,6 +56,7 @@ workflow NFCORE_PROTEINFOLD {
     ch_multiqc           = channel.empty()
     ch_report_input      = channel.empty()
     ch_top_ranked_model  = channel.empty()
+    ch_modelcif_input    = channel.empty()
     requested_modes      = params.mode.toLowerCase().split(",")
     requested_modes_size = requested_modes.size()
 
@@ -62,6 +66,10 @@ workflow NFCORE_PROTEINFOLD {
 
     ch_dummy_file = channel.fromPath("$projectDir/assets/NO_FILE")
     ch_dummy_file_pae = channel.fromPath("$projectDir/assets/NO_FILE_PAE")
+    ch_dummy_file_msa = channel.fromPath("$projectDir/assets/DUMMY_MSA.tsv")
+    ch_dummy_file_pae = channel.fromPath("$projectDir/assets/DUMMY_PAE.tsv")
+    ch_dummy_file_ptm = channel.fromPath("$projectDir/assets/DUMMY_PTM.tsv")
+    ch_dummy_file_iptm = channel.fromPath("$projectDir/assets/DUMMY_IPTM.tsv")
 
     //
     // WORKFLOW: Run alphafold2
@@ -375,7 +383,6 @@ workflow NFCORE_PROTEINFOLD {
         )
         ch_top_ranked_model         = ch_top_ranked_model.mix(BOLTZ.out.top_ranked_pdb)
     }
-    //
     // POST PROCESSING: generate visualisation reports
     //
     ch_report_template     = channel.value(file("$projectDir/assets/report_template.html", checkIfExists: true))
@@ -402,6 +409,10 @@ workflow NFCORE_PROTEINFOLD {
         m.msa_tool = msaToolMap.get(meta.model, 'None')
         [m] + tupleData.drop(1)
     }
+
+    ASSEMBLE_MODELCIF(
+        ch_modelcif_input
+    )
 
     POST_PROCESSING(
         params.skip_visualisation,

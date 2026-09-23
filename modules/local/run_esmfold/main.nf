@@ -13,6 +13,7 @@ process RUN_ESMFOLD {
     output:
     tuple val(meta), path ("${meta.id}_esmfold.pdb")  , emit: top_ranked_pdb
     tuple val(meta), path ("*.pdb")                   , emit: pdb
+    tuple val(meta), path ("${meta.id}_plddt.tsv"), emit: plddt
     tuple val(meta), path ("${meta.id}_plddt_mqc.tsv"), emit: multiqc
     tuple val("${task.process}"), val('esm-fold'), val('1.0.3'), emit: versions_esmfold, topic: versions
     tuple val("${task.process}"), val('python'), eval("python3 --version | sed 's/Python //g'"), emit: versions_python, topic: versions
@@ -48,6 +49,7 @@ process RUN_ESMFOLD {
     stub:
     """
     touch "${meta.id}_esmfold.pdb"
+    touch "${meta.id}_plddt.tsv"
     touch "${meta.id}_plddt_mqc.tsv"
     """
 }
