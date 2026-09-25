@@ -119,7 +119,7 @@ workflow NFCORE_PROTEINFOLD {
             PREPARE_ALPHAFOLD2_DBS.out.pdb_seqres,
             PREPARE_ALPHAFOLD2_DBS.out.uniprot
         )
-        ch_multiqc          = ch_multiqc.mix(ALPHAFOLD2.out.multiqc_report.collect())
+        ch_multiqc          = ch_multiqc.mix(ALPHAFOLD2.out.multiqc_report)
         ch_report_input     = ch_report_input
                                 .mix(ALPHAFOLD2
                                 .out
@@ -309,7 +309,7 @@ workflow NFCORE_PROTEINFOLD {
             params.esmfold_num_recycles
         )
 
-        ch_multiqc      = ch_multiqc.mix(ESMFOLD.out.multiqc_report.collect())
+        ch_multiqc      = ch_multiqc.mix(ESMFOLD.out.multiqc_report)
         ch_report_input = ch_report_input.mix(
             ESMFOLD.out.pdb
                 .combine(ch_dummy_file)
@@ -378,12 +378,12 @@ workflow NFCORE_PROTEINFOLD {
     //
     // POST PROCESSING: generate visualisation reports
     //
+    ch_multiqc_config        = channel.fromPath("$projectDir/assets/multiqc_config.yml", checkIfExists: true).first()
+    ch_multiqc_custom_config = params.multiqc_config ? channel.fromPath( params.multiqc_config, checkIfExists: true ).first()  : channel.fromPath("${projectDir}/multiqc_proteinfold/multiqc_proteinfold_config.yml", checkIfExists: true)
+    ch_multiqc_logo          = params.multiqc_logo   ? channel.fromPath( params.multiqc_logo ).first()    : channel.empty()
+    ch_multiqc_methods_description = params.multiqc_methods_description ? file(params.multiqc_methods_description, checkIfExists: true) : file("$projectDir/assets/methods_description_template.yml", checkIfExists: true)
     ch_report_template     = channel.value(file("$projectDir/assets/report_template.html", checkIfExists: true))
     ch_comparison_template = channel.value(file("$projectDir/assets/comparison_template.html", checkIfExists: true))
-
-    ch_multiqc_config              = channel.of(file("$projectDir/assets/multiqc_config.yml", checkIfExists: true))
-    ch_multiqc_custom_config       = params.multiqc_config ? channel.of(file(params.multiqc_config, checkIfExists: true)) : channel.empty()
-    ch_multiqc_methods_description = params.multiqc_methods_description ? file(params.multiqc_methods_description, checkIfExists: true) : file("$projectDir/assets/methods_description_template.yml", checkIfExists: true)
 
     // Inject msa_tool into meta based on selected model for report provenance.
     def msaToolMap = [

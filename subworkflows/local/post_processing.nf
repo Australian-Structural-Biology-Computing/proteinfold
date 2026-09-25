@@ -115,16 +115,35 @@ workflow POST_PROCESSING {
         ch_multiqc_files       = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
         ch_methods_description = channel.value(methodsDescriptionText(ch_multiqc_methods_description))
         ch_multiqc_files       = ch_multiqc_files.mix(ch_methods_description.collectFile(name: 'methods_description_mqc.yaml', sort: true))
+        
+        // One manifest file per model. The nf-core MULTIQC module stages all input
+        // files flat ('?/*'), so the model-bearing parent directory is lost and the
+        // plugin's directory-based mode detection falls back to "UNKNOWN". We encode
+        // the model into the filename itself ('proteinfold_model_<model>.tsv') and let
+        // the MultiQC plugin read the model back from the filename, not the path.
+        ch_proteinfold_model_manifest = ch_top_ranked_model
+            .map { meta, _ ->
+                [ "${meta.model}", "${meta.id}\t${meta.model}" ]
+            }
+            .groupTuple()
+            .map { model, rows ->
+                [ [ model: model ], rows.unique().sort().join('\n') + '\n' ]
+            }
+            .collectFile(name: { "proteinfold_model_${it[0].model}.tsv" })
+
+        ch_multiqc_files = ch_multiqc_files.mix(ch_proteinfold_model_manifest)
+
         MULTIQC (
             ch_multiqc_rep
-                .combine(ch_multiqc_files.collect())
-                .combine(ch_multiqc_config.collect().ifEmpty([]))
-                .combine(ch_multiqc_custom_config.collect().ifEmpty([]))
-                .map { meta, report_files, methods_file, workflow_file, config_file ->
+                // Wrap each collected list so combine() keeps it as one tuple field.
+                .combine(ch_multiqc_files.collect().map { [it] })
+                .combine(ch_multiqc_config.collect().ifEmpty([]).map { [it] })
+                .combine(ch_multiqc_custom_config.collect().ifEmpty([]).map { [it] })
+                .map { meta, report_files, extra_files, config_file, custom_config_file ->
                     [
                         meta,
-                        report_files + [methods_file, workflow_file],  // All multiqc input files
-                        config_file,
+                        report_files + extra_files,  // All multiqc input files
+                        config_file + custom_config_file,
                         multiqc_logo ? file(multiqc_logo, checkIfExists: true) : [],
                         [],
                         []
