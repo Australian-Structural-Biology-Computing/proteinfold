@@ -28,7 +28,7 @@ include { ALPHAFOLD3                       } from './workflows/alphafold3'
 include { COLABFOLD                        } from './workflows/colabfold'
 include { ESMFOLD                          } from './workflows/esmfold'
 include { BOLTZ                            } from './workflows/boltz'
-              
+
 include { ASSEMBLE_MODELCIF                 } from './modules/local/assemble_modelcif'
 
 
