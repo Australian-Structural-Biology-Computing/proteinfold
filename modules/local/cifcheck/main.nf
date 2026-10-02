@@ -2,6 +2,12 @@ process CIFCHECK {
     tag "$meta.id-$meta.model"
     label 'process_single'
 
+    // NOTE: hard-depends on bin/dicts/mmcif_ma.sdb, a large binary ModelArchive
+    // dictionary that is git-ignored and not bundled with this repository (see
+    // .gitignore). Any invocation of this process requires that file to be
+    // present on disk; it is expected to be supplied via nf-core/test-datasets
+    // or a local setup step. The nf-test specs that depend on it are skipped
+    // in nf-test.config until that data is wired in.
     input:
     tuple val(meta), path(mmcif)
 

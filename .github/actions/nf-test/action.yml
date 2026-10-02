@@ -36,7 +36,7 @@ runs:
       # any container used by the pipeline process under test. Install the
       # packages those assertions import so they can run on the runner.
       shell: bash
-      run: pip install --quiet modelcif msgpack
+      run: pip install --quiet "modelcif>=1.7" "msgpack>=1.0"
 
     - name: Install nf-test
       uses: nf-core/setup-nf-test@4069fbbaabe94c08faba4ad261bfa88225ba133f # v2
