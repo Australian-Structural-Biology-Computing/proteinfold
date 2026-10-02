@@ -1,0 +1,35 @@
+nextflow_process {
+
+    // Split out from modelcif_validate.nf.test: this test needs the real
+    // (augmented) ModelArchive mmCIF fixture, which is intentionally not
+    // bundled in this repository to keep it small. The fixture will be
+    // provided via nf-core/test-datasets; until then this file is skipped
+    // in CI (see nf-test.config).
+    name "Test Process MODELCIF_VALIDATE"
+    script "../modules/local/modelcif_validate/main.nf"
+    process "MODELCIF_VALIDATE"
+
+    tag "modelcif_validate"
+
+    test("real modelarchive file (augmented)") {
+
+        when {
+            params {
+                outdir = "$outputDir"
+            }
+            process {
+                """
+                input[0] = [ [ id: 'real' ], file("$projectDir/tests/test_data/modelcif/ma-atiya1-gk-01-AUGMENTED.cif", checkIfExists: true) ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out.versions).match() }
+            )
+        }
+    }
+
+}
