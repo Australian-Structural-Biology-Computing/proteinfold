@@ -40,7 +40,7 @@ process ASSEMBLE_MODELCIF {
     # identically under conda, docker and singularity. Skip the (re)install when
     # a conda environment has already provided them.
     python3 -c "import yaml, numpy, Bio.PDB, modelcif, msgpack" 2>/dev/null || \\
-        pip install --quiet --no-cache-dir pyyaml==6.0.2 numpy biopython==1.84 modelcif==1.7 "msgpack>=1.0"
+        pip install --quiet --no-cache-dir pyyaml==6.0.2 numpy biopython==1.84 "modelcif>=1.7" "msgpack>=1.0"
 
     populate_modelcif.py \\
         --structs ${structs} \\
