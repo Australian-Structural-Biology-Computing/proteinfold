@@ -4,6 +4,7 @@ channels:
   - bioconda
 dependencies:
   - conda-forge::biopython=1.84
+  - conda-forge::numpy
   - conda-forge::pyyaml=6.0.2
   - conda-forge::pip=24.2
   - pip:

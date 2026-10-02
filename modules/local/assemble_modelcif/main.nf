@@ -3,6 +3,7 @@ process ASSEMBLE_MODELCIF {
     label 'process_single'
 
     conda "${moduleDir}/environment.yml"
+    container "python:3.12-slim"
 
     // Unpack the tuple assuming every value used is at the path. Pass along a DUMMY_FILE so that the path is always occupied.
     // The populate_modelcif.py can explicitly trigger if the arg.metric is a DUMMY_FILE, and if so, appropriately account for the non-existence of that in the model metadata
@@ -34,6 +35,13 @@ process ASSEMBLE_MODELCIF {
     def args = task.ext.args ?: ''
     def container = task.container ?: 'None'
     """
+    # The 'python:3.12-slim' base container only provides the interpreter; install the
+    # pinned runtime dependencies declared in environment.yml so this works
+    # identically under conda, docker and singularity. Skip the (re)install when
+    # a conda environment has already provided them.
+    python3 -c "import yaml, numpy, Bio.PDB, modelcif, msgpack" 2>/dev/null || \\
+        pip install --quiet --no-cache-dir pyyaml==6.0.2 numpy biopython==1.84 modelcif==1.7 "msgpack>=1.0"
+
     populate_modelcif.py \\
         --structs ${structs} \\
         --msa ${msa} \\

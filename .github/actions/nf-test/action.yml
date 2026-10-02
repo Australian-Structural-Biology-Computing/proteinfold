@@ -29,6 +29,15 @@ runs:
       with:
         python-version: "3.14"
 
+    - name: Install Python packages for nf-test assertions
+      # Some nf-test specs (e.g. tests/assemble_modelcif.nf.test,
+      # tests/modelcif_sw_entries.nf.test) parse ModelCIF output with a
+      # host-side `python3` subprocess (Groovy `.execute()`), independent of
+      # any container used by the pipeline process under test. Install the
+      # packages those assertions import so they can run on the runner.
+      shell: bash
+      run: pip install --quiet modelcif msgpack
+
     - name: Install nf-test
       uses: nf-core/setup-nf-test@4069fbbaabe94c08faba4ad261bfa88225ba133f # v2
       with:
