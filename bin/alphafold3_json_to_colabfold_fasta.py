@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Extract protein queries from an AlphaFold3 input JSON for MMseqs/ColabFold."""
 
 import argparse
 import json

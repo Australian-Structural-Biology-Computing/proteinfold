@@ -1,4 +1,3 @@
-// Validate the staged ColabFold2 weights root and runtime assets.
 workflow PREPARE_COLABFOLD2_DBS {
     take:
     colabfold2_params_path // directory containing params/af3
