@@ -251,5 +251,4 @@ These raw outputs are intended for advanced debugging, reproducibility and metho
 - [AlphaFold3](https://github.com/google-deepmind/alphafold3/blob/main/docs/output.md)
 - [Boltz](https://github.com/jwohlwend/boltz/blob/main/docs/prediction.md#output)
 - [ColabFold](https://www.ebi.ac.uk/training/online/courses/alphafold/advanced-modeling-and-applications-of-predicted-protein-structures/customising-alphafold-structure-predictions/outputs-from-colabfold/)
-- [ColabFold2](./usage/colabfold2.md)
 - [ESMFold](https://github.com/facebookresearch/esm)
