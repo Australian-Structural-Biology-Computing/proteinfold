@@ -1,23 +1,5 @@
 #!/usr/bin/env python3
-"""Validate ProteinFold scientific-test structures and confidence metrics.
-
-ColabFold2-specific behaviour (shared with the upstream per-mode checks):
-
-* ColabFold2 backends publish directly under their public mode token. Most are
-  requested by their own name (``--mode opendde`` -> ``opendde``); only
-  ``alphafold3`` and ``boltz2`` need the ``colabfold2-`` prefix, because those two
-  names already select the standalone AlphaFold3 and Boltz modes. The retired
-  ``-af3`` short form no longer resolves.
-* ``--structure-only`` relaxes the confidence gates for the ESMFold2
-  language-model backends, which ship no confidence head by upstream design
-  (NO_CONFIDENCE_HEAD): pLDDT cells are literal ``n/a`` (or all-zero in older
-  extractions) and the PAE matrix is all-NaN, so the validator requires those
-  exact identity markers in addition to file shape and squareness.
-* Interface metrics (``*_iptm.tsv``, ``*_chainwise_iptm.tsv``, ``*_ipsae.tsv``,
-  ``*_chainwise_ipsae.tsv``) are validated wherever they carry content and
-  tolerated as empty placeholders, which is what monomer and structure-only
-  runs emit so downstream joins keep every sample.
-"""
+"""Validate ProteinFold scientific-test structures and confidence metrics."""
 
 import argparse
 import csv
@@ -37,23 +19,16 @@ warnings.filterwarnings("error", category=PDBConstructionWarning, message=".*dis
 warnings.filterwarnings("error", category=PDBConstructionWarning, message=".*duplicate.*")
 warnings.filterwarnings("error", category=PDBConstructionWarning, message=".*could not assign element.*")
 
-# Interface metrics published alongside the per-sample TSVs. Monomers and
-# structure-only models emit them as empty placeholders.
 INTERFACE_SUFFIXES = ("_iptm.tsv", "_chainwise_iptm.tsv", "_ipsae.tsv", "_chainwise_ipsae.tsv")
 
-# ColabFold2 backends publish their metrics under the shared 'colabfold2' model namespace (meta.model, pinned in workflows/colabfold2.nf).
 COLABFOLD2_MODES = frozenset({
     "colabfold2-alphafold3", "colabfold2-boltz2", "esmfold2", "protenix2",
     "chai1", "intellifold2", "opendde", "openfold3", "openbind0", "rosettafold3",
 })
 
 
-# Backends reachable only behind the colabfold2- prefix, because the bare name selects an
-# existing standalone mode. Kept in step with colabfold2_prefixed_models in main.nf.
 COLABFOLD2_PREFIXED = ("alphafold3", "boltz2")
 
-# Backends requested by their own name; the bare `esmfold2` here is upstream's JAX
-# ESMFold2, distinct from the `esmfold` mode's esm-fold 1.0.3 PyTorch package.
 COLABFOLD2_BARE = (
     "protenix2", "chai1", "intellifold2", "opendde", "openfold3", "openbind0",
     "rosettafold3", "esmfold2",
@@ -136,8 +111,6 @@ def validate_plddt(path: Path, structure_only: bool = False) -> tuple[int, int, 
         assert len(row) == len(rows[0]), f"Inconsistent pLDDT column count in {path}"
         for cell in row[1:]:
             if cell == "n/a":
-                # Structure-only models report no per-residue confidence; the pipeline publishes
-                # literal n/a cells so the joins keep every sample.
                 assert structure_only, f"pLDDT cell is 'n/a' without --structure-only: {path}"
                 unavailable += 1
                 continue
@@ -166,8 +139,6 @@ def validate_pae(path: Path, structure_only: bool = False) -> tuple[int, int]:
     assert rows, f"Empty PAE matrix: {path}"
     assert all(len(row) == len(rows) for row in rows), f"PAE matrix is not square: {path}"
     if structure_only:
-        # Structure-only models ship an all-NaN PAE by upstream design. Reject
-        # finite values rather than accepting a merely square matrix.
         values = []
         for row in rows:
             for cell in row:

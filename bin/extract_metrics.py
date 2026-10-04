@@ -264,12 +264,6 @@ def derive_interface_scores(pae_matrix, struct_file, source_label):
         return None
 
 def _scores_json_is_structure_only(scores_files):
-    """
-    Detect the upstream NO_CONFIDENCE_HEAD fingerprint (alphafold3-colabfold 3.1.14): every
-    scores json lacks a 'ptm' key and carries a missing or NaN 'ranking_score', so the model
-    emits all-zero B-factors and all-NaN PAE by design. Unreadable jsons disqualify the
-    structure-only path; a run where no json loads at all raises SystemExit.
-    """
     if not scores_files:
         return False
     parsed = []
@@ -303,10 +297,6 @@ def _scores_json_is_structure_only(scores_files):
 
 
 def _model_type_from_scores_path(scores_path):
-    """
-    Best-effort model type from a ColabFold scores filename, e.g.
-    '<id>_scores_rank_001_esmfold2_lm300m_seed_000_sample_0.json'.
-    """
     match = re.search(r"_scores_rank_\d+_(.+)_seed_\d+_sample_\d+\.json$", os.path.basename(scores_path))
     return match.group(1) if match and match.group(1) else "unknown"
 
@@ -315,8 +305,6 @@ def extract_structs_plddt_to_tsv(name, structures, scores_files=None):
     """
     Write out a tsv file contain pLDDTs for reading by MultiQC in nf-core/proteinfold
     Uses utils function with BioPython PDB package to extract residue pLDDT values from the b-factor column.
-    When the scores jsons carry the NO_CONFIDENCE_HEAD fingerprint and every pLDDT is
-    zero/nonpositive, publish literal 'n/a' cells instead of a misleading all-zero table.
     """
     sorted_structures = sort_paths_by_rank(structures)
     plddt_cols = [plddt_from_struct_b_factor(structure) for structure in sorted_structures]
