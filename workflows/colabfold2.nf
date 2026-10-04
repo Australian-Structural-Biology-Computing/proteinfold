@@ -1,13 +1,3 @@
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    IMPORT LOCAL MODULES/SUBWORKFLOWS
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
-
-//
-// MODULE: Loaded from modules/local/
-//
-
 include { COLABFOLD2_INFERENCE as ALPHAFOLD3      } from '../modules/local/colabfold2_inference'
 include { COLABFOLD2_INFERENCE as BOLTZ2          } from '../modules/local/colabfold2_inference'
 include { COLABFOLD2_INFERENCE as OPENFOLD3       } from '../modules/local/colabfold2_inference'
@@ -37,7 +27,6 @@ workflow COLABFOLD2 {
     ch_uniref30     // channel: path(uniref30)
 
     main:
-    // Mode token -> inference process alias; the three esmfold2 selections share the ESMFOLD2 alias.
     def COLABFOLD2_BACKENDS = [
         'alphafold3'      : 'ALPHAFOLD3',
         'boltz2'          : 'BOLTZ2',
@@ -70,10 +59,8 @@ workflow COLABFOLD2 {
         .set { ch_input_by_ext }
 
     if (params.use_msa_server) {
-        // colabfold_batch reads AF3 JSON directly and preserves its non-protein metadata.
         ch_msa_input = ch_input_by_ext.fasta.mix(ch_input_by_ext.json)
     } else {
-        // colabfold_search needs FASTA: extract protein queries, search, then merge the MSAs back into the original JSON.
         ch_input_by_ext.json
             .map { meta, input_json ->
                 def search_meta = meta.clone()
@@ -116,17 +103,11 @@ workflow COLABFOLD2 {
         ch_msa_input = ch_search_result.fasta.mix(MERGE_ALPHAFOLD3_MSA.out.json)
     }
 
-    //
-    // MODULE: Run inference on the process belonging to the selected backend
-    //
-    // The explicit model name selects the upstream backend; aliases identify the
-    // selected backend in task names and reports.
     def backend_process = COLABFOLD2_BACKENDS[model_type]
     if (backend_process == null) {
         error("ColabFold2 backend '${model_type}' is not wired to an inference process. Wired backends: ${COLABFOLD2_BACKENDS.keySet().join(', ')}.")
     }
 
-    // Static dispatch: the repo's Nextflow linter cannot parse dynamic process invocation.
     if (backend_process == 'ALPHAFOLD3') {
         ALPHAFOLD3(ch_msa_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
         ch_batch = ALPHAFOLD3.out
@@ -181,7 +162,6 @@ workflow COLABFOLD2 {
         }
         .set { ch_structures }
 
-    // Reports use the shared colabfold2 model name while task names identify the selected backend.
     modeChannel(ch_batch.msa, 'colabfold2').set { ch_msa }
     modeChannel(ch_batch.pae, 'colabfold2').set { ch_pae }
     modeChannel(ch_batch.ptms, 'colabfold2').set { ch_ptm }

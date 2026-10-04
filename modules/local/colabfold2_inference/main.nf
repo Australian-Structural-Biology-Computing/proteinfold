@@ -47,7 +47,6 @@ process COLABFOLD2_INFERENCE {
         error("COLABFOLD2_INFERENCE received multiple inputs for sample '${meta.id}'. Use --split_fasta to run each FASTA record independently.")
     }
     def require_msa_output = input_files.any { name -> name ==~ /(?i).*\.(fa|faa|fasta)$/ }
-    // Stage the input behind a symlink so colabfold_batch receives one directory.
     def shell_quote = { name -> "'" + name.replace("'", "'\\''") + "'" }
     def quoted_input_files = input_files.collect(shell_quote).join(' ')
 
@@ -68,8 +67,6 @@ process COLABFOLD2_INFERENCE {
         fi
     done
 
-    # Register GPU kinds that JAX 0.11.1's Pallas device table misses (it matches by
-    # name, e.g. 'NVIDIA L40S', V100) so kernels lower normally on those devices.
     cat > sitecustomize.py <<'EOF'
     def _register_missing_gpu_kinds():
         try:
@@ -127,8 +124,6 @@ process COLABFOLD2_INFERENCE {
         touch "${meta.id}_colabfold2_msa.tsv"
     fi
 
-    # Some backends or monomers do not define interface metrics. Emit empty
-    # artifacts so downstream joins retain every sample.
     touch \
         "${meta.id}_1_pae.tsv" \
         "${meta.id}_ptm.tsv" \

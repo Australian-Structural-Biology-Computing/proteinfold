@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Merge ColabFold MMseqs MSAs into an original, rich AlphaFold3 JSON."""
 
 import argparse
 import copy
@@ -26,11 +25,6 @@ def _proteins(document):
 
 
 def merge_msa(original, searched):
-    """Return a deep copy of original with protein MSAs supplied by searched.
-
-    Matching by sequence preserves the original chain IDs and all rich AF3
-    metadata; repeated identical proteins may share a searched entity.
-    """
     merged = copy.deepcopy(original)
     available = _proteins(searched)
 
@@ -50,8 +44,6 @@ def merge_msa(original, searched):
                 f"for original chain(s) {protein.get('id')}"
             )
         for field in ("unpairedMsa", "pairedMsa"):
-            # AF3 treats an existing value, even an empty string, as explicit; fill only
-            # absent/null fields rather than overwriting user MSAs.
             if protein.get(field) is not None:
                 continue
             value = candidate.get(field)
