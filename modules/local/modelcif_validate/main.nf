@@ -3,6 +3,7 @@ process MODELCIF_VALIDATE {
     label 'process_single'
 
     conda "${moduleDir}/environment.yml"
+    container 'ghcr.io/australian-structural-biology-computing/proteinfold-modelcif:1.7'
 
     input:
     tuple val(meta), path(mmcif)
