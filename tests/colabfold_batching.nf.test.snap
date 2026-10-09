@@ -1,12 +1,8 @@
 {
-    "-profile test_colabfold_download": {
+    "runs multiple ColabFold MSA batches": {
         "content": [
-            10,
+            9,
             [
-                "DBs",
-                "DBs/colabfold",
-                "DBs/colabfold/params",
-                "DBs/colabfold/params/alphafold_params_2022-12-06",
                 "colabfold",
                 "colabfold/T1024",
                 "colabfold/T1024/T1024_chainwise_ipsae.tsv",
@@ -55,9 +51,6 @@
                 "reports/T1026_colabfold_report.html"
             ],
             [
-                [
-                    "file.txt:md5,d41d8cd98f00b204e9800998ecf8427e"
-                ],
                 "T1024_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_chainwise_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_colabfold_msa.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -92,7 +85,7 @@
                 "T1026_colabfold_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-10-09T14:12:11.2833867",
+        "timestamp": "2026-10-09T14:11:56.606247674",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "25.10.4"
