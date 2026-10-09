@@ -40,35 +40,36 @@ workflow COLABFOLD {
     main:
     ch_multiqc_metrics = channel.empty()
 
+    ch_byo_msa = ch_samplesheet
+        .filter { meta, fasta -> meta.msa }
+        .map { meta, fasta ->
+            log.info "Using samplesheet MSA for ${meta.id}; bypassing ColabFold MSA generation"
+            def meta_without_msa = meta.clone()
+            def msa = meta_without_msa.remove('msa')
+            [meta_without_msa, msa]
+        }
+
+    ch_generated_input = ch_samplesheet
+        .filter { meta, fasta -> !meta.msa }
+
+    ch_colabfold_input = ch_byo_msa
+
+    MULTIFASTA_TO_CSV(
+        ch_generated_input
+    )
+
     if (params.use_msa_server) {
-        //
-        // MODULE: Run colabfold
-        //
-
-        MULTIFASTA_TO_CSV(
-            ch_samplesheet
-        )
-
-        COLABFOLD_BATCH(
+        ch_colabfold_input = ch_colabfold_input.mix(
             MULTIFASTA_TO_CSV.out.input_csv
-                .combine(ch_colabfold_params),
-            num_recycles
         )
-
     } else {
-        //
-        // MODULE: Run mmseqs
-        //
-        MULTIFASTA_TO_CSV(
-            ch_samplesheet
-        )
         if (msa_batch_size == 1) {
             MMSEQS_COLABFOLDSEARCH (
                 MULTIFASTA_TO_CSV.out.input_csv,
                 ch_colabfold_db,
                 ch_uniref30
             )
-            ch_a3m = MMSEQS_COLABFOLDSEARCH.out.a3m
+            ch_generated_msa = MMSEQS_COLABFOLDSEARCH.out.a3m
         } else {
             ch_batches = MULTIFASTA_TO_CSV.out.input_csv
                 .map { meta, csv -> [meta.id, meta, csv] }
@@ -82,7 +83,7 @@ workflow COLABFOLD {
                     }
                 }
             MMSEQS_COLABFOLDSEARCH_BATCH(ch_batches, ch_colabfold_db, ch_uniref30)
-            ch_a3m = MMSEQS_COLABFOLDSEARCH_BATCH.out.a3m
+            ch_generated_msa = MMSEQS_COLABFOLDSEARCH_BATCH.out.a3m
                 .flatMap { batch_meta, files ->
                     def batch_files = files instanceof List ? files : [files]
                     batch_files.collect { file ->
@@ -93,16 +94,14 @@ workflow COLABFOLD {
                     }
                 }
         }
-
-        //
-        // MODULE: Run colabfold
-        //
-        COLABFOLD_BATCH(
-            ch_a3m
-                .combine(ch_colabfold_params),
-            num_recycles
-        )
+        ch_colabfold_input = ch_colabfold_input.mix(ch_generated_msa)
     }
+
+    COLABFOLD_BATCH(
+        ch_colabfold_input
+            .combine(ch_colabfold_params),
+        num_recycles
+    )
 
     COLABFOLD_BATCH
         .out
