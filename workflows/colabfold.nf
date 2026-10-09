@@ -122,6 +122,8 @@ workflow COLABFOLD {
     chainwise_iptm = ch_chainwise_iptm_final // channel: [ id, /path/to/*_chainwise_iptm.tsv ]
     chainwise_ipsae = ch_chainwise_ipsae_final // channel: [ id, /path/to/*_chainwise_ipsae.tsv ]
     multiqc_metrics = ch_multiqc_metrics // channel: [ [id:..., model:...], [metric tsvs] ]
+    plddt           = modeChannel(COLABFOLD_BATCH.out.plddt, "colabfold")
+    ptm             = modeChannel(COLABFOLD_BATCH.out.ptms, "colabfold")
 }
 
 /*

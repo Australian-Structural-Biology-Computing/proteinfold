@@ -102,6 +102,30 @@
                     "fa_icon": "fas fa-link",
                     "format": "uri",
                     "errorMessage": "Please provide a valid URL for the MMSeqs2 API server"
+                },
+                "write_modelcif": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Assemble modelCIF (.mmcif/.bcif) deposits for every predicted structure (requires modelCIF-compatible outputs).",
+                    "help_text": "Runs ASSEMBLE_MODELCIF + CIFCHECK per sample+model; outputs land under results/modelcif/."
+                },
+                "modelcif_binary": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Write compressed binaryCIF (.bcif) instead of text mmCIF.",
+                    "help_text": "Adds --write_binary to populate_modelcif.py (requires msgpack)."
+                },
+                "modelcif_pae_embed": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Embed PAE matrices as local-pairwise QA metrics instead of linking as associated files.",
+                    "help_text": "Adds --pae-embed to populate_modelcif.py."
+                },
+                "modelcif_software_details": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Optional YAML with software/protocol metadata (e.g. template search attribution).",
+                    "help_text": "Passed to populate_modelcif.py --software_details."
                 }
             }
         },
