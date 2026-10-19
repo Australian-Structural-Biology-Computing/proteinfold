@@ -4,6 +4,7 @@
 import argparse
 import csv
 import os
+<<<<<<< HEAD
 import re
 import sys
 import warnings
@@ -11,6 +12,10 @@ try:
   import yaml
 except ImportError:
   yaml = None
+=======
+import sys
+import yaml
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
 
 import modelcif
 import modelcif.model
@@ -18,7 +23,10 @@ import modelcif.dumper
 import modelcif.qa_metric
 import modelcif.protocol
 import modelcif.data
+<<<<<<< HEAD
 import modelcif.associated
+=======
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
 
 from Bio import PDB
 from Bio.PDB.Polypeptide import protein_letters_3to1 as _aa3to1
@@ -37,6 +45,7 @@ _SOFTWARE_INFO = {
     'rosettafold_all_atom': ('RoseTTAFold-All-Atom',  'https://github.com/baker-laboratory/RoseTTAFold-All-Atom', 'protein structure prediction'),
 }
 
+<<<<<<< HEAD
 # Tools that can be attributed to the template search step (#579); version,
 # when known, comes from the run module's topic: channel via --template_version
 # or the template_search_step spec.
@@ -57,12 +66,15 @@ _PLDDT_METRIC_CLASSES = {
     'plddt-allatom01':  modelcif.qa_metric.PLDDTAllAtom01,
 }
 
+=======
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
 def parse_args(args=None):
     parser = argparse.ArgumentParser(
         description='Convert prediction structures and available quality metrics to ModelCIF.'
     )
     parser.add_argument('--structs', required=True, nargs='+',
                         help='Input structure files (PDB or mmCIF), one per rank in rank order.')
+<<<<<<< HEAD
     parser.add_argument('--msa',     required=True, help='*_msa.tsv from extract_metrics.py.')
     parser.add_argument('--plddt',   required=True, help='*_plddt.tsv from extract_metrics.py.')
 <<<<<<< HEAD
@@ -112,6 +124,13 @@ def parse_args(args=None):
                         help="Declared metric type of the values in --plddt (no rescaling is performed): "
                              "'plddt' = lDDT-CA in [0,100] (default), 'plddt01' = lDDT-CA in [0,1], "
                              "'plddt-allatom' = all-atom lDDT in [0,100], 'plddt-allatom01' = all-atom lDDT in [0,1].")
+=======
+    parser.add_argument('--plddt',   required=True, help='*_plddt.tsv from extract_metrics.py.')
+    parser.add_argument('--name',    required=True)
+    parser.add_argument('--prog',         required=True)
+    parser.add_argument('--versions_yml', default=None, help='versions.yml emitted by the upstream run_* module.')
+    parser.add_argument('--output',       default=None)
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
     return parser.parse_args(args)
 
 
@@ -119,7 +138,10 @@ def parse_args(args=None):
 # Structure helpers
 # ---------------------------------------------------------------------------
 
+<<<<<<< HEAD
 # So proteinfold can handle the structure files from any ${meta.mode} structure prediction module
+=======
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
 def _parse_structure(struct_file):
     """Parse a PDB or mmCIF file with BioPython and return the structure."""
     ext = os.path.splitext(struct_file)[1].lower()
@@ -128,9 +150,13 @@ def _parse_structure(struct_file):
     elif ext == '.pdb':
         parser = PDB.PDBParser(QUIET=True)
     else:
+<<<<<<< HEAD
         raise ValueError(
             f"Unsupported structure format: {ext} for file {struct_file}"
             "Expected .pdb, .cif, or .mmcif")
+=======
+        raise ValueError(f'Unsupported structure format: {ext!r}')
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
     return parser.get_structure('model', struct_file)
 
 
@@ -148,6 +174,7 @@ def _read_sw_version(versions_yml, prog):
     """
     Extract the version string for *prog* from a Nextflow versions.yml.
 
+<<<<<<< HEAD
     """
     if versions_yml is None or not os.path.exists(versions_yml):
         return None
@@ -155,10 +182,23 @@ def _read_sw_version(versions_yml, prog):
     if yaml is None:
         return None
 
+=======
+    The file has the format::
+
+        "PROCESS:NAME":
+            alphafold2: abc123
+            python: 3.11.0
+
+    Returns None if the file is absent or the key is not found.
+    """
+    if versions_yml is None or not os.path.exists(versions_yml):
+        return None
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
     with open(versions_yml) as fh:
         data = yaml.safe_load(fh)
     if not isinstance(data, dict):
         return None
+<<<<<<< HEAD
     # Traditional nf-core versions files nest tools below a process name.
     # The pipeline-wide MultiQC file instead flattens them as
     # "PROCESS:tool": version, so accept both representations.
@@ -294,6 +334,11 @@ def _read_msa_tsv(msa_tsv):
             if alignment_length == 0:
                 alignment_length = len(line.split('\t'))
     return num_seqs, alignment_length
+=======
+    # The single top-level key is the process name; we don't care what it is.
+    process_versions = next(iter(data.values()), {})
+    return process_versions.get(prog.lower())
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
 
 
 def _read_plddt_tsv(plddt_tsv):
@@ -312,6 +357,7 @@ def _read_plddt_tsv(plddt_tsv):
         (k for k in rows[0].keys() if k.startswith('rank_')),
         key=lambda k: int(k.split('_', 1)[1]),
     )
+<<<<<<< HEAD
     if not rank_cols:
         raise ValueError(
             f"No 'rank_X' columns found in {plddt_tsv}. Expected a header like "
@@ -576,6 +622,11 @@ def _read_seed_values(seed_arg, struct_files, num_ranks):
 
 =======
 >>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
+=======
+    return {col: [float(row[col]) for row in rows] for col in rank_cols}
+
+
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
 # ---------------------------------------------------------------------------
 # modelcif Model subclass
 # ---------------------------------------------------------------------------
@@ -583,17 +634,23 @@ def _read_seed_values(seed_arg, struct_files, num_ranks):
 class _StructureModel(modelcif.model.AbInitioModel):
     """Wrap a BioPython structure as a modelCIF AbInitioModel."""
 
+<<<<<<< HEAD
     # While AlphaFold does use templates and MSAs for homology, the deep learning methods are a different approach and *can* be run template and MSA-free
     # I think "ab initio" is still the best fit for the modelCIF class features, and wider support for various EvoFormer base models
     # I was planning to capture MSA, DB, and template in the protocol steps --helped by nextflow-- rather than as an inseparable model attribute.
     # See (to be implemented later) .protoctol.TemplateSearch() and .protocol.CoevolutionMSA() in the modelCIF spec
 
+=======
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
     def __init__(self, assembly, asym_map, biopython_structure, **kwargs):
         super().__init__(assembly=assembly, **kwargs)
         self._biopy_struct = biopython_structure
         self._asym_map = asym_map  # chain_id -> modelcif.AsymUnit
 
+<<<<<<< HEAD
     # By defining the get_atoms() generator the modelcif library will populate model.atoms cleanly from BioPython structure data
+=======
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
     def get_atoms(self):
         bp_model = next(self._biopy_struct.get_models())
         for chain in bp_model:
@@ -606,7 +663,10 @@ class _StructureModel(modelcif.model.AbInitioModel):
                     continue
                 for atom in res.get_atoms():
                     elem = (atom.element or atom.name[0]).strip().capitalize()
+<<<<<<< HEAD
                     # Remember this is basically BioPython PDB .atom() data -> modelcif.model.Atom, so we have to convert types and rename some fields.
+=======
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
                     yield modelcif.model.Atom(
                         asym_unit=asym,
                         seq_id=seq_id,
@@ -626,6 +686,7 @@ class _StructureModel(modelcif.model.AbInitioModel):
 # Piece together the modelCIF system from the structure and pLDDT data
 # ---------------------------------------------------------------------------
 
+<<<<<<< HEAD
 def build_modelcif(
     struct_files,
     plddt_file,
@@ -667,6 +728,11 @@ def build_modelcif(
 ):
     """
     Build a modelcif.System from ranked structure files and QA metric .tsv files.
+=======
+def build_modelcif(struct_files, plddt_file, name, prog, sw_version=None):
+    """
+    Build a modelcif.System from ranked structure files and a pLDDT TSV.
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
 
     Parameters
     ----------
@@ -675,6 +741,7 @@ def build_modelcif(
         Each file becomes a separate model in the output ModelGroup.
     plddt_file : str
         Path to *_plddt.tsv from extract_metrics.py.
+<<<<<<< HEAD
     msa_file : str
         Path to *_msa.tsv from extract_metrics.py.
 <<<<<<< HEAD
@@ -700,12 +767,15 @@ def build_modelcif(
         Path to *_chainwise_ipsae.tsv; same representation as chainwise_iptm.
 =======
 >>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
+=======
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
     name : str
         Sample / sequence identifier used in titles and file naming.
     prog : str
         Prediction program key (see _SOFTWARE_INFO).
     sw_version : str, optional
         Version string parsed from the upstream versions.yml.
+<<<<<<< HEAD
     msa_tool : str, optional
         MSA search tool name (e.g. ``'jackhmmer'``, ``'hhblits'``, ``'mmseqs2'``).
         Embedded in the CoevolutionMSA protocol step name.
@@ -714,11 +784,14 @@ def build_modelcif(
     pae_embed : bool, optional
         If True, embed PAE values as local-pairwise QA metrics.
 >>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
+=======
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
 
     Returns
     -------
     modelcif.System
     """
+<<<<<<< HEAD
     software_details = software_details or {}
 <<<<<<< HEAD
     if plddt_scale not in _PLDDT_METRIC_CLASSES:
@@ -793,6 +866,10 @@ def build_modelcif(
     pae_matrix = _read_pae_tsv(pae_file) if pae_embed else None
 >>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
     msa_num_seqs, msa_length = _read_msa_tsv(msa_file)
+=======
+    biopy_structs = [_parse_structure(f) for f in struct_files]
+    plddt_by_rank = _read_plddt_tsv(plddt_file)
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
 
     system = modelcif.System(title=f'{name} predicted by {prog}')
 
@@ -819,10 +896,14 @@ def build_modelcif(
     if not asym_map:
         raise ValueError(
 <<<<<<< HEAD
+<<<<<<< HEAD
             f'No standard polymer residues found in {selected_struct_files[0]}. '
 =======
             f'No standard polymer residues found in {struct_files[0]}. '
 >>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
+=======
+            f'No standard polymer residues found in {struct_files[0]!r}. '
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
             'Cannot build modelCIF system.'
         )
 
@@ -837,6 +918,7 @@ def build_modelcif(
         sw_location       = 'unknown'
         sw_classification = 'protein structure prediction'
 
+<<<<<<< HEAD
     details_defaults = software_details.get('defaults', {})
     details_programs = software_details.get('programs', {})
     details_for_prog = details_programs.get(prog.lower(), {})
@@ -949,6 +1031,31 @@ def build_modelcif(
         )
         if len(plddt_values) != residue_count:
             raise ValueError(f'{rank_key}: expected {residue_count} pLDDT values, got {len(plddt_values)}')
+=======
+    software = modelcif.Software(
+        name=sw_name,
+        classification=sw_classification,
+        description=f'{sw_name} structure prediction',
+        location=sw_location,
+        version=sw_version,  # None if not supplied; modelcif accepts this
+    )
+    system.software.append(software)
+
+    # ---- pLDDT QA metric class ------------------------------------------
+    class LocalPLDDT(modelcif.qa_metric.Local, modelcif.qa_metric.PLDDT):
+        """Predicted lDDT-CA score in [0,100] output by the folding software"""
+
+    LocalPLDDT.software = software
+
+    # ---- One model per ranked structure ---------------------------------
+    # Pair each struct file with the matching rank_N column from the TSV.
+    # zip() stops at the shorter of the two, so a mismatch never raises.
+    models = []
+    for biopy_struct, (rank_key, plddt_values) in zip(
+        biopy_structs, plddt_by_rank.items()
+    ):
+        bp_model_i = next(biopy_struct.get_models())
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
         model = _StructureModel(
             assembly=assembly,
             asym_map=asym_map,
@@ -959,6 +1066,7 @@ def build_modelcif(
         # Assign per-residue pLDDT for this rank in residue order across all
         # chains, matching the column order written by
         # extract_metrics.extract_structs_plddt_to_tsv.
+<<<<<<< HEAD
         if plddt_values is not None:
             plddt_iter = iter(plddt_values)
             for chain in bp_model_i:
@@ -1090,11 +1198,30 @@ def build_modelcif(
     # So model.ModelGroup is great here since every single inference from a multi-model method (e.g. AlphaFold)
     # is captured coordinates-wise as a separate structure to inspect, but the protocol and software metadata is shared across them.
 >>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
+=======
+        plddt_iter = iter(plddt_values)
+        for chain in bp_model_i:
+            asym = asym_map.get(chain.id)
+            if asym is None:
+                continue
+            seq_id = 1
+            for res in chain.get_residues():
+                if res.id[0] != ' ':
+                    continue
+                model.qa_metrics.append(
+                    LocalPLDDT(asym.residue(seq_id), next(plddt_iter))
+                )
+                seq_id += 1
+
+        models.append(model)
+
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
     model_group = modelcif.model.ModelGroup(models, name='All models')
     system.model_groups.append(model_group)
 
     # ---- Protocol -------------------------------------------------------
     protocol = modelcif.protocol.Protocol()
+<<<<<<< HEAD
 
 <<<<<<< HEAD
     msa_step_cfg = protocol_cfg.get('msa_step', {})
@@ -1173,10 +1300,18 @@ def build_modelcif(
         name=modeling_step_cfg.get('name', 'Structure prediction'),
         details=modeling_step_cfg.get('details'),
         software=_step_software(software, execution_software, modeling_step_cfg),
+=======
+    step = modelcif.protocol.ModelingStep(
+        input_data=modelcif.data.DataGroup([]),
+        output_data=modelcif.data.DataGroup(models),
+        name='Structure prediction',
+        software=software,
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
     )
     protocol.steps.append(step)
     system.protocols.append(protocol)
 
+<<<<<<< HEAD
     if not pae_embed:
 <<<<<<< HEAD
         associated_files = []
@@ -1211,12 +1346,15 @@ def build_modelcif(
 >>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
         )
 
+=======
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
     return system
 
 
 def main(args=None):
     args = parse_args(args)
 
+<<<<<<< HEAD
     if args.write_binary:
         import msgpack  # Only required when writing BinaryCIF; not a hard dependency otherwise. Should be environment.yml but being defensive
         output_file = args.output or f'{args.name}_{args.prog}.bcif'
@@ -1293,6 +1431,15 @@ def main(args=None):
 
     with open(output_file, open_mode) as fh:
         modelcif.dumper.write(fh, [system], format=fmt)
+=======
+    output_file = args.output or f'{args.name}_{args.prog}.mmcif'
+
+    sw_version = _read_sw_version(args.versions_yml, args.prog)
+    system = build_modelcif(args.structs, args.plddt, args.name, args.prog, sw_version)
+
+    with open(output_file, 'w') as fh:
+        modelcif.dumper.write(fh, [system])
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
 
     print(f'Written: {output_file}', file=sys.stderr)
 

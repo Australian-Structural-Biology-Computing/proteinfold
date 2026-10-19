@@ -5,6 +5,7 @@ process ASSEMBLE_MODELCIF {
     conda "${moduleDir}/environment.yml"
     container 'ghcr.io/keiran-rowell-unsw/proteinfold-modelcif:1.7'
 
+<<<<<<< HEAD
     // Unpack the tuple assuming every value used is at the path. Pass along a DUMMY_FILE so that the path is always occupied.
     // The populate_modelcif.py can explicitly trigger if the arg.metric is a DUMMY_FILE, and if so, appropriately account for the non-existence of that in the model metadata
     // This is also means no hand-crafted exceptions for particular programs that doesn't make use of some input (MSA - EMSFold), they all obey the same take: pipleline logic
@@ -83,4 +84,22 @@ process ASSEMBLE_MODELCIF {
     END_VERSIONS
     """
 
+=======
+    input:
+    tuple val(meta), path(struct), path(plddt)
+
+    output:
+    tuple val(meta), path("*.mmcif"), emit: modelcif
+    path "versions.yml", emit: versions
+
+    script:
+    """
+    populate_modelcif.py --structs ${struct} --plddt ${plddt} --name ${meta.id} --prog ${meta.model}
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        modelcif: \$(python3 -c "import modelcif; print(modelcif.__version__)")
+    END_VERSIONS
+    """
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
 }

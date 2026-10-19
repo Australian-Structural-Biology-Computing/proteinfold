@@ -1,5 +1,6 @@
 nextflow_process {
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 =======
 >>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
@@ -76,11 +77,19 @@ nextflow_process {
 =======
     test("dummy inputs produce modelcif with associated PAE") {
 >>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
+=======
+    name "Test minimal ModelCIF assembly"
+    script "../modules/local/assemble_modelcif/main.nf"
+    process "ASSEMBLE_MODELCIF"
+
+    test("one structure and pLDDT produce a parseable ModelCIF") {
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
         when {
             params {
                 outdir = "$outputDir"
             }
             process {
+<<<<<<< HEAD
                 (0..1).each { rank ->
                     new File(outputDir, "rank_${rank}.mmcif").text = new File(projectDir, 'assets/DUMMY_MODELCIF.mmcif').text
                     new File(outputDir, "rank_${rank}_pae.tsv").text = new File(projectDir, 'assets/DUMMY_PAE.tsv').text
@@ -118,6 +127,13 @@ nextflow_process {
 =======
                     file("$projectDir/assets/NO_FILE", checkIfExists: true)
 >>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
+=======
+                """
+                input[0] = [
+                    [id: 'test', model: 'alphafold2'],
+                    file("$projectDir/assets/DUMMY_MODELCIF.mmcif", checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_PLDDT.tsv", checkIfExists: true)
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
                 ]
                 """
             }
@@ -125,6 +141,7 @@ nextflow_process {
         then {
             assert process.success
             def outputFile = path(process.out.modelcif[0][1])
+<<<<<<< HEAD
             assert outputFile.text.contains('_ma_qa_metric')
             assert outputFile.text.contains('_ma_protocol_step')
             (0..1).each { rank ->
@@ -506,4 +523,11 @@ nextflow_process {
         }
     }
 >>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
+=======
+            assert outputFile.text.contains('_ma_model_list')
+            assert outputFile.text.contains('_ma_protocol_step')
+            assert path(process.out.versions[0]).getFileName().toString() == 'versions.yml'
+        }
+    }
+>>>>>>> e5ee7607 (Create minimal ModelCIF from one structure and pLDDT)
 }
