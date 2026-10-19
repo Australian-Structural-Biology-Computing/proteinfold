@@ -10,7 +10,11 @@ process ASSEMBLE_MODELCIF {
     // This is also means no hand-crafted exceptions for particular programs that doesn't make use of some input (MSA - EMSFold), they all obey the same take: pipleline logic
     // TODO: Unsure at this stage best way forward with chain-wise paths. At least modelCIF has the asymmetric unit entity, so we *could* DUMMY_FILE, but I do like the philosophy of don't check things that *can't* exist
     input:
+<<<<<<< HEAD
     tuple val(meta), path(structs), path(msa), path(plddt), path(pae), path(ptm), path(iptm), path(versions_yml, stageAs: 'versions_input/versions.yml'), path(software_details)
+=======
+    tuple val(meta), path(structs), path(msa), path(plddt), path(pae), path(ptm), path(iptm), path(versions_yml), path(software_details)
+>>>>>>> 376b61c1 (Add software and protocol provenance from details YAML)
 
     output:
     tuple val(meta), path("*.{mmcif,bcif}"), emit: modelcif
@@ -30,6 +34,7 @@ process ASSEMBLE_MODELCIF {
     def container = task.container ?: 'None'
     def no_template_search = meta.no_template_search ? '--no-template-search' : ''
     """
+<<<<<<< HEAD
     mkdir pae
     cp ${pae} pae/
     populate_modelcif.py \\
@@ -57,6 +62,9 @@ process ASSEMBLE_MODELCIF {
         with open(output, 'rb' if binary else 'r') as fh:
             assert modelcif.reader.read(fh, format='BCIF' if binary else 'mmCIF')
     PY
+=======
+    populate_modelcif.py --structs ${structs} --msa ${msa} --plddt ${plddt} --pae ${pae} --ptm ${ptm} --iptm ${iptm} --name ${meta.id} --prog ${meta.model} --versions_yml ${versions_yml} --msa_tool ${meta.msa_tool ?: 'None'} --software_details ${software_details} $args
+>>>>>>> 376b61c1 (Add software and protocol provenance from details YAML)
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

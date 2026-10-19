@@ -95,7 +95,11 @@ def parse_args(args=None):
     parser.add_argument('--prog',         required=True)
     parser.add_argument('--msa_tool',     default=None, help='MSA search tool used (e.g. jackhmmer, hhblits, mmseqs2). Embedded in the CoevolutionMSA protocol step.')
     parser.add_argument('--versions_yml', default=None, help='versions.yml emitted by the upstream run_* module.')
+<<<<<<< HEAD
     parser.add_argument('--software_details', default=None, help='YAML file describing software and protocol step metadata.')
+=======
+    parser.add_argument('--software_details', required=True, help='YAML file describing software and protocol step metadata.')
+>>>>>>> 376b61c1 (Add software and protocol provenance from details YAML)
     parser.add_argument('--output',       default=None)
     parser.add_argument('--all-structs',  action='store_true', help='Include all parseable files passed via --structs as models. This is enabled automatically when more than one structure file is supplied.')
     parser.add_argument('--write_binary', action='store_true', help='Write BinaryCIF (.bcif) output instead of text mmCIF. Requires the msgpack package.')
@@ -165,8 +169,11 @@ def _read_sw_version(versions_yml, prog):
 
 def _read_software_details_yml(software_details):
     """Load software/protocol metadata from an explicit YAML path."""
+<<<<<<< HEAD
     if software_details in (None, 'None'):
         return {}
+=======
+>>>>>>> 376b61c1 (Add software and protocol provenance from details YAML)
     if not os.path.exists(software_details):
         raise ValueError(f"software_details file not found: {software_details}")
     with open(software_details) as fh:
@@ -208,11 +215,15 @@ def _software_from_spec(spec, fallback_name, fallback_location, fallback_classif
 
 
 def _step_software(main_software, execution_software, step_cfg):
+<<<<<<< HEAD
     """Resolve step software as Software, SoftwareWithParameters or SoftwareGroup.
 
     SoftwareWithParameters is duck-typed by the dumper (.software/.parameters),
     so singletons of it must be wrapped in a group for parameters to be written.
     """
+=======
+    """Resolve protocol step software as Software or SoftwareGroup."""
+>>>>>>> 376b61c1 (Add software and protocol provenance from details YAML)
     use_main = step_cfg.get('use_main_software', True)
     use_execution = step_cfg.get('use_execution_software', False)
 
@@ -224,7 +235,11 @@ def _step_software(main_software, execution_software, step_cfg):
 
     if not members:
         return main_software
+<<<<<<< HEAD
     if len(members) == 1 and isinstance(members[0], modelcif.Software):
+=======
+    if len(members) == 1:
+>>>>>>> 376b61c1 (Add software and protocol provenance from details YAML)
         return members[0]
     return modelcif.SoftwareGroup(members)
 
@@ -577,6 +592,7 @@ def build_modelcif(
     chainwise_ipsae_file=None,
     sw_version=None,
     msa_tool=None,
+<<<<<<< HEAD
     software_details=None,
     all_structs=None,
     plddt_scale='plddt',
@@ -586,6 +602,10 @@ def build_modelcif(
     template_software=None,
     template_version=None,
     no_template_search=False,
+=======
+    pae_embed=False,
+    software_details=None,
+>>>>>>> 376b61c1 (Add software and protocol provenance from details YAML)
 ):
     """
     Build a modelcif.System from ranked structure files and QA metric .tsv files.
@@ -629,6 +649,7 @@ def build_modelcif(
     modelcif.System
     """
     software_details = software_details or {}
+<<<<<<< HEAD
     if plddt_scale not in _PLDDT_METRIC_CLASSES:
         raise ValueError(
             f"Unknown plddt_scale '{plddt_scale}'; "
@@ -660,6 +681,10 @@ def build_modelcif(
     else:
         selected_struct_files = [struct_files[0]]
         biopy_structs = [_parse_structure(struct_files[0])]
+=======
+
+    biopy_structs = [_parse_structure(f) for f in struct_files]
+>>>>>>> 376b61c1 (Add software and protocol provenance from details YAML)
     plddt_by_rank = _read_plddt_tsv(plddt_file)
     if len(biopy_structs) != len(plddt_by_rank):
         raise ValueError(
@@ -953,6 +978,7 @@ def build_modelcif(
 
     msa_step_cfg = protocol_cfg.get('msa_step', {})
     modeling_step_cfg = protocol_cfg.get('modeling_step', {})
+<<<<<<< HEAD
     template_search_cfg = None if no_template_search else protocol_cfg.get('template_search_step')
 
     # Optional template search step (e.g. AF2/AF3-family programs):
@@ -993,6 +1019,8 @@ def build_modelcif(
             software=tpl_step_sw,
         )
         protocol.steps.append(template_search)
+=======
+>>>>>>> 376b61c1 (Add software and protocol provenance from details YAML)
 
     msa_data = modelcif.data.Data(
         'Coevolution MSA',
@@ -1070,6 +1098,7 @@ def main(args=None):
     prog_params = extra_params  # merged over built-in facts in build_modelcif
     all_structs = args.all_structs or len(args.structs) > 1
     system = build_modelcif(
+<<<<<<< HEAD
         plddt_scale=args.plddt_scale,
         container_image=container_image,
         seed_values=seed_values,
@@ -1092,6 +1121,20 @@ def main(args=None):
         sw_version=sw_version,
         msa_tool=msa_tool,
         software_details=software_details,
+=======
+        args.structs,
+        args.plddt,
+        args.msa,
+        args.pae,
+        args.ptm,
+        args.iptm,
+        args.name,
+        args.prog,
+        sw_version,
+        msa_tool,
+        args.pae_embed,
+        software_details,
+>>>>>>> 376b61c1 (Add software and protocol provenance from details YAML)
     )
 
     with open(output_file, open_mode) as fh:
