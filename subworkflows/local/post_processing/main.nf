@@ -6,16 +6,8 @@
 // SUBWORKFLOW: Consisting entirely of nf-core/modules
 //
 include { paramsSummaryMap       } from 'plugin/nf-schema'
-include { paramsSummaryMultiqc   } from '../nf-core/utils_nfcore_pipeline'
-include { methodsDescriptionText } from './utils_nfcore_proteinfold_pipeline'
-
-include { GENERATE_REPORT     } from '../../modules/local/generate_report'
-include { GENERATE_MULTIQC_CONTENTS } from '../../modules/local/generate_multiqc_contents'
-include { COMPARE_STRUCTURES  } from '../../modules/local/compare_structures'
-include { FOLDSEEK_EASYSEARCH } from '../../modules/nf-core/foldseek/easysearch/main'
-include { MULTIQC             } from '../../modules/nf-core/multiqc/main'
-include { MODELCIF_ASSEMBLE    } from '../../modules/local/assemble_modelcif/main'
-include { CIFCHECK             } from '../../modules/local/cifcheck/main'
+include { paramsSummaryMultiqc   } from '../../nf-core/utils_nfcore_pipeline'
+include { methodsDescriptionText } from '../utils_nfcore_proteinfold_pipeline'
 
 
 workflow POST_PROCESSING {
@@ -40,6 +32,9 @@ workflow POST_PROCESSING {
     ch_top_ranked_model
     ch_modelcif
     write_modelcif
+    modelcif_binary
+    modelcif_pae_embed
+    modelcif_software_details
 
     main:
     def ch_comparison_report_files = channel.empty()
@@ -48,9 +43,12 @@ workflow POST_PROCESSING {
 
     if (write_modelcif) {
         MODELCIF_ASSEMBLE(ch_modelcif)
-        CIFCHECK(MODELCIF_ASSEMBLE.out.modelcif.map { meta, cif ->
-            [meta, cif, file("$projectDir/bin/dicts/mmcif_ma.sdb", checkIfExists: true)]
-        })
+        MODELCIF_VALIDATE(MODELCIF_ASSEMBLE.out.modelcif)
+        CIFCHECK(
+            MODELCIF_VALIDATE.out.modelcif.map { meta, modelcif ->
+                [meta, modelcif, file("$projectDir/bin/dicts/mmcif_ma.sdb", checkIfExists: true)]
+            }
+        )
         ch_modelcif_published = CIFCHECK.out.modelcif
     }
 
