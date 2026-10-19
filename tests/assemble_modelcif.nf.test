@@ -1,9 +1,13 @@
 nextflow_process {
+<<<<<<< HEAD
 
+=======
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
     name "Test metrics are inserted properly by ASSEMBLE_MODELCIF process"
     script "../modules/local/assemble_modelcif/main.nf"
     process "ASSEMBLE_MODELCIF"
 
+<<<<<<< HEAD
     tag "assemble_modelcif"
     config "./assemble_modelcif_software.config"
 
@@ -69,6 +73,9 @@ nextflow_process {
 
     test("dummy inputs produce modelcif with associated PAE") {
 
+=======
+    test("dummy inputs produce modelcif with associated PAE") {
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
         when {
             params {
                 outdir = "$outputDir"
@@ -87,6 +94,7 @@ nextflow_process {
                 """
                 input[0] = [
                     [id: 'test', model: 'alphafold2', msa_tool: 'jackhmmer'],
+<<<<<<< HEAD
                     [file("$outputDir/rank_0.mmcif"), file("$outputDir/rank_1.mmcif")],
                     file("$projectDir/assets/DUMMY_MSA.tsv", checkIfExists: true),
 <<<<<<< HEAD
@@ -95,13 +103,21 @@ nextflow_process {
                     file("$outputDir/ptm.tsv", checkIfExists: true),
                     file("$outputDir/iptm.tsv", checkIfExists: true),
 =======
+=======
+                    file("$projectDir/assets/DUMMY_MODELCIF.mmcif", checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_MSA.tsv", checkIfExists: true),
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
                     file("$projectDir/assets/DUMMY_PLDDT.tsv", checkIfExists: true),
                     file("$projectDir/assets/DUMMY_PAE.tsv", checkIfExists: true),
                     file("$projectDir/assets/DUMMY_PTM.tsv", checkIfExists: true),
                     file("$projectDir/assets/DUMMY_IPTM.tsv", checkIfExists: true),
+<<<<<<< HEAD
 >>>>>>> 376b61c1 (Add software and protocol provenance from details YAML)
                     file("$projectDir/assets/DUMMY_SOFTWARE_VERSIONS.yml", checkIfExists: true),
                     file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
+=======
+                    file("$projectDir/assets/NO_FILE", checkIfExists: true)
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
                 ]
                 """
             }
@@ -175,11 +191,18 @@ nextflow_process {
         }
     }
 
+<<<<<<< HEAD
     test("rejects a mismatch between structures and pLDDT ranks") {
+=======
+    test("dummy inputs produce modelcif with embedded PAE") {
+        config "./assemble_modelcif_embed.config"
+
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
         when {
             process {
                 """
                 input[0] = [
+<<<<<<< HEAD
                     [ id: 'test', model: 'alphafold2', msa_tool: 'jackhmmer' ],
                     file("$projectDir/assets/DUMMY_MODELCIF.mmcif", checkIfExists: true),
                     file("$projectDir/assets/DUMMY_MSA.tsv",         checkIfExists: true),
@@ -188,10 +211,21 @@ nextflow_process {
                     file("$projectDir/assets/DUMMY_PTM.tsv",         checkIfExists: true),
                     file("$projectDir/assets/DUMMY_IPTM.tsv",        checkIfExists: true),
                     file("$projectDir/assets/NO_FILE",               checkIfExists: true)
+=======
+                    [id: 'test_embed', model: 'alphafold2', msa_tool: 'jackhmmer'],
+                    file("$projectDir/assets/DUMMY_MODELCIF.mmcif", checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_MSA.tsv", checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_PLDDT.tsv", checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_PAE.tsv", checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_PTM.tsv", checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_IPTM.tsv", checkIfExists: true),
+                    file("$projectDir/assets/NO_FILE", checkIfExists: true)
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
                 ]
                 """
             }
         }
+<<<<<<< HEAD
 
         then {
             assert process.failed
@@ -462,4 +496,14 @@ nextflow_process {
         }
     }
 
+=======
+        then {
+            assert process.success
+            def outputFile = path(process.out.modelcif[0][1])
+            assert outputFile.text.contains('_ma_qa_metric_local_pairwise')
+            assert !outputFile.text.contains('_ma_entry_associated_files')
+            assert path(process.out.versions[0]).getFileName().toString() == 'versions.yml'
+        }
+    }
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
 }

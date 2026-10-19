@@ -65,6 +65,7 @@ def parse_args(args=None):
                         help='Input structure files (PDB or mmCIF), one per rank in rank order.')
     parser.add_argument('--msa',     required=True, help='*_msa.tsv from extract_metrics.py.')
     parser.add_argument('--plddt',   required=True, help='*_plddt.tsv from extract_metrics.py.')
+<<<<<<< HEAD
     parser.add_argument('--container_image', default=None,
                         help='Container image (URI) the prediction ran in; embedded as a '
                              'container_image software parameter (task.container).')
@@ -89,6 +90,10 @@ def parse_args(args=None):
     parser.add_argument('--pae-embed', action='store_true', help='Embed PAE as local-pairwise QA metrics in the primary modelCIF instead of as an associated file.')
     parser.add_argument('--pae', required=True, nargs='+',
                         help='Per-rank *_<rank>_pae.tsv files from extract_metrics.py, one per rank.')
+=======
+    parser.add_argument('--pae',     required=True, help='*_pae.tsv from extract_metrics.py.')
+    parser.add_argument('--pae-embed', action='store_true', help='Embed PAE as local-pairwise QA metrics in the primary modelCIF instead of as an associated file.')
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
     parser.add_argument('--ptm',     required=True, help='*_ptm.tsv from extract_metrics.py.')
     parser.add_argument('--iptm',    required=True, help='*_iptm.tsv from extract_metrics.py.')
     parser.add_argument('--name',    required=True)
@@ -268,6 +273,29 @@ def _read_msa_tsv(msa_tsv):
     return num_seqs, alignment_length
 
 
+def _read_msa_tsv(msa_tsv):
+    """
+    Parse the *_msa.tsv written by extract_metrics.py.
+
+    The file has no header; each row is one homologous sequence encoded as
+    tab-separated integers (0-21 per residue position).
+
+    Returns ``(num_seqs, alignment_length)`` where *num_seqs* is the MSA
+    depth and *alignment_length* is the number of residue columns.
+    """
+    num_seqs = 0
+    alignment_length = 0
+    with open(msa_tsv) as fh:
+        for line in fh:
+            line = line.rstrip('\n')
+            if not line:
+                continue
+            num_seqs += 1
+            if alignment_length == 0:
+                alignment_length = len(line.split('\t'))
+    return num_seqs, alignment_length
+
+
 def _read_plddt_tsv(plddt_tsv):
     """
     Parse the *_plddt.tsv written by extract_metrics.py.
@@ -297,8 +325,11 @@ def _read_ranked_score_tsv(tsv_file):
     scores = {}
     with open(tsv_file) as fh:
         for row in csv.reader(fh, delimiter='\t'):
+<<<<<<< HEAD
             if not row or (len(row) == 1 and not row[0].strip()):
                 continue
+=======
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
             if len(row) < 2:
                 raise ValueError(f"Malformed row in {tsv_file}: {row!r}")
             rank, value = row[0].strip(), row[1].strip()
@@ -308,6 +339,7 @@ def _read_ranked_score_tsv(tsv_file):
                 try:
                     rank = f"rank_{int(rank)}"
                 except ValueError:
+<<<<<<< HEAD
                     raise ValueError(f"Unrecognised rank label in {tsv_file}: {row!r}")
             try:
                 scores[rank] = float(value)
@@ -373,6 +405,16 @@ def _check_ranked_scores(scores, struct_ranks, label, tsv_file):
     return True
 
 
+=======
+                    continue
+            try:
+                scores[rank] = float(value)
+            except ValueError:
+                continue
+    return scores
+
+
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
 def _read_pae_tsv(pae_tsv):
     matrix = []
     with open(pae_tsv) as fh:
@@ -391,6 +433,7 @@ def _read_pae_tsv(pae_tsv):
     return matrix
 
 
+<<<<<<< HEAD
 def _read_chainwise_tsv(tsv_file):
     """
     Parse a *_chainwise_{iptm,ipsae}.tsv written by extract_metrics.py.
@@ -442,6 +485,8 @@ def _read_chainwise_tsv(tsv_file):
     return out
 
 
+=======
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
 def _read_ptm_tsv(ptm_tsv):
     return _read_ranked_score_tsv(ptm_tsv)
 
@@ -450,6 +495,7 @@ def _read_iptm_tsv(iptm_tsv):
     return _read_ranked_score_tsv(iptm_tsv)
 
 
+<<<<<<< HEAD
 _KNOWN_PROGRAM_MODELS = {
     # Verified against upstream docs/repos: AF2 has recycling and (in its
     # params) template use; AF3 runs template search in its data pipeline
@@ -528,6 +574,8 @@ def _read_seed_values(seed_arg, struct_files, num_ranks):
     return [infer_model_seed(f) for f in struct_files]
 
 
+=======
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
 # ---------------------------------------------------------------------------
 # modelcif Model subclass
 # ---------------------------------------------------------------------------
@@ -582,12 +630,17 @@ def build_modelcif(
     struct_files,
     plddt_file,
     msa_file,
+<<<<<<< HEAD
     pae_files,
     pae_embed,
+=======
+    pae_file,
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
     ptm_file,
     iptm_file,
     name,
     prog,
+<<<<<<< HEAD
     chainwise_iptm_file=None,
     chainwise_ipsae_file=None,
     sw_version=None,
@@ -606,6 +659,11 @@ def build_modelcif(
     pae_embed=False,
     software_details=None,
 >>>>>>> 376b61c1 (Add software and protocol provenance from details YAML)
+=======
+    sw_version=None,
+    msa_tool=None,
+    pae_embed=False,
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
 ):
     """
     Build a modelcif.System from ranked structure files and QA metric .tsv files.
@@ -619,21 +677,29 @@ def build_modelcif(
         Path to *_plddt.tsv from extract_metrics.py.
     msa_file : str
         Path to *_msa.tsv from extract_metrics.py.
+<<<<<<< HEAD
     pae_files : list[str]
         Paths to per-rank *_<rank>_pae.tsv files from extract_metrics.py.
     pae_embed : bool
         If True, embed PAE values as local-pairwise QA metrics in the main
         modelCIF. If False, keep PAE as an associated QA metrics file.
+=======
+    pae_file : str
+        Path to *_pae.tsv from extract_metrics.py.
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
     ptm_file : str
         Path to *_ptm.tsv from extract_metrics.py.
     iptm_file : str
         Path to *_iptm.tsv from extract_metrics.py.
+<<<<<<< HEAD
     chainwise_iptm_file : str, optional
         Path to *_chainwise_iptm.tsv; for multichain models the diagonal
         (per-chain pTM) is embedded as Feature metrics and off-diagonal
         (interface ipTM) as FeaturePairwise metrics (per #582).
     chainwise_ipsae_file : str, optional
         Path to *_chainwise_ipsae.tsv; same representation as chainwise_iptm.
+=======
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
     name : str
         Sample / sequence identifier used in titles and file naming.
     prog : str
@@ -643,6 +709,11 @@ def build_modelcif(
     msa_tool : str, optional
         MSA search tool name (e.g. ``'jackhmmer'``, ``'hhblits'``, ``'mmseqs2'``).
         Embedded in the CoevolutionMSA protocol step name.
+<<<<<<< HEAD
+=======
+    pae_embed : bool, optional
+        If True, embed PAE values as local-pairwise QA metrics.
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
 
     Returns
     -------
@@ -686,6 +757,7 @@ def build_modelcif(
     biopy_structs = [_parse_structure(f) for f in struct_files]
 >>>>>>> 376b61c1 (Add software and protocol provenance from details YAML)
     plddt_by_rank = _read_plddt_tsv(plddt_file)
+<<<<<<< HEAD
     if len(biopy_structs) != len(plddt_by_rank):
         raise ValueError(
             f'Expected one pLDDT rank per structure: got {len(biopy_structs)} '
@@ -715,6 +787,11 @@ def build_modelcif(
 
     cw_iptm_by_rank = _maybe_chainwise(chainwise_iptm_file, 'chainwise_iptm')
     cw_ipsae_by_rank = _maybe_chainwise(chainwise_ipsae_file, 'chainwise_ipsae')
+=======
+    ptm_by_rank = _read_ptm_tsv(ptm_file)
+    iptm_by_rank = _read_iptm_tsv(iptm_file)
+    pae_matrix = _read_pae_tsv(pae_file) if pae_embed else None
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
     msa_num_seqs, msa_length = _read_msa_tsv(msa_file)
 
     system = modelcif.System(title=f'{name} predicted by {prog}')
@@ -741,7 +818,11 @@ def build_modelcif(
 
     if not asym_map:
         raise ValueError(
+<<<<<<< HEAD
             f'No standard polymer residues found in {selected_struct_files[0]}. '
+=======
+            f'No standard polymer residues found in {struct_files[0]}. '
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
             'Cannot build modelCIF system.'
         )
 
@@ -818,6 +899,7 @@ def build_modelcif(
 
     LocalPairwisePAE.software = software
 
+<<<<<<< HEAD
     class ChainPTM(modelcif.qa_metric.Feature, modelcif.qa_metric.PTM):
         """pTM restricted to a single chain (diagonal of the chain-pair matrix)."""
 
@@ -853,6 +935,8 @@ def build_modelcif(
         system.software_groups.append(
             modelcif.SoftwareGroup([modelcif.SoftwareWithParameters(software, params)]))
 
+=======
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
     # ---- One model per ranked structure ---------------------------------
     # Pair each struct file with the matching rank_N column from the TSV.
     models = []
@@ -954,8 +1038,40 @@ def build_modelcif(
                     else:
                         model.qa_metrics.append(pair_cls(fa, fb, value))
 
+        if pae_embed:
+            model_residues = []
+            for chain in bp_model_i:
+                asym = asym_map.get(chain.id)
+                if asym is None:
+                    continue
+                seq_id = 1
+                for res in chain.get_residues():
+                    if res.id[0] != ' ':
+                        continue
+                    model_residues.append(asym.residue(seq_id))
+                    seq_id += 1
+
+            num_res = len(model_residues)
+            if len(pae_matrix) != num_res or len(pae_matrix[0]) != num_res:
+                raise ValueError(
+                    f"PAE matrix shape {len(pae_matrix)}x{len(pae_matrix[0])} does not match "
+                    f"the model residue count ({num_res}) for {rank_key}"
+                )
+
+            for i, residue_i in enumerate(model_residues):
+                for j, residue_j in enumerate(model_residues):
+                    model.qa_metrics.append(
+                        LocalPairwisePAE(residue_i, residue_j, pae_matrix[i][j])
+                    )
+
+        if rank_key in ptm_by_rank:
+            model.qa_metrics.append(GlobalPTM(ptm_by_rank[rank_key]))
+        if rank_key in iptm_by_rank:
+            model.qa_metrics.append(GlobalIpTM(iptm_by_rank[rank_key]))
+
         models.append(model)
 
+<<<<<<< HEAD
     # ---- Random seed(s) (#588) -------------------------------------------
     # seed_values[i] is the seed behind rank_i (None entries are skipped).
     # Multi-seed programs (e.g. alphafold3 seed x sample grids) get one
@@ -970,12 +1086,17 @@ def build_modelcif(
     # One model per inference in a single ModelGroup: distinct ordinal_id and
     # pdbx_model_number per model (verified, modelcif 1.7), so ChimeraX opens
     # them as separate #X.Y models sharing protocol/software metadata.
+=======
+    # So model.ModelGroup is great here since every single inference from a multi-model method (e.g. AlphaFold)
+    # is captured coordinates-wise as a separate structure to inspect, but the protocol and software metadata is shared across them.
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
     model_group = modelcif.model.ModelGroup(models, name='All models')
     system.model_groups.append(model_group)
 
     # ---- Protocol -------------------------------------------------------
     protocol = modelcif.protocol.Protocol()
 
+<<<<<<< HEAD
     msa_step_cfg = protocol_cfg.get('msa_step', {})
     modeling_step_cfg = protocol_cfg.get('modeling_step', {})
 <<<<<<< HEAD
@@ -1022,17 +1143,26 @@ def build_modelcif(
 =======
 >>>>>>> 376b61c1 (Add software and protocol provenance from details YAML)
 
+=======
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
     msa_data = modelcif.data.Data(
         'Coevolution MSA',
         details=f'{msa_num_seqs} sequences, {msa_length} columns',
     )
     system.data.append(msa_data)
     msa_step = modelcif.protocol.CoevolutionMSAStep(
+<<<<<<< HEAD
         input_data=msa_input_data,
         output_data=msa_data,
         name=msa_step_cfg.get('name', msa_tool),
         details=msa_step_cfg.get('details'),
         software=_step_software(software, execution_software, msa_step_cfg),
+=======
+        input_data=modelcif.data.DataGroup(list(seen_seqs.values())),
+        output_data=msa_data,
+        name=msa_tool,
+        software=software,
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
     )
     protocol.steps.append(msa_step)
 
@@ -1048,6 +1178,7 @@ def build_modelcif(
     system.protocols.append(protocol)
 
     if not pae_embed:
+<<<<<<< HEAD
         associated_files = []
         for rank in sorted(pae_by_rank):
             pae_data = modelcif.data.Data(
@@ -1064,6 +1195,20 @@ def build_modelcif(
             )
         system.repositories.append(
             modelcif.associated.Repository(url_root=None, files=associated_files)
+=======
+        pae_data = modelcif.data.Data(
+            'Predicted aligned error matrix',
+            details='Per-rank PAE matrices exported as TSV from extract_metrics.py',
+        )
+        system.data.append(pae_data)
+        pae_associated = modelcif.associated.QAMetricsFile(
+            path=os.path.basename(pae_file),
+            details='Predicted aligned error (PAE) values for this entry',
+            data=pae_data,
+        )
+        system.repositories.append(
+            modelcif.associated.Repository(url_root=None, files=[pae_associated])
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
         )
 
     return system
@@ -1081,6 +1226,7 @@ def main(args=None):
         open_mode, fmt = 'w', 'mmCIF'
 
     sw_version = _read_sw_version(args.versions_yml, args.prog)
+<<<<<<< HEAD
     software_details = _read_software_details_yml(args.software_details)
     # Nextflow emits the string 'None' when no msa_tool is known; normalise to Python None.
     msa_tool = None if args.msa_tool in (None, 'None') else args.msa_tool
@@ -1122,6 +1268,11 @@ def main(args=None):
         msa_tool=msa_tool,
         software_details=software_details,
 =======
+=======
+    # Nextflow emits the string 'None' when no msa_tool is known; normalise to Python None.
+    msa_tool = None if args.msa_tool in (None, 'None') else args.msa_tool
+    system = build_modelcif(
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
         args.structs,
         args.plddt,
         args.msa,
@@ -1133,8 +1284,11 @@ def main(args=None):
         sw_version,
         msa_tool,
         args.pae_embed,
+<<<<<<< HEAD
         software_details,
 >>>>>>> 376b61c1 (Add software and protocol provenance from details YAML)
+=======
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
     )
 
     with open(output_file, open_mode) as fh:

@@ -11,10 +11,14 @@ process ASSEMBLE_MODELCIF {
     // TODO: Unsure at this stage best way forward with chain-wise paths. At least modelCIF has the asymmetric unit entity, so we *could* DUMMY_FILE, but I do like the philosophy of don't check things that *can't* exist
     input:
 <<<<<<< HEAD
+<<<<<<< HEAD
     tuple val(meta), path(structs), path(msa), path(plddt), path(pae), path(ptm), path(iptm), path(versions_yml, stageAs: 'versions_input/versions.yml'), path(software_details)
 =======
     tuple val(meta), path(structs), path(msa), path(plddt), path(pae), path(ptm), path(iptm), path(versions_yml), path(software_details)
 >>>>>>> 376b61c1 (Add software and protocol provenance from details YAML)
+=======
+    tuple val(meta), path(structs), path(msa), path(plddt), path(pae), path(ptm), path(iptm), path(versions_yml)
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
 
     output:
     tuple val(meta), path("*.{mmcif,bcif}"), emit: modelcif
@@ -31,6 +35,7 @@ process ASSEMBLE_MODELCIF {
     // BinaryCIF output: pass --write_binary via task.ext.args.
     script:
     def args = task.ext.args ?: ''
+<<<<<<< HEAD
     def container = task.container ?: 'None'
     def no_template_search = meta.no_template_search ? '--no-template-search' : ''
     """
@@ -65,6 +70,10 @@ process ASSEMBLE_MODELCIF {
 =======
     populate_modelcif.py --structs ${structs} --msa ${msa} --plddt ${plddt} --pae ${pae} --ptm ${ptm} --iptm ${iptm} --name ${meta.id} --prog ${meta.model} --versions_yml ${versions_yml} --msa_tool ${meta.msa_tool ?: 'None'} --software_details ${software_details} $args
 >>>>>>> 376b61c1 (Add software and protocol provenance from details YAML)
+=======
+    """
+    populate_modelcif.py --structs ${structs} --msa ${msa} --plddt ${plddt} --pae ${pae} --ptm ${ptm} --iptm ${iptm} --name ${meta.id} --prog ${meta.model} --versions_yml ${versions_yml} --msa_tool ${meta.msa_tool ?: 'None'} $args
+>>>>>>> cc67c687 (Add MSA and confidence metrics to ModelCIF assembly)
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
