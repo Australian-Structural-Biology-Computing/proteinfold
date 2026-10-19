@@ -1,0 +1,58 @@
+nextflow_process {
+
+    name "Test Process MODELCIF_VALIDATE"
+    script "../modules/local/modelcif_validate/main.nf"
+    process "MODELCIF_VALIDATE"
+
+    tag "modelcif_validate"
+
+    test("dummy modelcif") {
+
+        when {
+            params {
+                outdir = "$outputDir"
+            }
+            process {
+                """
+                input[0] = [ [ id: 'test' ], file("$projectDir/assets/DUMMY_MODELCIF.mmcif", checkIfExists: true) ]
+                """
+            }
+        }
+
+        then {
+            assert process.success
+            assert path(process.out.versions[0]).getFileName().toString() == 'versions.yml'
+        }
+    }
+
+    test("rejects plain pdbx without ma content") {
+
+        when {
+            process {
+                """
+                input[0] = [ [ id: 'pdbx' ], file("$projectDir/assets/DUMMY_PDBX.mmcif", checkIfExists: true) ]
+                """
+            }
+        }
+
+        then {
+            assert process.failed
+        }
+    }
+
+    test("rejects invalid mmcif") {
+
+        when {
+            process {
+                """
+                input[0] = [ [ id: 'invalid' ], file("$projectDir/assets/DUMMY_INVALID.mmcif", checkIfExists: true) ]
+                """
+            }
+        }
+
+        then {
+            assert process.failed
+        }
+    }
+
+}
