@@ -1,0 +1,64 @@
+nextflow_process {
+
+    name "Test Process CIFCHECK"
+    script "../modules/local/cifcheck/main.nf"
+    process "CIFCHECK"
+
+    tag "cifcheck"
+
+    test("valid text ModelCIF") {
+        when {
+            params {
+                outdir = "$outputDir"
+            }
+            process {
+                """
+                input[0] = [ [ id: 'text', model: 'rank_1' ], file("$projectDir/assets/DUMMY_MODELCIF_CIFCHECK.mmcif", checkIfExists: true), file("$projectDir/bin/dicts/mmcif_ma.sdb", checkIfExists: true) ]
+                """
+            }
+        }
+        then {
+            assert process.success
+            assert path(process.out.versions[0]).getFileName().toString() == 'versions.yml'
+        }
+    }
+
+    test("valid BinaryCIF") {
+        when {
+            process {
+                """
+                input[0] = [ [ id: 'binary', model: 'rank_1' ], file("$projectDir/assets/DUMMY_MODELCIF_CIFCHECK.bcif", checkIfExists: true), file("$projectDir/bin/dicts/mmcif_ma.sdb", checkIfExists: true) ]
+                """
+            }
+        }
+        then {
+            assert process.success
+        }
+    }
+
+    test("rejects PDBx without ModelArchive content") {
+        when {
+            process {
+                """
+                input[0] = [ [ id: 'pdbx', model: 'rank_1' ], file("$projectDir/assets/DUMMY_PDBX.mmcif", checkIfExists: true), file("$projectDir/bin/dicts/mmcif_ma.sdb", checkIfExists: true) ]
+                """
+            }
+        }
+        then {
+            assert process.failed
+        }
+    }
+
+    test("rejects malformed mmCIF") {
+        when {
+            process {
+                """
+                input[0] = [ [ id: 'invalid', model: 'rank_1' ], file("$projectDir/assets/DUMMY_INVALID.mmcif", checkIfExists: true), file("$projectDir/bin/dicts/mmcif_ma.sdb", checkIfExists: true) ]
+                """
+            }
+        }
+        then {
+            assert process.failed
+        }
+    }
+}
