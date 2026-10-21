@@ -44,14 +44,14 @@ output:
           description: Groovy Map containing sample information.
       - "${meta.id}_pae.tsv":
           type: file
-          description: Predicted aligned error matrix from the ESMFold inference.
+          description: Predicted aligned error matrix from the same ESMFold inference as the PDB.
   ptm:
     - - meta:
           type: map
           description: Groovy Map containing sample information.
       - "${meta.id}_ptm.tsv":
           type: file
-          description: Predicted TM score from the ESMFold inference.
+          description: Predicted TM score from the same ESMFold inference as the PDB.
   versions_esmfold:
     - - "${task.process}": { type: string, description: The process the versions were collected from. }
       - esm-fold: { type: string, description: The tool name. }

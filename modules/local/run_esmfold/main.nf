@@ -3,7 +3,7 @@ process RUN_ESMFOLD {
     label 'process_medium'
     label 'process_gpu'
 
-    container params.esmfold_container
+    container "nf-core/proteinfold_esmfold:2.0.0"
 
     input:
     tuple val(meta), path(fasta)
@@ -32,13 +32,18 @@ process RUN_ESMFOLD {
     }
     def args = task.ext.args ?: ''
     """
-    run_esmfold_with_metrics.py \
+    # Capture PAE and pTM from esm-fold's one inference through Python startup.
+    cp "\$(command -v esmfold_metrics_sitecustomize.py)" sitecustomize.py
+    ESMFOLD_PAE_FILE="\$PWD/${meta.id}_pae.tsv" ESMFOLD_PTM_FILE="\$PWD/${meta.id}_ptm.tsv" PYTHONPATH="\$PWD" esm-fold \
         -i ${fasta} \
         -o \$PWD \
         -m \$PWD \
-        --output-prefix ${meta.id} \
         --num-recycles ${numRec} \
         $args
+
+    test -s "${meta.id}_pae.tsv"
+    test -s "${meta.id}_ptm.tsv"
+    mv  *.pdb ${meta.id}_esmfold.pdb
 
     extract_metrics.py --name ${meta.id} \\
         --structs ${meta.id}_esmfold.pdb
