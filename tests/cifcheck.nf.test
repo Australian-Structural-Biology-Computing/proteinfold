@@ -49,6 +49,19 @@ nextflow_process {
         }
     }
 
+    test("valid PDBx with PDBx dictionary") {
+        when {
+            process {
+                """
+                input[0] = [ [ id: 'pdbx', model: 'entry' ], file("$projectDir/assets/DUMMY_PDBX.mmcif", checkIfExists: true), file("$projectDir/bin/dicts/mmcif_pdbx_v50.sdb", checkIfExists: true) ]
+                """
+            }
+        }
+        then {
+            assert process.success
+        }
+    }
+
     test("rejects malformed mmCIF") {
         when {
             process {
