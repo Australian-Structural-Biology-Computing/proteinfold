@@ -14,6 +14,8 @@ include { GENERATE_MULTIQC_CONTENTS } from '../../modules/local/generate_multiqc
 include { COMPARE_STRUCTURES  } from '../../modules/local/compare_structures'
 include { FOLDSEEK_EASYSEARCH } from '../../modules/nf-core/foldseek/easysearch/main'
 include { MULTIQC             } from '../../modules/nf-core/multiqc/main'
+include { MODELCIF_ASSEMBLE    } from '../../modules/local/assemble_modelcif/main'
+include { CIFCHECK             } from '../../modules/local/cifcheck/main'
 
 
 workflow POST_PROCESSING {
@@ -36,10 +38,19 @@ workflow POST_PROCESSING {
     ch_multiqc_methods_description
     ch_software_versions
     ch_top_ranked_model
+    ch_modelcif
+    write_modelcif
 
     main:
     def ch_comparison_report_files = channel.empty()
     def ch_multiqc_files = channel.empty()
+    ch_modelcif_published = channel.empty()
+
+    if (write_modelcif) {
+        MODELCIF_ASSEMBLE(ch_modelcif)
+        CIFCHECK(MODELCIF_ASSEMBLE.out.modelcif)
+        ch_modelcif_published = CIFCHECK.out.modelcif
+    }
 
     if (!skip_visualisation){
         GENERATE_REPORT(
@@ -148,4 +159,5 @@ workflow POST_PROCESSING {
 
     emit:
     multiqc_report = ch_multiqc_report
+    modelcif = ch_modelcif_published
 }
