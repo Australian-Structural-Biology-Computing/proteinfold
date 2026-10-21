@@ -3,3 +3,5 @@
 SHA-256: `5e8f3458f91743cddedf3d610f777284a5e580f2db77e75de02512f9fe0236a9`
 
 The existing `bin/CifCheck` executable is version 2.500. Dictionary validation uses this ModelArchive dictionary for both text ModelCIF and BinaryCIF (converted to text before checking).
+
+`mmcif_pdbx_v50.sdb` is the PDBx v5.0 CifCheck dictionary. Use it for plain PDBx/mmCIF files; ModelCIF files must be checked with `mmcif_ma.sdb`, which defines the ModelArchive categories.
