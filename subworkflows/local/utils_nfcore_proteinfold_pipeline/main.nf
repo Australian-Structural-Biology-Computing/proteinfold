@@ -236,6 +236,29 @@ def collectMultiqcMetrics(model, metric_channels) {
         }
 }
 
+// Join ESMFold outputs with placeholders for metrics that it does not generate.
+def modelcifInput(structs, msa, plddt, pae, ptm, iptm, versions, msaTool, missingMetrics = [], modelParams = [:], plddtScale = null) {
+    structs
+        .join(msa)
+        .join(plddt)
+        .join(pae)
+        .join(ptm)
+        .join(iptm)
+        .combine(versions)
+        .map { meta, structureFiles, msaFile, plddtFile, paeFile, ptmFile, iptmFile, versionsFile ->
+            def modelcifMeta = meta.clone()
+            modelcifMeta.msa_tool = msaTool
+            modelcifMeta.missing_metrics = missingMetrics
+            modelcifMeta.modelcif_params = modelParams
+            modelcifMeta.plddt_scale = plddtScale
+            [modelcifMeta, structureFiles, msaFile, plddtFile, paeFile, ptmFile, iptmFile, versionsFile]
+        }
+}
+
+def modelcifDummyMetric(structs, dummyFile) {
+    structs.map { meta, _files -> [meta.clone(), dummyFile] }
+}
+
 def countMolecularEntitiesInFasta(fasta) {
     return fasta.text
         .readLines()

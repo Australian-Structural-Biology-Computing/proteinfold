@@ -1,5 +1,16 @@
 #!/usr/bin/env python3
-"""Convert prediction structures and available quality metrics to ModelCIF."""
+"""
+Convert protein structure prediction outputs (PDB or mmCIF) to a
+modelCIF-compliant mmCIF file.
+
+With aim to be directly depositable in ModelArchive.
+
+Includes metadata supported by the prediction outputs.
+
+When PAE is available, it is linked as an associated file by default.
+
+Can also create .bcif for space reasons
+"""
 
 import argparse
 import csv
@@ -58,7 +69,7 @@ _PLDDT_METRIC_CLASSES = {
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser(
-        description='Convert prediction structures and available quality metrics to ModelCIF.'
+        description='Generate a valid modelCIF structure file (according to ModelArchive dictionary) from the various metrics .tsv files, and program execution details.'
     )
     parser.add_argument('--structs', required=True, nargs='+',
                         help='Input structure files (PDB or mmCIF), one per rank in rank order.')
@@ -89,11 +100,13 @@ def parse_args(args=None):
     parser.add_argument('--pae',     required=True, help='*_pae.tsv from extract_metrics.py.')
     parser.add_argument('--ptm',     required=True, help='*_ptm.tsv from extract_metrics.py.')
     parser.add_argument('--iptm',    required=True, help='*_iptm.tsv from extract_metrics.py.')
+    parser.add_argument('--missing-metrics', default='',
+                        help='Comma-separated placeholder inputs to omit: msa,pae,ptm,iptm.')
     parser.add_argument('--name',    required=True)
     parser.add_argument('--prog',         required=True)
     parser.add_argument('--msa_tool',     default=None, help='MSA search tool used (e.g. jackhmmer, hhblits, mmseqs2). Embedded in the CoevolutionMSA protocol step.')
     parser.add_argument('--versions_yml', default=None, help='versions.yml emitted by the upstream run_* module.')
-    parser.add_argument('--software_details', default=None, help='YAML file describing software and protocol step metadata.')
+    parser.add_argument('--software_details', default=None, help='Optional path to DUMMY YAML file for software + protocol step metadata -- pre-wiring into upstream logic.')
     parser.add_argument('--output',       default=None)
     parser.add_argument('--all-structs',  action='store_true', help='Include all parseable files passed via --structs as models. This is enabled automatically when more than one structure file is supplied.')
     parser.add_argument('--write_binary', action='store_true', help='Write BinaryCIF (.bcif) output instead of text mmCIF. Requires the msgpack package.')
@@ -137,6 +150,8 @@ def _read_sw_version(versions_yml, prog):
     """
     Extract the version string for *prog* from a Nextflow versions.yml.
 
+    TODO: this currently assumes a simple structure of versions.yml and I'm not sure if that's settled.
+
     """
     if versions_yml is None or not os.path.exists(versions_yml):
         return None
@@ -151,12 +166,14 @@ def _read_sw_version(versions_yml, prog):
     # Traditional nf-core versions files nest tools below a process name.
     # The pipeline-wide MultiQC file instead flattens them as
     # "PROCESS:tool": version, so accept both representations.
-    wanted = prog.lower()
+    wanted = prog.lower().replace('-', '').replace('_', '')
     for process_versions in data.values():
-        if isinstance(process_versions, dict) and wanted in process_versions:
-            return process_versions[wanted]
+        if isinstance(process_versions, dict):
+            for tool_key, version in process_versions.items():
+                if str(tool_key).lower().replace('-', '').replace('_', '') == wanted:
+                    return version
     for tool_key, version in data.items():
-        if str(tool_key).lower().rsplit(':', 1)[-1] == wanted:
+        if str(tool_key).lower().rsplit(':', 1)[-1].replace('-', '').replace('_', '') == wanted:
             return version
     return None
 
@@ -256,9 +273,7 @@ def _read_plddt_tsv(plddt_tsv):
     Parse the *_plddt.tsv written by extract_metrics.py.
 
     Returns a dict mapping each rank label (e.g. ``'rank_0'``) to a list of
-    per-residue pLDDT floats in residue order.  The dict is ordered by rank
-    index so that ``zip(struct_files, plddt_by_rank.values())`` pairs them
-    correctly.
+    per-residue pLDDT floats in residue order, keyed by structure rank.
     """
     with open(plddt_tsv) as fh:
         reader = csv.DictReader(fh, delimiter='\t')
@@ -384,7 +399,7 @@ _KNOWN_PROGRAM_MODELS = {
     'helixfold3':     {'has_recycling': False, 'uses_templates': True},
     'colabfold':      {'has_recycling': True,  'uses_templates': True,
                       'has_relaxation': True},
-    'esmfold':        {'has_recycling': False, 'uses_templates': False},
+    'esmfold':        {'has_recycling': True, 'uses_templates': False},
     'boltz':          {'has_recycling': False, 'uses_templates': False},
     'rosettafold2na': {'has_recycling': False, 'uses_templates': False},
     'rosettafold_all_atom': {'has_recycling': False, 'uses_templates': False},
@@ -525,6 +540,7 @@ def build_modelcif(
     template_software=None,
     template_version=None,
     no_template_search=False,
+    missing_metrics=None,
 ):
     """
     Build a modelcif.System from ranked structure files and QA metric .tsv files.
@@ -568,6 +584,11 @@ def build_modelcif(
     modelcif.System
     """
     software_details = software_details or {}
+    missing_metrics = set(missing_metrics or ())
+    metric_files = {'msa': msa_file, 'pae': pae_file, 'ptm': ptm_file, 'iptm': iptm_file}
+    unknown_metrics = missing_metrics - metric_files.keys()
+    if unknown_metrics:
+        raise ValueError(f'Unknown missing metrics: {sorted(unknown_metrics)}')
     if plddt_scale not in _PLDDT_METRIC_CLASSES:
         raise ValueError(
             f"Unknown plddt_scale '{plddt_scale}'; "
@@ -600,8 +621,8 @@ def build_modelcif(
         selected_struct_files = [struct_files[0]]
         biopy_structs = [_parse_structure(struct_files[0])]
     plddt_by_rank = _read_plddt_tsv(plddt_file)
-    ptm_by_rank = _read_ptm_tsv(ptm_file)
-    iptm_by_rank = _read_iptm_tsv(iptm_file)
+    ptm_by_rank = {} if 'ptm' in missing_metrics else _read_ptm_tsv(ptm_file)
+    iptm_by_rank = {} if 'iptm' in missing_metrics else _read_iptm_tsv(iptm_file)
 
     def _maybe_chainwise(path, label):
         if path is None or not os.path.exists(path):
@@ -616,10 +637,21 @@ def build_modelcif(
 
     cw_iptm_by_rank = _maybe_chainwise(chainwise_iptm_file, 'chainwise_iptm')
     cw_ipsae_by_rank = _maybe_chainwise(chainwise_ipsae_file, 'chainwise_ipsae')
-    pae_matrix = _read_pae_tsv(pae_file) if pae_embed else None
-    msa_num_seqs, msa_length = _read_msa_tsv(msa_file)
+    pae_matrix = _read_pae_tsv(pae_file) if pae_embed and 'pae' not in missing_metrics else None
+    if 'msa' not in missing_metrics:
+        msa_num_seqs, msa_length = _read_msa_tsv(msa_file)
 
-    system = modelcif.System(title=f'{name} predicted by {prog}')
+    model_details = None
+    if prog.lower() == 'esmfold' and 'msa' in missing_metrics:
+        model_details = ('ESMFold predicted coordinates directly from the input protein sequence '
+                         'without an input multiple sequence alignment or structural templates.')
+        if model_params and 'num_recycles' in model_params:
+            model_details += f" The prediction used {model_params['num_recycles']} recycles."
+        if model_params and 'checkpoint' in model_params:
+            model_details += f" Structure checkpoint: {model_params['checkpoint']}."
+        if model_params and 'language_model_checkpoint' in model_params:
+            model_details += f" Language model checkpoint: {model_params['language_model_checkpoint']}."
+    system = modelcif.System(title=f'{name} predicted by {prog}', model_details=model_details)
 
     # ---- Entities & AsymUnits -------------------------------------------
     # Derived from rank_0; all ranked structures share the same target sequence
@@ -701,7 +733,10 @@ def build_modelcif(
     plddt_base = _PLDDT_METRIC_CLASSES[plddt_scale]
 
     class LocalPLDDT(modelcif.qa_metric.Local, plddt_base):
-        __doc__ = f"Per-residue pLDDT ({plddt_scale}) as emitted by the prediction software."
+        __doc__ = ("Per-residue mean of ESMFold per-atom predicted lDDT scores "
+                   "(all-atom, [0,100]); stored in the source PDB B-factor field."
+                   if prog.lower() == 'esmfold' else
+                   f"Per-residue pLDDT ({plddt_scale}) as emitted by the prediction software.")
 
     LocalPLDDT.software = software
 
@@ -751,9 +786,11 @@ def build_modelcif(
     for key, value in _program_model_params(prog, model_params).items():
         params.append(modelcif.SoftwareParameter(key, _coerce_param(value),
                                                  f'{sw_name} model parameter'))
+    parameterized_software = None
     if params:
-        system.software_groups.append(
-            modelcif.SoftwareGroup([modelcif.SoftwareWithParameters(software, params)]))
+        parameterized_software = modelcif.SoftwareGroup(
+            [modelcif.SoftwareWithParameters(software, params)])
+        system.software_groups.append(parameterized_software)
 
     # ---- One model per ranked structure ---------------------------------
     # Iterate over every provided structure file; rank_N QA metrics are
@@ -795,7 +832,7 @@ def build_modelcif(
                     )
                     seq_id += 1
 
-        if pae_embed:
+        if pae_embed and 'pae' not in missing_metrics:
             model_residues = []
             for chain in bp_model_i:
                 asym = asym_map.get(chain.id)
@@ -917,40 +954,46 @@ def build_modelcif(
         )
         protocol.steps.append(template_search)
 
-    msa_data = modelcif.data.Data(
-        'Coevolution MSA',
-        details=f'{msa_num_seqs} sequences, {msa_length} columns',
-    )
-    system.data.append(msa_data)
-    msa_step = modelcif.protocol.CoevolutionMSAStep(
-        input_data=msa_input_data,
-        output_data=msa_data,
-        name=msa_step_cfg.get('name', msa_tool),
-        details=msa_step_cfg.get('details'),
-        software=_step_software(software, execution_software, msa_step_cfg),
-    )
-    protocol.steps.append(msa_step)
+    modeling_input = msa_input_data
+    if 'msa' not in missing_metrics:
+        msa_data = modelcif.data.Data(
+            'Coevolution MSA',
+            details=f'{msa_num_seqs} sequences, {msa_length} columns',
+        )
+        system.data.append(msa_data)
+        msa_step = modelcif.protocol.CoevolutionMSAStep(
+            input_data=msa_input_data,
+            output_data=msa_data,
+            name=msa_step_cfg.get('name', msa_tool),
+            details=msa_step_cfg.get('details'),
+            software=_step_software(software, execution_software, msa_step_cfg),
+        )
+        protocol.steps.append(msa_step)
+        modeling_input = msa_data
 
-    # Modeling step: MSA is the input; ranked models are the output.
+    # The modeling step consumes an MSA when one was used, otherwise the target sequence.
     step = modelcif.protocol.ModelingStep(
-        input_data=msa_data,
+        input_data=modeling_input,
         output_data=modelcif.data.DataGroup(models),
         name=modeling_step_cfg.get('name', 'Structure prediction'),
-        details=modeling_step_cfg.get('details'),
-        software=_step_software(software, execution_software, modeling_step_cfg),
+        details=modeling_step_cfg.get('details') or model_details,
+        software=(parameterized_software if prog.lower() == 'esmfold' and parameterized_software
+                  else _step_software(software, execution_software, modeling_step_cfg)),
     )
     protocol.steps.append(step)
     system.protocols.append(protocol)
 
-    if not pae_embed:
+    if not pae_embed and 'pae' not in missing_metrics:
         pae_data = modelcif.data.Data(
             'Predicted aligned error matrix',
-            details='Per-rank PAE matrices exported as TSV from extract_metrics.py',
+            details=('ESMFold predicted aligned error matrix from the inference output'
+                     if prog.lower() == 'esmfold' else
+                     'Per-rank PAE matrices exported as TSV from extract_metrics.py'),
         )
         system.data.append(pae_data)
-        pae_associated = modelcif.associated.QAMetricsFile(
+        pae_associated = modelcif.associated.File(
             path=os.path.basename(pae_file),
-            details='Predicted aligned error (PAE) values for this entry',
+            details='Tab-separated predicted aligned error (PAE) matrix for this entry',
             data=pae_data,
         )
         system.repositories.append(
@@ -987,6 +1030,7 @@ def main(args=None):
         key, _, value = item.partition('=')
         extra_params[key.strip()] = _coerce_param(value)
     prog_params = extra_params  # merged over built-in facts in build_modelcif
+    missing_metrics = {part.strip().lower() for part in args.missing_metrics.split(',') if part.strip()}
     all_structs = args.all_structs or len(args.structs) > 1
     system = build_modelcif(
         plddt_scale=args.plddt_scale,
@@ -1011,6 +1055,7 @@ def main(args=None):
         sw_version=sw_version,
         msa_tool=msa_tool,
         software_details=software_details,
+        missing_metrics=missing_metrics,
     )
 
     with open(output_file, open_mode) as fh:

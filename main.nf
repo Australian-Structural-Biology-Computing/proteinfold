@@ -31,6 +31,8 @@ include { BOLTZ                            } from './workflows/boltz'
 
 include { PIPELINE_INITIALISATION          } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { PIPELINE_COMPLETION              } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
+include { modelcifInput                    } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
+include { modelcifDummyMetric              } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { POST_PROCESSING                  } from './subworkflows/local/post_processing'
 
 /*
@@ -53,6 +55,9 @@ workflow NFCORE_PROTEINFOLD {
     ch_multiqc           = channel.empty()
     ch_report_input      = channel.empty()
     ch_top_ranked_model  = channel.empty()
+    ch_modelcif          = channel.empty()
+    modelcif_dummy_msa  = file("$projectDir/assets/DUMMY_MSA.tsv", checkIfExists: true)
+    modelcif_dummy_iptm = file("$projectDir/assets/DUMMY_IPTM.tsv", checkIfExists: true)
     requested_modes      = params.mode.toLowerCase().split(",")
     requested_modes_size = requested_modes.size()
 
@@ -314,13 +319,30 @@ workflow NFCORE_PROTEINFOLD {
         ch_report_input = ch_report_input.mix(
             ESMFOLD.out.pdb
                 .combine(ch_dummy_file)
-                .combine(ch_dummy_file_pae)
+                .join(ESMFOLD.out.pae)
                 .combine(ch_dummy_file)
                 .combine(ch_dummy_file)
                 .combine(ch_dummy_file)
                 .combine(ch_dummy_file)
         )
         ch_top_ranked_model = ch_top_ranked_model.mix(ESMFOLD.out.pdb)
+        ch_modelcif = ch_modelcif.mix(modelcifInput(
+            ESMFOLD.out.pdb,
+            modelcifDummyMetric(ESMFOLD.out.pdb, modelcif_dummy_msa),
+            ESMFOLD.out.plddt,
+            ESMFOLD.out.pae,
+            ESMFOLD.out.ptm,
+            modelcifDummyMetric(ESMFOLD.out.pdb, modelcif_dummy_iptm),
+            ch_software_versions,
+            'None',
+            ['msa', 'iptm'],
+            [num_recycles: params.esmfold_num_recycles,
+             checkpoint: 'esmfold_3B_v1.pt',
+             language_model_checkpoint: 'esm2_t36_3B_UR50D.pt',
+             language_model_parameters: '3B',
+             container_image: params.esmfold_container],
+            'plddt-allatom'
+        ))
     }
 
     // WORKFLOW: Run Boltz
@@ -430,7 +452,9 @@ workflow NFCORE_PROTEINFOLD {
         params.multiqc_logo,
         ch_multiqc_methods_description,
         ch_software_versions,
-        ch_top_ranked_model
+        ch_top_ranked_model,
+        ch_modelcif,
+        params.write_modelcif
     )
 
     emit:

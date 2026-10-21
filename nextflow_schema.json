@@ -102,6 +102,26 @@
                     "fa_icon": "fas fa-link",
                     "format": "uri",
                     "errorMessage": "Please provide a valid URL for the MMSeqs2 API server"
+                },
+                "write_modelcif": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Assemble ModelCIF files for ESMFold predictions."
+                },
+                "modelcif_binary": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Write BinaryCIF instead of text ModelCIF."
+                },
+                "modelcif_pae_embed": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Embed the PAE matrix as pairwise QA metrics."
+                },
+                "modelcif_software_details": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Optional YAML with software and protocol metadata."
                 }
             }
         },
@@ -231,6 +251,11 @@
                     "minimum": 1,
                     "maximum": 20,
                     "errorMessage": "Number of recycles must be a whole number between 1 and 20"
+                },
+                "esmfold_container": {
+                    "type": "string",
+                    "default": "nf-core/proteinfold_esmfold:2.0.0",
+                    "description": "Container image used for ESMFold inference and recorded in ModelCIF metadata"
                 }
             }
         },

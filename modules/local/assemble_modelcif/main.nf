@@ -1,18 +1,15 @@
-process ASSEMBLE_MODELCIF {
+process MODELCIF_ASSEMBLE {
     tag "$meta.id-$meta.model"
     label 'process_single'
 
     conda "${moduleDir}/environment.yml"
     container 'ghcr.io/keiran-rowell-unsw/proteinfold-modelcif:1.7'
 
-    // Unpack the tuple assuming every value used is at the path. Pass along a DUMMY_FILE so that the path is always occupied.
-    // The populate_modelcif.py can explicitly trigger if the arg.metric is a DUMMY_FILE, and if so, appropriately account for the non-existence of that in the model metadata
-    // This is also means no hand-crafted exceptions for particular programs that doesn't make use of some input (MSA - EMSFold), they all obey the same take: pipleline logic
+    // Placeholder TSVs keep the tuple complete; populate_modelcif.py omits them from metadata.
     // TODO: Unsure at this stage best way forward with chain-wise paths. At least modelCIF has the asymmetric unit entity, so we *could* DUMMY_FILE, but I do like the philosophy of don't check things that *can't* exist
     input:
     tuple val(meta), path(structs), path(msa), path(plddt), path(pae), path(ptm), path(iptm), path(versions_yml)
-    // TODO: --plddt-scale covers PLDDT/PLDDT01/PLDDTAllAtom/PLDDTAllAtom01; still need per-program scale selection
-    // and removal of the averaging in EXTRACT_METRICS
+    // The caller selects the pLDDT metric type when the predictor emits atom-wise values.
     // TODO: A space will be made for path(ipsae) once 1) it's captured 2) an ipsae custom class extends the modelCIF construction
     // Rank mapping is guaranteed: extract_metrics.py emits rank_0..N; populate_modelcif.py rejects TSVs without them.
     // Seed: --seed takes a {name}_seed.tsv (see assets/DUMMY_SEED.tsv) or an int; falls back to filename inference
@@ -21,6 +18,7 @@ process ASSEMBLE_MODELCIF {
 
     output:
     tuple val(meta), path("*.{mmcif,bcif}"), emit: modelcif
+    path("${meta.id}_pae.tsv"), optional: true, emit: pae
     path "versions.yml"             , emit: versions
 
     when:
@@ -33,8 +31,11 @@ process ASSEMBLE_MODELCIF {
     // BinaryCIF output: pass --write_binary via task.ext.args.
     script:
     def args = task.ext.args ?: ''
-    def container = task.container ?: 'None'
     def no_template_search = meta.no_template_search ? '--no-template-search' : ''
+    def missing_metrics = meta.missing_metrics ? "--missing-metrics ${meta.missing_metrics.join(',')}" : ''
+    def modelcif_params = (meta.modelcif_params ?: [:]).collect { key, value -> "--param ${key}=${value}" }.join(' ')
+    def plddt_scale = meta.plddt_scale ? "--plddt-scale ${meta.plddt_scale}" : ''
+    def output_prefix = "${meta.id}_${meta.model}"
     """
     populate_modelcif.py \\
         --structs ${structs} \\
@@ -46,20 +47,14 @@ process ASSEMBLE_MODELCIF {
         --name ${meta.id} \\
         --prog ${meta.model} \\
         --versions_yml ${versions_yml} \\
-        --container_image ${container} \\
         --msa_tool ${meta.msa_tool ?: 'None'} \\
+        ${missing_metrics} \\
+        ${modelcif_params} \\
+        ${plddt_scale} \\
         ${no_template_search} \\
         $args
 
-    python3 - <<'PY'
-    import glob
-    import modelcif.reader
-
-    for output in glob.glob('*.mmcif') + glob.glob('*.bcif'):
-        binary = output.endswith('.bcif')
-        with open(output, 'rb' if binary else 'r') as fh:
-            assert modelcif.reader.read(fh, format='BCIF' if binary else 'mmCIF')
-    PY
+    python3 -c 'import glob, modelcif.reader; outputs = [f for f in glob.glob("${output_prefix}.mmcif") + glob.glob("${output_prefix}.bcif")]; assert len(outputs) == 1, f"Expected one ModelCIF output, found: {outputs}"; output = outputs[0]; handle = open(output, "rb" if output.endswith(".bcif") else "r"); systems = modelcif.reader.read(handle); handle.close(); assert systems, f"No ModelCIF systems found in {output}"'
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

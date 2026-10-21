@@ -3,7 +3,7 @@ process RUN_ESMFOLD {
     label 'process_medium'
     label 'process_gpu'
 
-    container "nf-core/proteinfold_esmfold:2.0.0"
+    container params.esmfold_container
 
     input:
     tuple val(meta), path(fasta)
@@ -14,7 +14,9 @@ process RUN_ESMFOLD {
     tuple val(meta), path ("${meta.id}_esmfold.pdb")  , emit: top_ranked_pdb
     tuple val(meta), path ("*.pdb")                   , emit: pdb
     tuple val(meta), path ("${meta.id}_plddt.tsv"), emit: plddt
-    tuple val("${task.process}"), val('esm-fold'), val('1.0.3'), emit: versions_esmfold, topic: versions
+    tuple val(meta), path ("${meta.id}_pae.tsv"), emit: pae
+    tuple val(meta), path ("${meta.id}_ptm.tsv"), emit: ptm
+    tuple val("${task.process}"), val('esm-fold'), eval("python3 -m pip show fair-esm | sed -n 's/^Version: //p'"), emit: versions_esmfold, topic: versions
     tuple val("${task.process}"), val('python'), eval("python3 --version | sed 's/Python //g'"), emit: versions_python, topic: versions
     tuple val("${task.process}"), val('pytorch'), eval("python3 -c \"import torch; print(torch.__version__)\" 2>/dev/null || echo \"unknown\""), emit: versions_pytorch, topic: versions
     tuple val("${task.process}"), val('openfold'), eval("python -m pip show openfold | grep \"^Version\" | sed 's/.*Version: //' 2>/dev/null || echo \"unknown\""), emit: versions_openfold, topic: versions
@@ -29,17 +31,14 @@ process RUN_ESMFOLD {
         error("Local RUN_ESMFOLD module does not support Conda. Please use Docker / Singularity / Podman instead.")
     }
     def args = task.ext.args ?: ''
-    // KR - note: removed the *.pdb -> tmp.pdb, tmp.pdb  -> esmfold.pdb. Why not just take directly?
-    // Only one .pdb per ESMFold run
     """
-    esm-fold \
+    run_esmfold_with_metrics.py \
         -i ${fasta} \
         -o \$PWD \
         -m \$PWD \
+        --output-prefix ${meta.id} \
         --num-recycles ${numRec} \
         $args
-
-    mv  *.pdb ${meta.id}_esmfold.pdb
 
     extract_metrics.py --name ${meta.id} \\
         --structs ${meta.id}_esmfold.pdb
@@ -49,5 +48,7 @@ process RUN_ESMFOLD {
     """
     touch "${meta.id}_esmfold.pdb"
     touch "${meta.id}_plddt.tsv"
+    touch "${meta.id}_pae.tsv"
+    touch "${meta.id}_ptm.tsv"
     """
 }
