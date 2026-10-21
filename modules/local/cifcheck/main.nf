@@ -6,7 +6,7 @@ process CIFCHECK {
     container 'ghcr.io/keiran-rowell-unsw/proteinfold-modelcif:1.7'
 
     input:
-    tuple val(meta), path(mmcif), path(ma_dictionary)
+    tuple val(meta), path(mmcif), path(validation_dictionary)
 
     output:
     tuple val(meta), path(mmcif), emit: modelcif
@@ -25,7 +25,7 @@ process CIFCHECK {
                 ;;
             *) check_file="\${modelcif_file}" ;;
         esac
-        ${projectDir}/bin/CifCheck -f "\${check_file}" -dictSdb ${ma_dictionary}
+        ${projectDir}/bin/CifCheck -f "\${check_file}" -dictSdb ${validation_dictionary}
         if [ -s "\${check_file}-diag.log" ] || [ -s "\${check_file}-parser.log" ]; then
             cat "\${check_file}-diag.log" "\${check_file}-parser.log" >&2
             exit 1
