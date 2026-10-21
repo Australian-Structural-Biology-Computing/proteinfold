@@ -342,7 +342,7 @@ workflow NFCORE_PROTEINFOLD {
              checkpoint: 'esmfold_3B_v1.pt',
              language_model_checkpoint: 'esm2_t36_3B_UR50D.pt',
              language_model_parameters: '3B',
-             container_image: params.esmfold_container],
+             container_image: 'nf-core/proteinfold_esmfold:2.0.0'],
             'plddt-allatom'
         ))
     }
