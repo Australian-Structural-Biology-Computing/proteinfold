@@ -71,6 +71,9 @@ workflow ESMFOLD {
     emit:
     pdb             = ch_pdb_final      // channel: [ id, /path/to/*.pdb ]
     multiqc_metrics = ch_multiqc_metrics // channel: [ [id:..., model:...], [metric tsvs] ]
+    plddt           = modeChannel(RUN_ESMFOLD.out.plddt, "esmfold")
+    pae             = modeChannel(RUN_ESMFOLD.out.pae, "esmfold")
+    ptm             = modeChannel(RUN_ESMFOLD.out.ptm, "esmfold")
 }
 
 /*
