@@ -9,7 +9,7 @@ if [[ "$command_name" == run || "$command_name" == create ]]; then
     shift
     while (( $# )); do
         case "$1" in
-            --env|--env-file|--volume|--mount|--workdir|--user|--name|--network|--entrypoint|--hostname|--platform|--pull|--memory|--cpus|--gpus|--device|--label|--publish|--tmpfs|--add-host|--group-add|--ulimit|--cap-add|--cap-drop|--security-opt|--shm-size|--ipc|--pid|-e|-v|-w|-u|-p|-m|-l|-h)
+            --env|--env-file|--volume|--mount|--workdir|--user|--name|--network|--entrypoint|--hostname|--platform|--pull|--memory|--cpus|--gpus|--device|--label|--publish|--tmpfs|--add-host|--group-add|--ulimit|--cap-add|--cap-drop|--security-opt|--shm-size|--ipc|--pid|--cpu-shares|--cpuset|--cpuset-cpus|--memory-swap|--oom-score-adj|--cgroup-parent|--sysctl|--dns|--dns-search|--dns-option|--log-driver|--log-opt|--restart|--stop-signal|--health-cmd|--volumes-from|--link|-e|-v|-w|-u|-p|-m|-l|-h)
                 shift 2
                 ;;
             --*=*|-e?*|-v?*|-w?*|-u?*|-p?*|-m?*|-l?*|-h?*)
@@ -19,7 +19,9 @@ if [[ "$command_name" == run || "$command_name" == create ]]; then
                 shift
                 ;;
             *)
-                image="$1"
+                if [[ "$1" == */* || "$1" == *:* ]]; then
+                    image="$1"
+                fi
                 break
                 ;;
         esac
