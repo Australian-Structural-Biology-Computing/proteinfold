@@ -22,6 +22,7 @@ include { BOLTZ_FASTA } from '../modules/local/boltz_fasta'
 include { BOLTZ_YAML_TO_COLABFOLD_FASTA } from '../modules/local/boltz_yaml_to_colabfold_fasta'
 include { SPLIT_MSA } from '../modules/local/split_msa'
 include { MMSEQS_COLABFOLDSEARCH } from '../modules/local/mmseqs_colabfoldsearch'
+include { modeChannel } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
 
 //
 // MODULE: Boltz
@@ -202,4 +203,6 @@ workflow BOLTZ {
     ipsae           = ch_ipsae
     chainwise_iptm  = ch_chainwise_iptm
     chainwise_ipsae = ch_chainwise_ipsae
+    plddt           = modeChannel(RUN_BOLTZ.out.plddt, 'boltz')
+    ptm             = modeChannel(RUN_BOLTZ.out.ptm, 'boltz')
 }

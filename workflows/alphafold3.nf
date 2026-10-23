@@ -11,6 +11,7 @@ include { FASTA_TO_ALPHAFOLD3_JSON                } from '../modules/local/fasta
 include { RUN_ALPHAFOLD3_DATAPIPELINE             } from '../modules/local/run_alphafold3_datapipeline'
 include { RUN_ALPHAFOLD3_INFERENCE                } from '../modules/local/run_alphafold3_inference'
 include { collectMultiqcMetrics                   } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
+include { modeChannel                             } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -188,6 +189,8 @@ workflow ALPHAFOLD3 {
     chainwise_ipsae = ch_chainwise_ipsae_final // channel: [ meta, path/to/*_chainwise_ipsae.tsv ]
     multiqc_metrics = ch_multiqc_metrics       // channel: [ [id:..., model:...], [metric tsvs] ]
     versions        = ch_versions              // channel: [ path(versions.yml) ]
+    plddt           = modeChannel(RUN_ALPHAFOLD3_INFERENCE.out.plddt, 'alphafold3')
+    ptm             = modeChannel(RUN_ALPHAFOLD3_INFERENCE.out.ptms, 'alphafold3')
 }
 
 /*

@@ -251,6 +251,16 @@ workflow NFCORE_PROTEINFOLD {
                                 .join(ALPHAFOLD3.out.chainwise_ipsae)
                             )
         ch_top_ranked_model = ch_top_ranked_model.mix(ALPHAFOLD3.out.top_ranked_pdb)
+        ch_modelcif = ch_modelcif.mix(modelcifInput(
+            ALPHAFOLD3.out.pdb,
+            ALPHAFOLD3.out.msa,
+            ALPHAFOLD3.out.plddt,
+            ALPHAFOLD3.out.pae,
+            ALPHAFOLD3.out.ptm,
+            ALPHAFOLD3.out.iptm,
+            ch_software_versions,
+            'jackhmmer'
+        ))
     }
 
     //
@@ -309,6 +319,16 @@ workflow NFCORE_PROTEINFOLD {
                             )
 
         ch_top_ranked_model = ch_top_ranked_model.mix(COLABFOLD.out.top_ranked_pdb)
+        ch_modelcif = ch_modelcif.mix(modelcifInput(
+            COLABFOLD.out.pdb,
+            COLABFOLD.out.msa,
+            COLABFOLD.out.plddt,
+            COLABFOLD.out.pae,
+            COLABFOLD.out.ptm,
+            COLABFOLD.out.iptm,
+            ch_software_versions,
+            'mmseqs2'
+        ))
     }
 
     //
@@ -418,6 +438,16 @@ workflow NFCORE_PROTEINFOLD {
             .join(BOLTZ.out.chainwise_ipsae)
         )
         ch_top_ranked_model         = ch_top_ranked_model.mix(BOLTZ.out.top_ranked_pdb)
+        ch_modelcif = ch_modelcif.mix(modelcifInput(
+            BOLTZ.out.pdb,
+            BOLTZ.out.msa,
+            BOLTZ.out.plddt,
+            BOLTZ.out.pae,
+            BOLTZ.out.ptm,
+            BOLTZ.out.iptm,
+            ch_software_versions,
+            'mmseqs2'
+        ))
     }
     //
     // POST PROCESSING: generate visualisation reports
