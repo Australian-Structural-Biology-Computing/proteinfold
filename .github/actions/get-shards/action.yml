@@ -40,7 +40,10 @@ runs:
         matrix="[]"
 
         run_dry() {
-          nf-test test --profile +docker ${1:+--tag "$1"} --dry-run --ci --changed-since HEAD^
+          args=(--profile +docker --dry-run --ci --changed-since HEAD^)
+          if [[ -n "$1" ]]; then args+=(--tag "$1"); fi
+          if [[ -n "${2:-}" ]]; then args+=(--csv "$2"); fi
+          nf-test test "${args[@]}"
         }
         count_tests() {
           sed -n 's|.*Executed \([0-9]*\) tests.*|\1|p' | tail -1
@@ -62,24 +65,43 @@ runs:
             tests/colabfold_local.nf.test tests/colabfold_webserver.nf.test
             tests/default.nf.test tests/esmfold.nf.test tests/split_fasta.nf.test
           )
-          tags=(ci_img_boltz ci_img_misc ci_img_colabfold_a ci_img_colabfold_b ci_img_alphafold ci_img_utils)
+          tags=(ci_img_af2 ci_img_af3 ci_img_boltz ci_img_colabfold_a ci_img_colabfold_b ci_img_esmfold ci_img_misc ci_img_utils)
           for file in "${selected[@]}"; do
             n=$(grep -Ec '^    tag "ci_img_[^"]+"$' "$file")
             [[ "$n" == 1 ]] || { echo "Expected exactly one image tag in $file"; exit 1; }
           done
-          all=$(run_dry | count_tests)
-          sum=0
+          reports="$RUNNER_TEMP/nf-test-image-groups"
+          mkdir -p "$reports"
+          run_dry '' "$reports/all.csv" >/dev/null
           matrix_parts=()
           for tag in "${tags[@]}"; do
-            output=$(run_dry "$tag")
+            output=$(run_dry "$tag" "$reports/$tag.csv")
             n=$(printf '%s\n' "$output" | count_tests)
-            n=${n:-0}
-            if (( n > 0 )); then
-              sum=$((sum + n))
+            if (( ${n:-0} > 0 )); then
               matrix_parts+=("$(jq -cn --arg tag "$tag" '{tag:$tag,shard:"1",total_shards:"1"}')")
             fi
           done
-          [[ "${all:-0}" == "$sum" ]] || { echo "Image-tag coverage mismatch: $all != $sum"; exit 1; }
+          python - "$reports" <<'PY'
+        import csv
+        import glob
+        import os
+        import sys
+        from collections import Counter
+
+        directory = sys.argv[1]
+        def cases(path):
+            if not os.path.exists(path):
+                return Counter()
+            with open(path, newline='') as handle:
+                return Counter((row['filename'], row['test']) for row in csv.DictReader(handle))
+
+        selected = cases(os.path.join(directory, 'all.csv'))
+        grouped = Counter()
+        for path in glob.glob(os.path.join(directory, 'ci_img_*.csv')):
+            grouped.update(cases(path))
+        if selected != grouped:
+            sys.exit(f'Image-tag coverage mismatch: missing {selected - grouped}, duplicated {grouped - selected}')
+        PY
           matrix=$(printf '%s\n' "${matrix_parts[@]}" | jq -sc .)
           shard='["1"]'
           total_shards=$(jq length <<< "$matrix")
