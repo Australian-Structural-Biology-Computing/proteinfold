@@ -11,6 +11,7 @@ include { FASTA_TO_ALPHAFOLD3_JSON                } from '../modules/local/fasta
 include { RUN_ALPHAFOLD3_DATAPIPELINE             } from '../modules/local/run_alphafold3_datapipeline'
 include { RUN_ALPHAFOLD3_INFERENCE                } from '../modules/local/run_alphafold3_inference'
 include { collectMultiqcMetrics                   } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
+include { modeChannel                             } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
