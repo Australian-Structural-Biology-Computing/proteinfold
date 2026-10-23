@@ -61,8 +61,9 @@ runs:
             tests/alphafold2_download.nf.test tests/alphafold2_split.nf.test
             tests/alphafold3.nf.test tests/alphafold3_download.nf.test
             tests/assemble_modelcif.nf.test tests/boltz.nf.test
-            tests/colabfold_batching.nf.test tests/colabfold_download.nf.test
-            tests/colabfold_local.nf.test tests/colabfold_webserver.nf.test
+            tests/colabfold_batching.nf.test tests/colabfold_byo_msa.nf.test
+            tests/colabfold_download.nf.test tests/colabfold_local.nf.test
+            tests/colabfold_webserver.nf.test
             tests/default.nf.test tests/esmfold.nf.test tests/split_fasta.nf.test
           )
           tags=(ci_img_af2 ci_img_af3 ci_img_boltz ci_img_colabfold_a ci_img_colabfold_b ci_img_esmfold ci_img_misc ci_img_utils)
