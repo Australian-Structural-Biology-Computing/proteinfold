@@ -10,6 +10,10 @@ inputs:
   tags:
     description: "Tags to pass as argument for nf-test --tag parameter"
     required: false
+  fork:
+    description: "Use one image-affinity matrix entry per tag"
+    required: false
+    default: "false"
 outputs:
   shard:
     description: "Array of shard numbers"
@@ -17,6 +21,9 @@ outputs:
   total_shards:
     description: "Total number of shards"
     value: ${{ steps.shards.outputs.total_shards }}
+  matrix:
+    description: "Fork image-affinity matrix entries"
+    value: ${{ steps.shards.outputs.matrix }}
 runs:
   using: "composite"
   steps:
@@ -28,41 +35,68 @@ runs:
       id: shards
       shell: bash
       run: |
-        # Run nf-test with dynamic parameter
-        nftest_output=$(nf-test test \
-          --profile +docker \
-          $(if [ -n "${{ inputs.tags }}" ]; then echo "--tag ${{ inputs.tags }}"; fi) \
-          --dry-run \
-          --ci \
-          --changed-since HEAD^) || {
-            echo "nf-test command failed with exit code $?"
-            echo "Full output: $nftest_output"
-            exit 1
-        }
-        echo "nf-test dry-run output: $nftest_output"
-
-        # Default values for shard and total_shards
         shard="[]"
         total_shards=0
+        matrix="[]"
 
-        # Check if there are related tests
-        if echo "$nftest_output" | grep -q 'No tests to execute'; then
-          echo "No related tests found."
+        run_dry() {
+          nf-test test --profile +docker ${1:+--tag "$1"} --dry-run --ci --changed-since HEAD^
+        }
+        count_tests() {
+          sed -n 's|.*Executed \([0-9]*\) tests.*|\1|p' | tail -1
+        }
+
+        if [[ "${{ inputs.fork }}" == "true" ]]; then
+          selected=(
+            modules/local/boltz_fasta/tests/main.nf.test
+            modules/local/boltz_yaml_to_colabfold_fasta/tests/main.nf.test
+            modules/local/generate_multiqc_contents/tests/main.nf.test
+            modules/local/generate_report/tests/main.nf.test
+            modules/local/mmseqs_colabfoldsearch/tests/batch.nf.test
+            modules/local/split_msa/tests/main.nf.test
+            subworkflows/local/utils_nfcore_proteinfold_pipeline/tests/main.nf.test
+            tests/alphafold2_download.nf.test tests/alphafold2_split.nf.test
+            tests/alphafold3.nf.test tests/alphafold3_download.nf.test
+            tests/assemble_modelcif.nf.test tests/boltz.nf.test
+            tests/colabfold_batching.nf.test tests/colabfold_download.nf.test
+            tests/colabfold_local.nf.test tests/colabfold_webserver.nf.test
+            tests/default.nf.test tests/esmfold.nf.test tests/split_fasta.nf.test
+          )
+          tags=(ci_img_boltz ci_img_misc ci_img_colabfold_a ci_img_colabfold_b ci_img_alphafold ci_img_utils)
+          for file in "${selected[@]}"; do
+            n=$(grep -Ec '^    tag "ci_img_[^"]+"$' "$file")
+            [[ "$n" == 1 ]] || { echo "Expected exactly one image tag in $file"; exit 1; }
+          done
+          all=$(run_dry | count_tests)
+          sum=0
+          matrix_parts=()
+          for tag in "${tags[@]}"; do
+            output=$(run_dry "$tag")
+            n=$(printf '%s\n' "$output" | count_tests)
+            n=${n:-0}
+            if (( n > 0 )); then
+              sum=$((sum + n))
+              matrix_parts+=("$(jq -cn --arg tag "$tag" '{tag:$tag,shard:"1",total_shards:"1"}')")
+            fi
+          done
+          [[ "${all:-0}" == "$sum" ]] || { echo "Image-tag coverage mismatch: $all != $sum"; exit 1; }
+          matrix=$(printf '%s\n' "${matrix_parts[@]}" | jq -sc .)
+          shard='["1"]'
+          total_shards=$(jq length <<< "$matrix")
         else
-          # Extract the number of related tests
-          number_of_shards=$(echo "$nftest_output" | sed -n 's|.*Executed \([0-9]*\) tests.*|\1|p')
+          nftest_output=$(run_dry "${{ inputs.tags }}") || { echo "nf-test command failed"; exit 1; }
+          number_of_shards=$(printf '%s\n' "$nftest_output" | count_tests)
           if [[ -n "$number_of_shards" && "$number_of_shards" -gt 0 ]]; then
-            shards_to_run=$(( $number_of_shards < ${{ inputs.max_shards }} ? $number_of_shards : ${{ inputs.max_shards }} ))
+            shards_to_run=$(( number_of_shards < ${{ inputs.max_shards }} ? number_of_shards : ${{ inputs.max_shards }} ))
             shard=$(seq 1 "$shards_to_run" | jq -R . | jq -c -s .)
             total_shards="$shards_to_run"
-          else
-            echo "Unexpected output format. Falling back to default values."
           fi
         fi
 
         # Write to GitHub Actions outputs
         echo "shard=$shard" >> $GITHUB_OUTPUT
         echo "total_shards=$total_shards" >> $GITHUB_OUTPUT
+        echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
         # Debugging output
         echo "Final shard array: $shard"

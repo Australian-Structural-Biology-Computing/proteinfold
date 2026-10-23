@@ -33,6 +33,7 @@ jobs:
     outputs:
       shard: ${{ steps.set-shards.outputs.shard }}
       total_shards: ${{ steps.set-shards.outputs.total_shards }}
+      matrix: ${{ steps.set-shards.outputs.matrix }}
     steps:
       - name: Clean Workspace # Purge the workspace in case it's running on a self-hosted runner
         run: |
@@ -54,6 +55,7 @@ jobs:
           SKIP_CPU_INTEGRATION: ${{ github.repository_owner != 'nf-core' }}
         with:
           max_shards: ${{ github.repository_owner == 'nf-core' && 15 || 8 }}
+          fork: ${{ github.repository_owner != 'nf-core' }}
 
       - name: debug
         run: |
@@ -69,6 +71,7 @@ jobs:
       fail-fast: false
       matrix:
         shard: ${{ fromJson(needs.nf-test-changes.outputs.shard) }}
+        tag: ${{ github.repository_owner == 'nf-core' && fromJson('[""]') || fromJson(needs.nf-test-changes.outputs.matrix) }}
         profile: [docker, singularity]
         isMain:
           - ${{ github.base_ref == 'master' || github.base_ref == 'main' }}
@@ -104,7 +107,8 @@ jobs:
         with:
           profile: ${{ matrix.profile }}
           shard: ${{ matrix.shard }}
-          total_shards: ${{ env.TOTAL_SHARDS }}
+          total_shards: ${{ github.repository_owner == 'nf-core' && env.TOTAL_SHARDS || matrix.tag.total_shards }}
+          tags: ${{ github.repository_owner == 'nf-core' && '' || matrix.tag.tag }}
 
       - name: Upload per-test timing report
         if: ${{ always() }}
