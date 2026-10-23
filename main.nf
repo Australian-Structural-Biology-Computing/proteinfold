@@ -58,6 +58,17 @@ workflow NFCORE_PROTEINFOLD {
     ch_modelcif          = channel.empty()
     modelcif_dummy_msa  = file("$projectDir/assets/DUMMY_MSA.tsv", checkIfExists: true)
     modelcif_dummy_iptm = file("$projectDir/assets/DUMMY_IPTM.tsv", checkIfExists: true)
+    def ch_software_versions = channel.topic('versions')
+        .unique()
+        .map { process_name, tool_name, version ->
+            "\"${process_name}:${tool_name}\": ${version}"
+        }
+        .collectFile(
+            storeDir: "${params.outdir}/pipeline_info",
+            name: 'nf_core_proteinfold_software_mqc_versions.yml',
+            newLine: true,
+            sort: true
+        )
     requested_modes      = params.mode.toLowerCase().split(",")
     requested_modes_size = requested_modes.size()
 
@@ -151,6 +162,16 @@ workflow NFCORE_PROTEINFOLD {
                             )
 
         ch_top_ranked_model = ch_top_ranked_model.mix(ALPHAFOLD2.out.top_ranked_pdb)
+        ch_modelcif = ch_modelcif.mix(modelcifInput(
+            ALPHAFOLD2.out.pdb,
+            ALPHAFOLD2.out.msa,
+            ALPHAFOLD2.out.plddt,
+            ALPHAFOLD2.out.pae,
+            ALPHAFOLD2.out.ptm,
+            ALPHAFOLD2.out.iptm,
+            ch_software_versions,
+            'jackhmmer'
+        ))
     }
 
     //
@@ -422,18 +443,6 @@ workflow NFCORE_PROTEINFOLD {
         m.msa_tool = msaToolMap.get(meta.model, 'None')
         [m] + tupleData.drop(1)
     }
-
-    def ch_software_versions = channel.topic('versions')
-        .unique()
-        .map { process_name, tool_name, version ->
-            "\"${process_name}:${tool_name}\": ${version}"
-        }
-        .collectFile(
-            storeDir: "${params.outdir}/pipeline_info",
-            name: 'nf_core_proteinfold_software_mqc_versions.yml',
-            newLine: true,
-            sort: true
-        )
 
     POST_PROCESSING(
         params.skip_visualisation,
