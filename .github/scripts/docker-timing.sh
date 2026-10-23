@@ -1,17 +1,48 @@
 #!/usr/bin/env bash
 
+original_args=("$@")
+command_name="${1:-}"
+image=''
+cache_before=''
+
+if [[ "$command_name" == run || "$command_name" == create ]]; then
+    shift
+    while (( $# )); do
+        case "$1" in
+            --env|--env-file|--volume|--mount|--workdir|--user|--name|--network|--entrypoint|--hostname|--platform|--pull|--memory|--cpus|--gpus|--device|--label|--publish|--tmpfs|--add-host|--group-add|--ulimit|--cap-add|--cap-drop|--security-opt|--shm-size|--ipc|--pid|-e|-v|-w|-u|-p|-m|-l|-h)
+                shift 2
+                ;;
+            --*=*|-e?*|-v?*|-w?*|-u?*|-p?*|-m?*|-l?*|-h?*)
+                shift
+                ;;
+            -* )
+                shift
+                ;;
+            *)
+                image="$1"
+                break
+                ;;
+        esac
+    done
+    if [[ -n "$image" ]]; then
+        if "$DOCKER_CI_BINARY" image inspect "$image" >/dev/null 2>&1; then
+            cache_before=present
+        else
+            cache_before=missing
+        fi
+    fi
+elif [[ "$command_name" == pull ]]; then
+    image="${*: -1}"
+fi
+
 started=$(date +%s%N)
-"$DOCKER_CI_BINARY" "$@"
+"$DOCKER_CI_BINARY" "${original_args[@]}"
 status=$?
 ended=$(date +%s%N)
 
-case "${1:-}" in
+case "$command_name" in
     pull|create|start|run)
-        image=''
-        if [[ "$1" == pull ]]; then
-            image="${*: -1}"
-        fi
-        printf '%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "$(( (ended - started) / 1000000 ))" "$status" "$image" >> "$DOCKER_CI_TIMING_LOG"
+        printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$command_name" "$(( (ended - started) / 1000000 ))" "$status" "$image" "$cache_before" >> "$DOCKER_CI_TIMING_LOG"
         ;;
 esac
 

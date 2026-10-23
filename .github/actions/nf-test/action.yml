@@ -67,7 +67,7 @@ runs:
           mkdir -p "$RUNNER_TEMP/docker-timing-bin"
           cp .github/scripts/docker-timing.sh "$RUNNER_TEMP/docker-timing-bin/docker"
           chmod +x "$RUNNER_TEMP/docker-timing-bin/docker"
-          printf 'completed_utc\tcommand\tduration_ms\texit_code\timage\n' > "$DOCKER_CI_TIMING_LOG"
+          printf 'completed_utc\tcommand\tduration_ms\texit_code\timage\tcache_before\n' > "$DOCKER_CI_TIMING_LOG"
           export PATH="$RUNNER_TEMP/docker-timing-bin:$PATH"
         fi
 

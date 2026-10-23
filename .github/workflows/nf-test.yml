@@ -53,7 +53,7 @@ jobs:
           SKIP_GPU: "true"
           SKIP_CPU_INTEGRATION: ${{ github.repository_owner != 'nf-core' }}
         with:
-          max_shards: ${{ github.repository_owner == 'nf-core' && 15 || 5 }}
+          max_shards: ${{ github.repository_owner == 'nf-core' && 15 || 8 }}
 
       - name: debug
         run: |
