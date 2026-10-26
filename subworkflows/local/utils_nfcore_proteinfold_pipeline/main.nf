@@ -103,14 +103,35 @@ ${colors.purple}  nf-core/proteinfold ${workflow.manifest.version}${colors.reset
     //
     // Create channel from input file provided through input
     //
-    ch_samplesheet = channel.fromList(samplesheetToList(input, "assets/schema_input.json"))
+    def sample_entries = samplesheetToList(input, "assets/schema_input.json")
+    def sample_ids = sample_entries.collect { item ->
+        def meta = item[0]
+        meta.id ?: meta.sequence
+    }
+    if (sample_ids.size() != sample_ids.toSet().size()) {
+        error("Duplicate sample IDs are not allowed: ${sample_ids}")
+    }
+    ch_samplesheet = channel.fromList(sample_entries)
 
-    ch_samplesheet
-        .map { meta, fasta ->
+    ch_samplesheet = ch_samplesheet
+        .map { item ->
+            def meta = item[0]
+            def fasta = item[1]
+            def msa = item.size() > 2 ? item[2] : null
             // This mapping supports legacy samplesheets that use 'sequence' as metadata.
             // If meta.id is missing or empty, meta.sequence is used as the identifier.
             def identifier = meta.id ? meta.id : meta.sequence
-            return [[id: identifier], fasta]
+            def normalized_meta = [id: identifier]
+            if (msa) {
+                if (!params.mode.toLowerCase().split(',').collect { it.trim() }.contains('colabfold')) {
+                    error("The 'msa' samplesheet column is currently supported only with --mode colabfold.")
+                }
+                if (params.split_fasta) {
+                    error("The 'msa' samplesheet column cannot be used with --split_fasta.")
+                }
+                normalized_meta.msa = msa
+            }
+            return [normalized_meta, fasta]
         }
 
     if (params.split_fasta) {
