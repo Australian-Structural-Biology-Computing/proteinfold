@@ -22,14 +22,14 @@
                     [
                         "MMSEQS_COLABFOLDSEARCH",
                         "colabfold_search",
-                        "1.6.1"
+                        "1.6.3"
                     ]
                 ],
                 "3": [
                     [
                         "MMSEQS_COLABFOLDSEARCH",
                         "mmseqs",
-                        "74c9370d45ba10446fe049c3603bf5f877817e95"
+                        "48f2a22d5f68f595afdfb5e601ca11721cf17449"
                     ]
                 ],
                 "a3m": [
@@ -52,21 +52,21 @@
                     [
                         "MMSEQS_COLABFOLDSEARCH",
                         "colabfold_search",
-                        "1.6.1"
+                        "1.6.3"
                     ]
                 ],
                 "versions_mmseqs": [
                     [
                         "MMSEQS_COLABFOLDSEARCH",
                         "mmseqs",
-                        "74c9370d45ba10446fe049c3603bf5f877817e95"
+                        "48f2a22d5f68f595afdfb5e601ca11721cf17449"
                     ]
                 ]
             }
         ],
-        "timestamp": "2026-09-22T09:37:21.199651886",
+        "timestamp": "2026-10-26T16:04:27.149862699",
         "meta": {
-            "nf-test": "0.9.5",
+            "nf-test": "0.9.4",
             "nextflow": "26.04.6"
         }
     }

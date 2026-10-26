@@ -12,7 +12,21 @@
                 [
                     "COLABFOLD_BATCH",
                     "colabfold_batch",
-                    "1.6.1"
+                    "1.6.3"
+                ]
+            ],
+            [
+                [
+                    "COLABFOLD_BATCH",
+                    "colabfold_binaries",
+                    "0.1.0"
+                ]
+            ],
+            [
+                [
+                    "COLABFOLD_BATCH",
+                    "colabfold_legacy_kernels",
+                    "0.2.0"
                 ]
             ]
         ],
