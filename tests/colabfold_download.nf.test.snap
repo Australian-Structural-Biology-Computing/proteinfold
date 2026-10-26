@@ -92,10 +92,10 @@
                 "T1026_colabfold_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-10-09T14:12:11.2833867",
+        "timestamp": "2026-10-26T16:05:22.748637017",
         "meta": {
-            "nf-test": "0.9.5",
-            "nextflow": "25.10.4"
+            "nf-test": "0.9.4",
+            "nextflow": "26.04.6"
         }
     }
 }

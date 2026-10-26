@@ -85,10 +85,10 @@
                 "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_colabfold_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-10-09T14:13:41.204958383",
+        "timestamp": "2026-10-26T16:06:30.484127793",
         "meta": {
-            "nf-test": "0.9.5",
-            "nextflow": "25.10.4"
+            "nf-test": "0.9.4",
+            "nextflow": "26.04.6"
         }
     }
 }

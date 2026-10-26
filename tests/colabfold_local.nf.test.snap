@@ -85,7 +85,7 @@
                 "T1026_colabfold_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-10-08T16:47:07.010036096",
+        "timestamp": "2026-10-26T16:05:45.615012313",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "26.04.6"

@@ -3,7 +3,7 @@ process COLABFOLD_BATCH {
     label 'process_medium'
     label 'process_gpu'
 
-    container "ghcr.io/tlitfin/wisps-colabfold-batch:1.1"
+    container "ghcr.io/jscgh/proteinfold_colabfold_batch:2.1.0dev"
 
     input:
     tuple val(meta), path(input), path('params/*')
@@ -22,8 +22,10 @@ process COLABFOLD_BATCH {
     tuple val(meta), path ("${meta.id}_ipsae.tsv")          , optional: true, emit: ipsaes
     tuple val(meta), path ("${meta.id}_chainwise_iptm.tsv") , optional: true, emit: chainwise_iptms
     tuple val(meta), path ("${meta.id}_chainwise_ipsae.tsv"), optional: true, emit: chainwise_ipsaes
-    tuple val("${task.process}"), val('alphafold_colabfold'), eval("pip list | grep \"^alphafold-colabfold\" | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_alphafold_colabfold, topic: versions
-    tuple val("${task.process}"), val('colabfold_batch'), eval("pip list | grep \"^colabfold\" | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold_batch, topic: versions
+    tuple val("${task.process}"), val('alphafold_colabfold'), eval("pip list | grep \"^alphafold-colabfold \" | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_alphafold_colabfold, topic: versions
+    tuple val("${task.process}"), val('colabfold_batch'), eval("pip list | grep \"^colabfold \" | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold_batch, topic: versions
+    tuple val("${task.process}"), val('colabfold_binaries'), eval("pip list | grep \"^colabfold-binaries \" | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold_binaries, topic: versions
+    tuple val("${task.process}"), val('colabfold_legacy_kernels'), eval("pip list | grep \"^colabfold-legacy-kernels \" | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold_legacy_kernels, topic: versions
 
     when:
     task.ext.when == null || task.ext.when

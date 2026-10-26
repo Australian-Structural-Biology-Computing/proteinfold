@@ -51,7 +51,7 @@ nextflow_process {
         then {
             assertAll(
                 { assert process.success },
-                { assert snapshot(process.out.versions_alphafold_colabfold, process.out.versions_colabfold_batch).match('versions') }
+                { assert snapshot(process.out.versions_alphafold_colabfold, process.out.versions_colabfold_batch, process.out.versions_colabfold_binaries, process.out.versions_colabfold_legacy_kernels).match('versions') }
             )
         }
     }
