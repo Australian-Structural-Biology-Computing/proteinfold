@@ -35,8 +35,8 @@ from Bio import PDB
 from Bio.PDB.Polypeptide import protein_letters_3to1 as _aa3to1
 
 # Static metadata per prediction program: (display_name, url, classification).
-# Version is absent — it is read at runtime from the upstream versions.yml so
-# it always reflects the actual container/tool version that ran.
+# Version is absent — it is resolved at runtime from collected Nextflow version
+# metadata so it reflects the actual container/tool version that ran.
 _SOFTWARE_INFO = {
     'alphafold2':           ('AlphaFold2',            'https://github.com/google-deepmind/alphafold',         'protein structure prediction'),
     'alphafold3':           ('AlphaFold3',            'https://github.com/google-deepmind/alphafold3',        'protein structure prediction'),
@@ -107,7 +107,7 @@ def parse_args(args=None):
     parser.add_argument('--name',    required=True)
     parser.add_argument('--prog',         required=True)
     parser.add_argument('--msa_tool',     default=None, help='MSA search tool used (e.g. jackhmmer, hhblits, mmseqs2). Embedded in the CoevolutionMSA protocol step.')
-    parser.add_argument('--versions_yml', default=None, help='versions.yml emitted by the upstream run_* module.')
+    parser.add_argument('--versions_yml', default=None, help='YAML file containing collected Nextflow software versions.')
     parser.add_argument('--software_details', default=None, help='Optional path to DUMMY YAML file for software + protocol step metadata -- pre-wiring into upstream logic.')
     parser.add_argument('--output',       default=None)
     parser.add_argument('--all-structs',  action='store_true', help='Include all parseable files passed via --structs as models. This is enabled automatically when more than one structure file is supplied.')
@@ -150,9 +150,7 @@ def _chain_sequence(chain):
 
 def _read_sw_version(versions_yml, prog):
     """
-    Extract the version string for *prog* from a Nextflow versions.yml.
-
-    TODO: this currently assumes a simple structure of versions.yml and I'm not sure if that's settled.
+    Extract the version string for *prog* from nested or topic-collected Nextflow version metadata.
 
     """
     if versions_yml is None or not os.path.exists(versions_yml):
@@ -635,7 +633,7 @@ def build_modelcif(
     prog : str
         Prediction program key (see _SOFTWARE_INFO).
     sw_version : str, optional
-        Version string parsed from the upstream versions.yml.
+        Version string resolved from collected Nextflow version metadata.
     msa_tool : str, optional
         MSA search tool name (e.g. ``'jackhmmer'``, ``'hhblits'``, ``'mmseqs2'``).
         Embedded in the CoevolutionMSA protocol step name.
@@ -1138,7 +1136,6 @@ def main(args=None):
         sw_version=sw_version,
         msa_tool=msa_tool,
         software_details=software_details,
-        missing_metrics=missing_metrics,
     )
 
     with open(output_file, open_mode) as fh:

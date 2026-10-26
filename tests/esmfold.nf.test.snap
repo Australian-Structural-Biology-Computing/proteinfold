@@ -5,9 +5,13 @@
             [
                 "esmfold",
                 "esmfold/T1024",
+                "esmfold/T1024/T1024_pae.tsv",
                 "esmfold/T1024/T1024_plddt.tsv",
+                "esmfold/T1024/T1024_ptm.tsv",
                 "esmfold/T1026",
+                "esmfold/T1026/T1026_pae.tsv",
                 "esmfold/T1026/T1026_plddt.tsv",
+                "esmfold/T1026/T1026_ptm.tsv",
                 "esmfold/top_ranked_structures",
                 "esmfold/top_ranked_structures/T1024.pdb",
                 "esmfold/top_ranked_structures/T1026.pdb",
@@ -24,8 +28,12 @@
                 "reports/T1026_esmfold_report.html"
             ],
             [
+                "T1024_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_plddt.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1024_ptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_plddt.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026_ptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",

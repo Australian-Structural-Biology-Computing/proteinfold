@@ -48,7 +48,9 @@ workflow POST_PROCESSING {
 
     if (write_modelcif) {
         MODELCIF_ASSEMBLE(ch_modelcif)
-        CIFCHECK(MODELCIF_ASSEMBLE.out.modelcif)
+        CIFCHECK(MODELCIF_ASSEMBLE.out.modelcif.map { meta, cif ->
+            [meta, cif, file("$projectDir/bin/dicts/mmcif_ma.sdb", checkIfExists: true)]
+        })
         ch_modelcif_published = CIFCHECK.out.modelcif
     }
 
