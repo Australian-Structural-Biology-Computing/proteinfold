@@ -1138,7 +1138,6 @@ def main(args=None):
         sw_version=sw_version,
         msa_tool=msa_tool,
         software_details=software_details,
-        missing_metrics=missing_metrics,
     )
 
     with open(output_file, open_mode) as fh:
