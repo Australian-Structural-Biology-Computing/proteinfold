@@ -38,6 +38,19 @@ nextflow_pipeline {
         }
     }
 
+    test("-profile test_esmfold --write_modelcif") {
+        when {
+            params {
+                outdir = "$outputDir"
+                write_modelcif = true
+            }
+        }
+        then {
+            assert workflow.success
+            assert file("${params.outdir}/modelcif/T1026_esmfold.mmcif").exists()
+        }
+    }
+
     test("-profile test_esmfold --skip_multiqc") {
         when {
             params {

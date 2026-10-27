@@ -14,7 +14,7 @@ nextflow_process {
             }
             process {
                 """
-                input[0] = [ [ id: 'test' ], file("$projectDir/assets/DUMMY_MODELCIF.mmcif", checkIfExists: true) ]
+                input[0] = [ [ id: 'test' ], file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_MODELCIF.mmcif", checkIfExists: true) ]
                 """
             }
         }
@@ -30,7 +30,7 @@ nextflow_process {
         when {
             process {
                 """
-                input[0] = [ [ id: 'pdbx' ], file("$projectDir/assets/DUMMY_PDBX.mmcif", checkIfExists: true) ]
+                input[0] = [ [ id: 'pdbx' ], file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_PDBX.mmcif", checkIfExists: true) ]
                 """
             }
         }
@@ -45,7 +45,7 @@ nextflow_process {
         when {
             process {
                 """
-                input[0] = [ [ id: 'invalid' ], file("$projectDir/assets/DUMMY_INVALID.mmcif", checkIfExists: true) ]
+                input[0] = [ [ id: 'invalid' ], file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_INVALID.mmcif", checkIfExists: true) ]
                 """
             }
         }

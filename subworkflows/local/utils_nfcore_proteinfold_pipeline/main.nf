@@ -259,17 +259,37 @@ def collectMultiqcMetrics(model, metric_channels) {
 
 // Join ESMFold outputs with placeholders for metrics that it does not generate.
 def modelcifInput(structs, msa, plddt, pae, ptm, iptm, versions, softwareDetails, msaTool, missingMetrics = [], modelParams = [:], plddtScale = null) {
-    structs
-        .join(msa)
-        .join(plddt)
-        .join(pae)
-        .join(ptm)
-        .join(iptm)
+    def dummyMetrics = [
+        pae: file("$projectDir/assets/DUMMY_PAE.tsv", checkIfExists: true),
+        ptm: file("$projectDir/assets/DUMMY_PTM.tsv", checkIfExists: true),
+        iptm: file("$projectDir/assets/DUMMY_IPTM.tsv", checkIfExists: true)
+    ]
+    def input = structs.join(msa).join(plddt)
+    [pae: pae, ptm: ptm, iptm: iptm].each { name, metric ->
+        input = input.join(metric, remainder: true)
+            .filter { values -> values[1] != null }
+            .map { values ->
+                def missing = values[-1] == null
+                values[0..-2] + [missing ? dummyMetrics[name] : values[-1], missing]
+            }
+    }
+    input
         .combine(versions)
-        .map { meta, structureFiles, msaFile, plddtFile, paeFile, ptmFile, iptmFile, versionsFile ->
+        .map { values ->
+            def meta = values[0]
+            def structureFiles = values[1]
+            def msaFile = values[2]
+            def plddtFile = values[3]
+            def paeFile = values[4]
+            def paeMissing = values[5]
+            def ptmFile = values[6]
+            def ptmMissing = values[7]
+            def iptmFile = values[8]
+            def iptmMissing = values[9]
+            def versionsFile = values[10]
             def modelcifMeta = meta.clone()
             modelcifMeta.msa_tool = msaTool
-            modelcifMeta.missing_metrics = missingMetrics
+            modelcifMeta.missing_metrics = (missingMetrics + [paeMissing ? 'pae' : null, ptmMissing ? 'ptm' : null, iptmMissing ? 'iptm' : null]).findAll().unique()
             modelcifMeta.modelcif_params = modelParams
             modelcifMeta.plddt_scale = plddtScale
             [modelcifMeta, structureFiles, msaFile, plddtFile, paeFile, ptmFile, iptmFile, versionsFile, softwareDetails]

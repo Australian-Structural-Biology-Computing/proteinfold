@@ -323,6 +323,8 @@ def _map_pae_files_to_ranks(pae_files, num_structs):
     """Map PAE files to model ranks by filename, rejecting gaps, duplicates
     and unparseable names.  A single arbitrarily-named file (e.g. DUMMY_PAE.tsv)
     is accepted when there is exactly one model."""
+    if num_structs == 1 and len(pae_files) == 1:
+        return {0: pae_files[0]}
     pae_by_rank = {}
     for pae_file in pae_files:
         rank = _rank_from_pae_filename(pae_file)
