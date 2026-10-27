@@ -6,13 +6,13 @@
                     {
                         "id": "T1026"
                     },
-                    "features.pkl:md5,5f3ae29dceb98a477fd7e119877224f0"
+                    "features.pkl:md5,de7a8555c90b1f4608fc33654fd157cb"
                 ]
             ]
         ],
-        "timestamp": "2026-09-22T15:53:46.412527305",
+        "timestamp": "2026-10-27T14:19:07.948790382",
         "meta": {
-            "nf-test": "0.9.5",
+            "nf-test": "0.9.4",
             "nextflow": "26.04.6"
         }
     }

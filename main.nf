@@ -57,8 +57,6 @@ workflow NFCORE_PROTEINFOLD {
     ch_top_ranked_model  = channel.empty()
     ch_modelcif          = channel.empty()
     modelcif_dummy_msa  = file("$projectDir/assets/DUMMY_MSA.tsv", checkIfExists: true)
-    modelcif_dummy_pae  = file("$projectDir/assets/DUMMY_PAE.tsv", checkIfExists: true)
-    modelcif_dummy_ptm  = file("$projectDir/assets/DUMMY_PTM.tsv", checkIfExists: true)
     modelcif_dummy_iptm = file("$projectDir/assets/DUMMY_IPTM.tsv", checkIfExists: true)
     modelcif_software_details = file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
     def ch_software_versions = channel.topic('versions')

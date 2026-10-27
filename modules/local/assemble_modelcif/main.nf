@@ -5,7 +5,7 @@ process MODELCIF_ASSEMBLE {
     conda "${moduleDir}/environment.yml"
     container 'ghcr.io/keiran-rowell-unsw/proteinfold-modelcif:1.7'
 
-    // Placeholder TSVs keep the tuple complete; populate_modelcif.py omits them from metadata.
+    // Missing metrics use placeholder TSVs and are excluded using --missing-metrics.
     // TODO: Unsure at this stage best way forward with chain-wise paths. At least modelCIF has the asymmetric unit entity, so we *could* DUMMY_FILE, but I do like the philosophy of don't check things that *can't* exist
     input:
     tuple val(meta), path(structs), path(msa), path(plddt), path(pae), path(ptm), path(iptm), path(versions_yml, stageAs: 'versions_input/versions.yml'), path(software_details)
