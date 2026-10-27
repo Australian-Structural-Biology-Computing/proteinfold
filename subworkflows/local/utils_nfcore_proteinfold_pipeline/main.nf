@@ -257,7 +257,7 @@ def collectMultiqcMetrics(model, metric_channels) {
         }
 }
 
-// Join ESMFold outputs with placeholders for metrics that it does not generate.
+// Join predictor outputs and substitute placeholders for unavailable optional metrics.
 def modelcifInput(structs, msa, plddt, pae, ptm, iptm, versions, softwareDetails, msaTool, missingMetrics = [], modelParams = [:], plddtScale = null) {
     def dummyMetrics = [
         pae: file("$projectDir/assets/DUMMY_PAE.tsv", checkIfExists: true),
