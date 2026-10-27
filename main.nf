@@ -173,6 +173,7 @@ workflow NFCORE_PROTEINFOLD {
             ALPHAFOLD2.out.ptm,
             ALPHAFOLD2.out.iptm,
             ch_software_versions,
+            modelcif_software_details,
             'jackhmmer'
         ))
     }
@@ -262,6 +263,7 @@ workflow NFCORE_PROTEINFOLD {
             ALPHAFOLD3.out.ptm,
             ALPHAFOLD3.out.iptm,
             ch_software_versions,
+            modelcif_software_details,
             'jackhmmer'
         ))
     }
@@ -330,6 +332,7 @@ workflow NFCORE_PROTEINFOLD {
             COLABFOLD.out.ptm,
             COLABFOLD.out.iptm,
             ch_software_versions,
+            modelcif_software_details,
             'mmseqs2'
         ))
     }
@@ -450,6 +453,7 @@ workflow NFCORE_PROTEINFOLD {
             BOLTZ.out.ptm,
             BOLTZ.out.iptm,
             ch_software_versions,
+            modelcif_software_details,
             'mmseqs2'
         ))
     }
