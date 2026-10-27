@@ -28,14 +28,15 @@ nextflow_pipeline {
             tag "${backend.mode}"
             options "--mode ${backend.mode} --use_gpu"
             def samplesheet = new File('tests/scientific/fixtures/colabfold2_single.csv').absolutePath
+            def testDB = System.getenv('PROTEINFOLD_TEST_DB') ?: 's3://proteinfold-dataset/test-data/mini_dbs'
 
             when {
                 params {
                     outdir = "$outputDir"
                     input = samplesheet
-                    colabfold_db = System.getenv('PROTEINFOLD_TEST_DB')
+                    colabfold_db = testDB
                     colabfold2_params_path = System.getenv('PROTEINFOLD_CF2_CACHE')
-                        ?: System.getenv('PROTEINFOLD_TEST_DB') + '/colabfold2_models'
+                        ?: testDB + '/colabfold2_models'
                     esmfold2_model = backend.model ?: 'msa'
                     colabfold2_kernel_backend = backend.kernel ?: 'auto'
                 }
