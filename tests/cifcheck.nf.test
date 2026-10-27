@@ -13,7 +13,7 @@ nextflow_process {
             }
             process {
                 """
-                input[0] = [ [ id: 'text', model: 'rank_1' ], file("$projectDir/assets/DUMMY_MODELCIF_CIFCHECK.mmcif", checkIfExists: true), file("$projectDir/bin/dicts/mmcif_ma.sdb", checkIfExists: true) ]
+                input[0] = [ [ id: 'text', model: 'rank_1' ], file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_MODELCIF_CIFCHECK.mmcif", checkIfExists: true), file("$projectDir/bin/dicts/mmcif_ma.sdb", checkIfExists: true) ]
                 """
             }
         }
@@ -27,7 +27,7 @@ nextflow_process {
         when {
             process {
                 """
-                input[0] = [ [ id: 'binary', model: 'rank_1' ], file("$projectDir/assets/DUMMY_MODELCIF_CIFCHECK.bcif", checkIfExists: true), file("$projectDir/bin/dicts/mmcif_ma.sdb", checkIfExists: true) ]
+                input[0] = [ [ id: 'binary', model: 'rank_1' ], file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_MODELCIF_CIFCHECK.bcif", checkIfExists: true), file("$projectDir/bin/dicts/mmcif_ma.sdb", checkIfExists: true) ]
                 """
             }
         }
@@ -40,7 +40,7 @@ nextflow_process {
         when {
             process {
                 """
-                input[0] = [ [ id: 'pdbx', model: 'rank_1' ], file("$projectDir/assets/DUMMY_PDBX.mmcif", checkIfExists: true), file("$projectDir/bin/dicts/mmcif_ma.sdb", checkIfExists: true) ]
+                input[0] = [ [ id: 'pdbx', model: 'rank_1' ], file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_PDBX.mmcif", checkIfExists: true), file("$projectDir/bin/dicts/mmcif_ma.sdb", checkIfExists: true) ]
                 """
             }
         }
@@ -53,7 +53,7 @@ nextflow_process {
         when {
             process {
                 """
-                input[0] = [ [ id: 'pdbx', model: 'entry' ], file("$projectDir/assets/DUMMY_PDBX.mmcif", checkIfExists: true), file("$projectDir/bin/dicts/mmcif_pdbx_v50.sdb", checkIfExists: true) ]
+                input[0] = [ [ id: 'pdbx', model: 'entry' ], file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_PDBX.mmcif", checkIfExists: true), file("$projectDir/bin/dicts/mmcif_pdbx_v50.sdb", checkIfExists: true) ]
                 """
             }
         }
@@ -66,7 +66,7 @@ nextflow_process {
         when {
             process {
                 """
-                input[0] = [ [ id: 'invalid', model: 'rank_1' ], file("$projectDir/assets/DUMMY_INVALID.mmcif", checkIfExists: true), file("$projectDir/bin/dicts/mmcif_ma.sdb", checkIfExists: true) ]
+                input[0] = [ [ id: 'invalid', model: 'rank_1' ], file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_INVALID.mmcif", checkIfExists: true), file("$projectDir/bin/dicts/mmcif_ma.sdb", checkIfExists: true) ]
                 """
             }
         }

@@ -16,14 +16,14 @@ nextflow_process {
             }
             process {
                 def plddt = new File(outputDir, 'one_rank_plddt.tsv')
-                plddt.text = new File(projectDir, 'assets/DUMMY_PLDDT.tsv').readLines()
+                plddt.text = new URL((params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/') + "testdata/metrics/DUMMY_PLDDT.tsv").readLines()
                     .collect { it.split('\t')[0..1].join('\t') }.join('\n') + '\n'
                 new File(outputDir, 'ptm.tsv').text = 'rank_0\t0.381\n'
                 new File(outputDir, 'iptm.tsv').text = 'rank_0\t0.617\n'
                 """
                 input[0] = [
                     [ id: 'sw_entries', model: 'alphafold2', msa_tool: 'jackhmmer', no_template_search: true ],
-                    file("$projectDir/assets/DUMMY_MODELCIF.mmcif", checkIfExists: true),
+                    file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_MODELCIF.mmcif", checkIfExists: true),
                     file("$projectDir/assets/DUMMY_MSA.tsv",         checkIfExists: true),
                     file("$outputDir/one_rank_plddt.tsv",           checkIfExists: true),
                     file("$projectDir/assets/DUMMY_PAE.tsv",         checkIfExists: true),

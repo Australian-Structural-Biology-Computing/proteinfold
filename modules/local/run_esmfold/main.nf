@@ -51,9 +51,16 @@ process RUN_ESMFOLD {
 
     stub:
     """
-    touch "${meta.id}_esmfold.pdb"
-    touch "${meta.id}_plddt.tsv"
-    touch "${meta.id}_pae.tsv"
-    touch "${meta.id}_ptm.tsv"
+    if [ "${params.write_modelcif}" = "true" ]; then
+        printf 'HEADER    MODEL CIF TEST\\nSEQRES   1 A    2  ALA GLY\\nATOM      1  CA  ALA A   1      10.000  10.000  10.000  1.00 50.00           C\\nATOM      2  CA  GLY A   2      11.000  10.000  10.000  1.00 50.00           C\\nTER\\nEND\\n' > "${meta.id}_esmfold.pdb"
+        printf 'Positions\\trank_0\\n0\\t50.0\\n1\\t50.0\\n' > "${meta.id}_plddt.tsv"
+        printf '0.0\\t0.0\\n0.0\\t0.0\\n' > "${meta.id}_pae.tsv"
+        printf 'rank_0\\t0.5\\n' > "${meta.id}_ptm.tsv"
+    else
+        touch "${meta.id}_esmfold.pdb"
+        touch "${meta.id}_plddt.tsv"
+        touch "${meta.id}_pae.tsv"
+        touch "${meta.id}_ptm.tsv"
+    fi
     """
 }
