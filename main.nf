@@ -20,9 +20,8 @@ include { PREPARE_ALPHAFOLD3_DBS           } from './subworkflows/local/prepare_
 include { PREPARE_ESMFOLD_DBS              } from './subworkflows/local/prepare_esmfold_dbs'
 include { PREPARE_BOLTZ_DBS                } from './subworkflows/local/prepare_boltz_dbs'
 
-include { PREPARE_COLABFOLD_DBS  as PREPARE_COLABFOLD_DBS_COLABFOLD  } from './subworkflows/local/prepare_colabfold_dbs'
-include { PREPARE_COLABFOLD_DBS  as PREPARE_COLABFOLD_DBS_BOLTZ      } from './subworkflows/local/prepare_colabfold_dbs'
-include { PREPARE_COLABFOLD_DBS  as PREPARE_COLABFOLD_DBS_COLABFOLD2 } from './subworkflows/local/prepare_colabfold_dbs'
+include { PREPARE_COLABFOLD_DBS  as PREPARE_COLABFOLD_DBS_COLABFOLD } from './subworkflows/local/prepare_colabfold_dbs'
+include { PREPARE_COLABFOLD_DBS  as PREPARE_COLABFOLD_DBS_BOLTZ     } from './subworkflows/local/prepare_colabfold_dbs'
 include { PREPARE_COLABFOLD2_DBS               } from './subworkflows/local/prepare_colabfold2_dbs'
 
 include { ALPHAFOLD2                       } from './workflows/alphafold2'
@@ -340,8 +339,7 @@ workflow NFCORE_PROTEINFOLD {
             params.colabfold_alphafold2_params_link,
             params.colabfold_db_link,
             params.colabfold_uniref30_link,
-            params.colabfold_create_index,
-            true
+            params.colabfold_create_index
         )
 
         //
@@ -401,28 +399,17 @@ workflow NFCORE_PROTEINFOLD {
             params.colabfold2_params_path,
             params.colabfold_db,
             colabfold2_model_for_submode,
-            params.colabfold2_weights_precision
+            params.colabfold2_weights_precision,
+            params.use_msa_server,
+            params.colabfold_envdb_path,
+            params.colabfold_uniref30_path,
+            params.colabfold_db_link,
+            params.colabfold_uniref30_link,
+            params.colabfold_create_index
         )
         ch_colabfold2_params_path = PREPARE_COLABFOLD2_DBS.out.params_path
-
-        ch_colabfold2_db       = channel.empty()
-        ch_colabfold2_uniref30 = channel.empty()
-        if (!params.use_msa_server) {
-            PREPARE_COLABFOLD_DBS_COLABFOLD2 (
-                params.colabfold_db,
-                params.use_msa_server,
-                params.colabfold_alphafold2_params_path,
-                params.colabfold_envdb_path,
-                params.colabfold_uniref30_path,
-                params.colabfold_alphafold2_params_link,
-                params.colabfold_db_link,
-                params.colabfold_uniref30_link,
-                params.colabfold_create_index,
-                false
-            )
-            ch_colabfold2_db       = PREPARE_COLABFOLD_DBS_COLABFOLD2.out.colabfold_db
-            ch_colabfold2_uniref30 = PREPARE_COLABFOLD_DBS_COLABFOLD2.out.uniref30
-        }
+        ch_colabfold2_db          = PREPARE_COLABFOLD2_DBS.out.colabfold_db
+        ch_colabfold2_uniref30    = PREPARE_COLABFOLD2_DBS.out.uniref30
 
         COLABFOLD2(
             ch_samplesheet,
@@ -531,8 +518,7 @@ workflow NFCORE_PROTEINFOLD {
             params.colabfold_alphafold2_params_link,
             params.colabfold_db_link,
             params.colabfold_uniref30_link,
-            params.colabfold_create_index,
-            true
+            params.colabfold_create_index
         )
 
         BOLTZ(

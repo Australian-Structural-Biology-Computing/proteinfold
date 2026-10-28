@@ -27,24 +27,6 @@ COLABFOLD2_MODES = frozenset({
 })
 
 
-COLABFOLD2_PREFIXED = ("alphafold3", "boltz2")
-
-COLABFOLD2_BARE = (
-    "protenix2", "chai1", "intellifold2", "opendde", "openfold3", "openbind0",
-    "rosettafold3", "esmfold2",
-)
-ESMFOLD2_RETIRED = {"esmfold2_lm300m", "esmfold2_lm600m"}
-
-
-def resolve_mode_dir(outdir: Path, mode: str) -> Path:
-    """Map a public mode token to its published output directory."""
-    if mode in ESMFOLD2_RETIRED:
-        raise ValueError(f"Retired ESMFold2 mode token: {mode}; use --mode esmfold2 with --esmfold2_model")
-    if mode in {f"colabfold2-{backend}" for backend in COLABFOLD2_PREFIXED} or mode in COLABFOLD2_BARE:
-        return outdir / mode
-    return outdir / mode
-
-
 def input_ids(samplesheet: str) -> list[str]:
     if samplesheet.startswith(("http://", "https://")):
         with urllib.request.urlopen(samplesheet) as response:  # noqa: S310 - fixed test data URL
@@ -263,8 +245,8 @@ def main() -> None:
     parser.add_argument(
         "--structure-only",
         action="store_true",
-        help="Model ships no confidence head (NO_CONFIDENCE_HEAD): accept n/a pLDDT "
-        "cells without a mean-pLDDT gate and all-NaN PAE matrices.",
+        help="For ESM-C language-model variants, accept unavailable or finite pLDDT "
+        "and PAE scores according to the checkpoint and runtime version.",
     )
     parser.add_argument(
         "--require-pae",
@@ -275,7 +257,7 @@ def main() -> None:
 
     parser_canary()
     ids = input_ids(args.samplesheet)
-    mode_dir = resolve_mode_dir(args.outdir, args.mode)
+    mode_dir = args.outdir / args.mode
     assert mode_dir.is_dir(), f"{args.display_name} output directory does not exist: {mode_dir}"
 
     structure_dirs = [path for path in mode_dir.rglob("top_ranked_structures") if path.is_dir()]
@@ -298,16 +280,10 @@ def main() -> None:
         )
     for path in plddt_files:
         position_count, score_count, mean_plddt = validate_plddt(path, structure_only=args.structure_only)
-        if args.structure_only:
-            print(
-                f"Validated pLDDT: {path.name} "
-                f"({position_count} positions, {score_count} cells; no confidence head identity verified)"
-            )
+        if mean_plddt is None:
+            print(f"Validated pLDDT: {path.name} ({position_count} positions, {score_count} cells; confidence unavailable)")
         else:
-            print(
-                f"Validated pLDDT: {path.name} "
-                f"({position_count} positions, {score_count} scores, mean={mean_plddt:.1f})"
-            )
+            print(f"Validated pLDDT: {path.name} ({position_count} positions, {score_count} scores, mean={mean_plddt:.1f})")
 
     pae_files = sorted(path for path in mode_dir.rglob("*.tsv") if path.parent.name == "paes")
     if args.require_pae:
