@@ -54,7 +54,7 @@ ColabFold2 outputs are published directly under the selected public mode token, 
 </details>
 
 > [!NOTE]
-> `--mode esmfold2 --esmfold2_model lm300m` and `--mode esmfold2 --esmfold2_model lm600m` select structure-only ESM-C models with no confidence head. Their pLDDT tables contain `n/a`, their PAE matrices contain `NaN`, and unavailable summary metrics are empty.
+> Select the ESMFold2 language-model variants with `--mode esmfold2 --esmfold2_model lm300m` or `--mode esmfold2 --esmfold2_model lm600m`. Confidence output depends on the checkpoint and runtime: pLDDT may contain finite scores or `n/a`, PAE may contain finite scores or `NaN`, and unavailable summary metrics remain empty.
 
 ### pLDDT (`{meta.id}_plddt.tsv`)
 

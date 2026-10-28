@@ -46,7 +46,7 @@ FASTA inputs go through the local `colabfold_search` protocol against the databa
 
 ## File Structure
 
-The file structure of the ColabFold2 weights root (`<colabfold_db>/colabfold2_models` for a local pre-populated database, or `--colabfold2_params_path`) must be as follows. For S3 databases, supply `--colabfold2_params_path` or allow the separate upstream download leg to stage weights. The same download leg can prepare weights when `--use_msa_server` is enabled without `--colabfold_db`.
+If `--colabfold2_params_path` is not set and no weights cache is available under a local `--db`/`--colabfold_db`, the pipeline downloads the required weights in a separate Nextflow process. The weights root has this structure:
 
 <details markdown="1">
 <summary>Directory structure</summary>
