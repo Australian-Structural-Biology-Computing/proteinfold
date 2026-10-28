@@ -1,19 +1,18 @@
 ARG CUDA_VERSION=12.9.1
 FROM nvidia/cuda:${CUDA_VERSION}-runtime-ubuntu24.04
 
-ARG COLABFOLD_COMMIT=f850f0f22f007355bd264d48e9ed263d59331426
+ARG COLABFOLD_COMMIT=e9e8bd0b8b6c26f9865808070342d0d785dada2e
 
 LABEL org.opencontainers.image.title="nf-core/proteinfold_colabfold2" \
       org.opencontainers.image.description="ColabFold AF3 preview runtime for ProteinFold" \
-      org.opencontainers.image.version="af3-preview-f850f0f" \
-      org.opencontainers.image.source="https://github.com/sokrypton/ColabFold/tree/f850f0f22f007355bd264d48e9ed263d59331426" \
-      org.opencontainers.image.revision="f850f0f22f007355bd264d48e9ed263d59331426" \
+      org.opencontainers.image.version="af3-preview-e9e8bd0" \
+      org.opencontainers.image.source="https://github.com/sokrypton/ColabFold/tree/e9e8bd0b8b6c26f9865808070342d0d785dada2e" \
+      org.opencontainers.image.revision="e9e8bd0b8b6c26f9865808070342d0d785dada2e" \
       org.opencontainers.image.licenses="MIT; model weights have separate terms"
 
 COPY requirements.lock /opt/colabfold-requirements.lock
 
-# requirements.lock was captured from the published af3-preview-f850f0f image; keep the pins fixed
-# so rebuilding this source cannot silently pick a different JAX runtime or transitive dependency.
+# Keep the runtime pins fixed so rebuilding this source cannot silently pick a different JAX runtime or transitive dependency.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends git python3 python3-pip python3-venv && \
     python3 -m venv /opt/colabfold && \

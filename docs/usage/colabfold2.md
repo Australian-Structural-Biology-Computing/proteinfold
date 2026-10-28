@@ -39,7 +39,7 @@ nextflow run nf-core/proteinfold \
     -profile <docker/singularity/podman/shifter/charliecloud/institute>
 ```
 
-FASTA inputs go through the local `colabfold_search` protocol against the databases in `--colabfold_db`. `--db`/`--colabfold_db` is a database-only location; it is not expected to contain a `colabfold2_models` child when it is an S3 URL. If no explicit local `--colabfold2_params_path` is supplied, the pipeline runs the pinned upstream ColabFold2 downloader in a separate Nextflow task and stages the result in the task work directory. This requires outbound network access and several GB of task storage; no model weights are downloaded in stub mode. AlphaFold3 JSON inputs are passed through to carry rich entities such as RNA, ligands, PTMs, templates and user CCD definitions: with offline MSA generation the pipeline extracts their protein queries, runs the search and merges the resulting MSAs back into the original JSON, while `--use_msa_server` (with an optional private `--msa_server_url`) passes the file directly to `colabfold_batch`.
+FASTA inputs go through the local `colabfold_search` protocol against the databases in `--colabfold_db`. `--db`/`--colabfold_db` is a database-only location; it is not expected to contain a `colabfold2_models` child when it is an S3 URL. If no explicit local `--colabfold2_params_path` is supplied, the pipeline reuses complete model weights under a local `<colabfold_db>/colabfold2_models` directory or runs the pinned upstream ColabFold2 downloader in a separate Nextflow task and stages the result in the task work directory. Outdated Chai1 or Boltz2 completion markers trigger a fresh download instead of reusing old blobs. For RosettaFold3 fp32, the pipeline also checks the checkpoint size pinned to this image: a stale implicit cache triggers a task-local download, while a stale explicit `--colabfold2_params_path` fails with a request to provide refreshed weights; neither case changes the source cache. This requires outbound network access and several GB of task storage; no model weights are downloaded in stub mode. AlphaFold3 JSON inputs are passed through to carry rich entities such as RNA, ligands, PTMs, templates and user CCD definitions: with offline MSA generation the pipeline extracts their protein queries, runs the search and merges the resulting MSAs back into the original JSON, while `--use_msa_server` (with an optional private `--msa_server_url`) passes the file directly to `colabfold_batch`.
 
 > [!NOTE]
 > Local ColabFold search occurs in a separate module to model inference and the resulting MSA will be cached if downstream modules need to be re-run.
@@ -63,6 +63,8 @@ The file structure of the ColabFold2 weights root (`<colabfold_db>/colabfold2_mo
     └── download_<model>_<precision>_finished.txt
 ```
 
+Chai1 and Boltz2 use revision-qualified completion markers instead: `download_chai1_<precision>_r3_finished.txt` and `download_boltz2_<precision>_r1_finished.txt`.
+
 </details>
 
 `<model>` is the selected upstream model, suffixed with `-int8` when `--colabfold2_weights_precision int8` is set; the `<model>.lm.npz` checkpoint and matching `esmc_300m` or `esmc_600m` trunk are only required by the ESMFold2 language-model selections.
@@ -74,7 +76,7 @@ See the [ColabFold2](https://github.com/sokrypton/ColabFold) documentation for a
 | Parameter                        | Default | Description                                                                                                                                                                                                                                  |
 | -------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--colabfold2_weights_precision` | `fp32`  | Checkpoint precision: `fp32` or `int8`. Official AlphaFold3 weights support `fp32` only.                                                                                                                                                     |
-| `--esmfold2_model`               | `msa`   | ESMFold2 checkpoint: `msa`, `lm300m` or `lm600m`. The language-model selections pass `--use-esm` automatically and provide no confidence outputs.                                                                                            |
+| `--esmfold2_model`               | `msa`   | ESMFold2 checkpoint: `msa`, `lm300m` or `lm600m`. The language-model selections pass `--use-esm` automatically; confidence output depends on the upstream checkpoint and runtime version.                                                    |
 | `--colabfold2_kernel_backend`    | `auto`  | Fused-kernel implementation used by `colabfold_batch`; `auto` is the upstream default, but on GPUs missing from the bundled JAX device table (e.g. L40S, V100) it fails with `No supported GPU devices found` and `cuda_legacy` must be set. |
 | `--colabfold_num_recycles`       | `3`     | The number of times model outputs are recycled as iterative refinement input. This parameter is shared with the ColabFold mode.                                                                                                              |
 
