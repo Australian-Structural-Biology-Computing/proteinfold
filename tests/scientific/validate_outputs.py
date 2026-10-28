@@ -125,10 +125,11 @@ def validate_plddt(path: Path, structure_only: bool = False) -> tuple[int, int, 
         total_cells = len(values) + unavailable
         all_na = unavailable == total_cells
         all_zero_legacy = unavailable == 0 and bool(values) and all(value == 0 for value in values)
-        assert all_na or all_zero_legacy, (
-            f"Structure-only pLDDT must be entirely 'n/a' or all-zero legacy values: {path}"
+        all_scored = unavailable == 0 and bool(values) and sum(values) / len(values) >= 5.0
+        assert all_na or all_zero_legacy or all_scored, (
+            f"Language-model pLDDT must be all 'n/a', all-zero legacy values, or finite scores with mean >= 5: {path}"
         )
-        return len(rows) - 1, total_cells, None
+        return len(rows) - 1, total_cells, sum(values) / len(values) if all_scored else None
     mean_plddt = sum(values) / len(values)
     assert mean_plddt >= 5.0, f"Suspiciously low mean pLDDT: {path}"
     return len(rows) - 1, len(values), mean_plddt
@@ -146,9 +147,9 @@ def validate_pae(path: Path, structure_only: bool = False) -> tuple[int, int]:
                     values.append(float(cell))
                 except ValueError:
                     raise AssertionError(f"PAE value {cell!r} is not a number: {path}") from None
-        assert values and all(math.isnan(value) for value in values), (
-            f"Structure-only PAE must be all-NaN: {path}"
-        )
+        all_na = values and all(math.isnan(value) for value in values)
+        all_scored = values and all(math.isfinite(value) and 0 <= value <= 31.75 for value in values)
+        assert all_na or all_scored, f"Language-model PAE must be all-NaN or finite values in 0-31.75: {path}"
         return len(rows), len(rows[0])
     values = [float(value) for row in rows for value in row]
     assert all(math.isfinite(value) and 0 <= value <= 31.75 for value in values), (

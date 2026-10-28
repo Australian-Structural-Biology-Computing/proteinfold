@@ -1,0 +1,28 @@
+name: "PREPARE_COLABFOLD2_DBS"
+description: Reuse a complete local ColabFold2 weights cache or download the selected checkpoint into a task-local directory
+keywords:
+  - colabfold2
+  - weights
+  - checkpoint
+components: []
+input:
+  - colabfold2_params_path:
+      type: string
+      description: Optional explicit root of the ColabFold2 weights cache
+  - colabfold_db:
+      type: string
+      description: Local database directory that may contain a ColabFold2 weights cache
+  - colabfold2_model:
+      type: string
+      description: Selected upstream model
+  - colabfold2_precision:
+      type: string
+      description: Checkpoint precision
+output:
+  - params_path:
+      type: directory
+      description: Root containing the selected model weights under params/af3
+authors:
+  - "@jscgh"
+maintainers:
+  - "@jscgh"
