@@ -57,9 +57,6 @@ process MMSEQS_COLABFOLDSEARCH {
         ./db \\
         --af3-json \\
         "results/"
-    if [ -n ${quotedDir} ]; then
-        msa_cache.py store ${quotedFasta} ${quotedId} ${quotedToolId} ${quotedArgs} ${quotedDir} ${quotedJson} ${quotedA3m}
-    fi
 
     if [[ -z "\$(find results -type f -name '*.a3m' -print -quit)" ]]; then
         echo "MMSEQS_COLABFOLDSEARCH produced no a3m files for ${meta.id}" >&2
@@ -80,6 +77,10 @@ process MMSEQS_COLABFOLDSEARCH {
         colabfold_search: \$colabfold_search_version
         mmseqs: \$(mmseqs version)
     END_VERSIONS
+
+    if [ -n ${quotedDir} ]; then
+        msa_cache.py store ${quotedFasta} ${quotedId} ${quotedToolId} ${quotedArgs} ${quotedDir} ${quotedJson} ${quotedA3m}
+    fi
     """
 
     stub:
