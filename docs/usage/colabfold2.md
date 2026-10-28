@@ -39,14 +39,14 @@ nextflow run nf-core/proteinfold \
     -profile <docker/singularity/podman/shifter/charliecloud/institute>
 ```
 
-FASTA inputs go through the local `colabfold_search` protocol against the databases in `--colabfold_db`. AlphaFold3 JSON inputs are passed through to carry rich entities such as RNA, ligands, PTMs, templates and user CCD definitions: with offline MSA generation the pipeline extracts their protein queries, runs the search and merges the resulting MSAs back into the original JSON, while `--use_msa_server` (with an optional private `--msa_server_url`) passes the file directly to `colabfold_batch`.
+FASTA inputs go through the local `colabfold_search` protocol against the databases in `--colabfold_db`. `--db`/`--colabfold_db` is a database-only location; it is not expected to contain a `colabfold2_models` child when it is an S3 URL. If no explicit local `--colabfold2_params_path` is supplied, the pipeline runs the pinned upstream ColabFold2 downloader in a separate Nextflow task and stages the result in the task work directory. This requires outbound network access and several GB of task storage; no model weights are downloaded in stub mode. AlphaFold3 JSON inputs are passed through to carry rich entities such as RNA, ligands, PTMs, templates and user CCD definitions: with offline MSA generation the pipeline extracts their protein queries, runs the search and merges the resulting MSAs back into the original JSON, while `--use_msa_server` (with an optional private `--msa_server_url`) passes the file directly to `colabfold_batch`.
 
 > [!NOTE]
 > Local ColabFold search occurs in a separate module to model inference and the resulting MSA will be cached if downstream modules need to be re-run.
 
 ## File Structure
 
-The file structure of the ColabFold2 weights root (`<colabfold_db>/colabfold2_models` by default, or `--colabfold2_params_path`; the latter is required when using `--use_msa_server` without `--colabfold_db`) must be as follows:
+The file structure of the ColabFold2 weights root (`<colabfold_db>/colabfold2_models` for a local pre-populated database, or `--colabfold2_params_path`) must be as follows. For S3 databases, supply `--colabfold2_params_path` or allow the separate upstream download leg to stage weights. The same download leg can prepare weights when `--use_msa_server` is enabled without `--colabfold_db`.
 
 <details markdown="1">
 <summary>Directory structure</summary>
