@@ -340,7 +340,8 @@ workflow NFCORE_PROTEINFOLD {
             params.colabfold_alphafold2_params_link,
             params.colabfold_db_link,
             params.colabfold_uniref30_link,
-            params.colabfold_create_index
+            params.colabfold_create_index,
+            true
         )
 
         //
@@ -393,11 +394,12 @@ workflow NFCORE_PROTEINFOLD {
     }
 
     if(!colabfold2_submodes.isEmpty()) {
-        if (!params.colabfold2_params_path || (!params.colabfold_db && !params.use_msa_server)) {
-            error("ColabFold2 needs a weights root: set --db/--colabfold_db (weights are then read from <colabfold_db>/colabfold2_models) or point --colabfold2_params_path at the weights directory directly. Offline runs additionally require --colabfold_db for the MMseqs2 search; the --use_msa_server leg needs only the weights root.")
+        if (!params.colabfold2_params_path && !params.colabfold_db && !params.use_msa_server) {
+            error("ColabFold2 needs weights: provide --colabfold2_params_path, --db/--colabfold_db, or use --use_msa_server. Weights are downloaded separately when no local weights root is provided.")
         }
         PREPARE_COLABFOLD2_DBS (
             params.colabfold2_params_path,
+            params.colabfold_db,
             colabfold2_model_for_submode,
             params.colabfold2_weights_precision
         )
@@ -415,7 +417,8 @@ workflow NFCORE_PROTEINFOLD {
                 params.colabfold_alphafold2_params_link,
                 params.colabfold_db_link,
                 params.colabfold_uniref30_link,
-                params.colabfold_create_index
+                params.colabfold_create_index,
+                false
             )
             ch_colabfold2_db       = PREPARE_COLABFOLD_DBS_COLABFOLD2.out.colabfold_db
             ch_colabfold2_uniref30 = PREPARE_COLABFOLD_DBS_COLABFOLD2.out.uniref30
@@ -528,7 +531,8 @@ workflow NFCORE_PROTEINFOLD {
             params.colabfold_alphafold2_params_link,
             params.colabfold_db_link,
             params.colabfold_uniref30_link,
-            params.colabfold_create_index
+            params.colabfold_create_index,
+            true
         )
 
         BOLTZ(
