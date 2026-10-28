@@ -36,7 +36,6 @@ nextflow_pipeline {
                     input = samplesheet
                     colabfold_db = testDB
                     colabfold2_params_path = System.getenv('PROTEINFOLD_CF2_CACHE')
-                        ?: testDB + '/colabfold2_models'
                     esmfold2_model = backend.model ?: 'msa'
                     colabfold2_kernel_backend = backend.kernel ?: 'auto'
                 }
