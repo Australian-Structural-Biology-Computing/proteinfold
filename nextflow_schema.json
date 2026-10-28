@@ -264,14 +264,14 @@
                     "type": "string",
                     "enum": ["auto", "pallas", "cuda_legacy"],
                     "default": "auto",
-                    "description": "Fused-kernel implementation used by colabfold_batch. 'auto' is the upstream default (tokamax/Pallas on sm_80+); on GPUs missing from JAX 0.11.1's Pallas device table (e.g. L40S, V100) 'auto' fails with 'No supported GPU devices found' and 'cuda_legacy' enables the colabfold-kernels shim with legacy float16 kernels instead.",
+                    "description": "Fused-kernel implementation used by colabfold_batch. 'auto' is the upstream default (tokamax/Pallas on sm_80+); on GPUs missing from the bundled JAX/Pallas device table (e.g. L40S, V100) 'auto' fails with 'No supported GPU devices found' and 'cuda_legacy' enables the colabfold-kernels shim with legacy float16 kernels instead.",
                     "fa_icon": "fas fa-microchip"
                 },
                 "esmfold2_model": {
                     "type": "string",
                     "enum": ["msa", "lm300m", "lm600m"],
                     "default": "msa",
-                    "description": "ESMFold2 model used by --mode esmfold2. msa uses the normal MSA model; lm300m and lm600m use the ESM-C language-model variants and produce structure-only outputs.",
+                    "description": "ESMFold2 model used by --mode esmfold2. msa uses the normal MSA model; lm300m and lm600m use the ESM-C language-model variants with --use-esm; confidence output depends on the upstream checkpoint and runtime version.",
                     "fa_icon": "fas fa-dna"
                 }
             }

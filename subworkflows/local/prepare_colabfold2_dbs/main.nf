@@ -1,3 +1,8 @@
+include { MMSEQS_CREATEINDEX as MMSEQS_CREATEINDEX_COLABFOLDDB } from '../../../modules/nf-core/mmseqs/createindex/main'
+include { MMSEQS_CREATEINDEX as MMSEQS_CREATEINDEX_UNIPROT30   } from '../../../modules/nf-core/mmseqs/createindex/main'
+include { ARIA2_UNCOMPRESS as ARIA2_COLABFOLD_DB } from '../aria2_uncompress/main'
+include { ARIA2_UNCOMPRESS as ARIA2_UNIREF30     } from '../aria2_uncompress/main'
+
 process DOWNLOAD_COLABFOLD2_WEIGHTS {
     tag "$colabfold2_model ($colabfold2_precision)"
     label 'process_medium'
@@ -34,6 +39,12 @@ workflow PREPARE_COLABFOLD2_DBS {
     colabfold_db
     colabfold2_model
     colabfold2_precision
+    use_msa_server
+    colabfold_envdb_path
+    colabfold_uniref30_path
+    colabfold_db_link
+    colabfold_uniref30_link
+    colabfold_create_index
 
     main:
     def localModels = colabfold_db && !colabfold_db.toString().contains('://') ? "${colabfold_db}/colabfold2_models" : null
@@ -80,6 +91,47 @@ workflow PREPARE_COLABFOLD2_DBS {
         ch_params_path = DOWNLOAD_COLABFOLD2_WEIGHTS.out.params_path
     }
 
+    ch_colabfold_db = channel.empty()
+    ch_uniref30 = channel.empty()
+    if (!use_msa_server) {
+        if (colabfold_db) {
+            ch_colabfold_db = channel.value(files(colabfold_envdb_path, type: 'any', checkIfExists: true))
+            ch_uniref30 = channel.value(files(colabfold_uniref30_path, type: 'any', checkIfExists: true))
+        } else {
+            ARIA2_COLABFOLD_DB(colabfold_db_link)
+            ch_colabfold_db = ARIA2_COLABFOLD_DB.out.db
+
+            if (colabfold_create_index) {
+                MMSEQS_CREATEINDEX_COLABFOLDDB (
+                    ch_colabfold_db.map { path_str ->
+                        def db_file = file(path_str)
+                        [[id: 'colabfolddb'], db_file]
+                    }
+                )
+                ch_colabfold_db = MMSEQS_CREATEINDEX_COLABFOLDDB.out.db_indexed.map { _meta, dir -> files("${dir}/*") }
+            } else {
+                ch_colabfold_db = ch_colabfold_db.map { dir_path -> files("${dir_path}/*") }
+            }
+
+            ARIA2_UNIREF30(colabfold_uniref30_link)
+            ch_uniref30 = ARIA2_UNIREF30.out.db
+
+            if (colabfold_create_index) {
+                MMSEQS_CREATEINDEX_UNIPROT30 (
+                    ch_uniref30.map { path_str ->
+                        def db_file = file(path_str)
+                        [[id: 'uniprot30'], db_file]
+                    }
+                )
+                ch_uniref30 = MMSEQS_CREATEINDEX_UNIPROT30.out.db_indexed.map { _meta, dir -> files("${dir}/*") }
+            } else {
+                ch_uniref30 = ch_uniref30.map { dir_path -> files("${dir_path}/*") }
+            }
+        }
+    }
+
     emit:
     params_path = ch_params_path
+    colabfold_db = ch_colabfold_db
+    uniref30 = ch_uniref30
 }
