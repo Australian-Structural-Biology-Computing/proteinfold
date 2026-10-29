@@ -1,0 +1,65 @@
+nextflow_pipeline {
+
+    name "Scientific validation: ColabFold2"
+    script "../../main.nf"
+    tag "scientific"
+    tag "output_validation"
+    tag "structure_validation"
+    tag "colabfold2"
+    profile "test_full_colabfold2,gpu"
+
+    def backends = [
+        [mode: 'colabfold2-alphafold3'],
+        [mode: 'colabfold2-boltz2', kernel: 'cuda_legacy'],
+        [mode: 'protenix2', kernel: 'cuda_legacy'],
+        [mode: 'chai1', kernel: 'cuda_legacy'],
+        [mode: 'intellifold2', kernel: 'cuda_legacy'],
+        [mode: 'opendde', kernel: 'cuda_legacy'],
+        [mode: 'openfold3', kernel: 'cuda_legacy'],
+        [mode: 'openbind0', kernel: 'cuda_legacy'],
+        [mode: 'rosettafold3', kernel: 'cuda_legacy'],
+        [mode: 'esmfold2', model: 'msa'],
+        [mode: 'esmfold2', model: 'lm300m', structure_only: true],
+        [mode: 'esmfold2', model: 'lm600m', structure_only: true]
+    ]
+
+    backends.each { backend ->
+        test("${backend.mode}${backend.model ? ' ' + backend.model : ''}: validate structures and metrics") {
+            tag "${backend.mode}"
+            options "--mode ${backend.mode} --use_gpu"
+            def samplesheet = new File('tests/scientific/fixtures/colabfold2_single.csv').absolutePath
+            def testDB = System.getenv('PROTEINFOLD_TEST_DB') ?: 's3://proteinfold-dataset/test-data/mini_dbs'
+
+            when {
+                params {
+                    outdir = "$outputDir"
+                    input = samplesheet
+                    colabfold_db = testDB
+                    colabfold2_params_path = System.getenv('PROTEINFOLD_CF2_CACHE')
+                    esmfold2_model = backend.model ?: 'msa'
+                    colabfold2_kernel_backend = backend.kernel ?: 'auto'
+                }
+            }
+
+            then {
+                assert workflow.success: "ColabFold2 ${backend.mode} workflow failed (exit ${workflow.exitStatus})"
+                def command = [
+                    'python3', new File('tests/scientific/validate_outputs.py').absolutePath,
+                    '--mode', backend.mode,
+                    '--display-name', "ColabFold2 ${backend.mode}${backend.model ? ' ' + backend.model : ''}",
+                    '--extension', '.cif',
+                    '--outdir', params.outdir.toString(),
+                    '--samplesheet', params.input.toString(),
+                    '--require-pae'
+                ]
+                if (backend.structure_only) command << '--structure-only'
+                def process = command.execute()
+                def stdout = new StringBuffer()
+                def stderr = new StringBuffer()
+                process.consumeProcessOutput(stdout, stderr)
+                assert process.waitFor() == 0: "${stdout}\n${stderr}"
+                assert file("${params.outdir}/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml").size() > 0
+            }
+        }
+    }
+}
