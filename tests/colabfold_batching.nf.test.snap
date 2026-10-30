@@ -1,7 +1,7 @@
 {
     "runs multiple ColabFold MSA batches": {
         "content": [
-            13,
+            16,
             [
                 "colabfold",
                 "colabfold/T1024",
@@ -107,9 +107,9 @@
                 "T1024.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1027.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024.csv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026.csv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1027.csv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1024.csv:md5,22afe170c0e30d4de850a0b24e490bfd",
+                "T1026.csv:md5,af7fbbd6d4e80843f7993b069dc1acf0",
+                "T1027.csv:md5,dba01b9b26c95820ae4b8877bbd90eb8",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_colabfold_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",

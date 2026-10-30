@@ -7,6 +7,84 @@ nextflow_pipeline {
     tag "test_colabfold_batching"
     profile "test_colabfold_local"
 
+    test("cache partial hit searches only missing samples and predicts both") {
+        tag "cache"
+        setup {
+            def hit = file("$outputDir/hit.fasta")
+            hit.text = '>hit\nACDEFG\n'
+            def miss = file("$outputDir/miss.fasta")
+            miss.text = '>miss\nMNPQRS\n'
+            def sheet = file("$outputDir/samples.csv")
+            sheet.text = "id,fasta\nhit,${hit}\nmiss,${miss}\n"
+            def query = file("$outputDir/hit.csv")
+            query.text = 'id,sequence\nhit,ACDEFG\n'
+            def payload = file("$outputDir/hit.a3m")
+            payload.text = '>hit\nACDEFG\n'
+            def jsonPayload = file(projectDir + '/modules/local/msa_cache_lookup/tests/multimer.json')
+            def cache = file("$outputDir/cache")
+            def command = ['python3', file(projectDir + '/bin/msa_cache.py').toString(), 'store', query.toString(), 'revision', 'sha256:test-image', '', cache.toString(), jsonPayload.toString(), payload.toString()]
+            assert command.execute().waitFor() == 0
+        }
+        when {
+            params {
+                outdir = "$outputDir/results"
+                input = "$outputDir/samples.csv"
+                mode = 'colabfold'
+                colabfold_db = "${projectDir}/assets/dummy_db_dir"
+                msa_cache_dir = "$outputDir/cache"
+                msa_cache_id = 'revision'
+                msa_cache_tool_id = 'sha256:test-image'
+            }
+        }
+        then {
+            assert workflow.success
+            assert workflow.trace.succeeded().count { it.name.contains('MSA_CACHE_LOOKUP') } == 2
+            def searches = workflow.trace.succeeded().findAll { it.name.contains('MMSEQS_COLABFOLDSEARCH_BATCH') }
+            assert searches.size() == 1
+            assert searches[0].name.contains('batch_miss')
+            assert !searches[0].name.contains('batch_hit')
+            assert workflow.trace.succeeded().count { it.name.contains('COLABFOLD_BATCH') } == 2
+        }
+    }
+
+    test("legacy cache identities hit and skip search") {
+        tag "cache"
+        setup {
+            def sheet = file("$outputDir/samples.csv")
+            def jsonPayload = file(projectDir + '/modules/local/msa_cache_lookup/tests/multimer.json')
+            def cache = file("$outputDir/cache")
+            def rows = ['hit': 'ACDEFG', 'miss': 'MNPQRS']
+            sheet.text = 'id,fasta\n' + rows.collect { id, sequence ->
+                def fasta = file("$outputDir/${id}.fasta")
+                fasta.text = ">${id}\n${sequence}\n"
+                def query = file("$outputDir/${id}.csv")
+                query.text = "id,sequence\n${id},${sequence}\n"
+                def payload = file("$outputDir/${id}.a3m")
+                payload.text = ">${id}\n${sequence}\n"
+                def command = ['python3', file(projectDir + '/bin/msa_cache.py').toString(), 'store', query.toString(), 'revision', 'sha256:test-image', '', cache.toString(), jsonPayload.toString(), payload.toString()]
+                assert command.execute().waitFor() == 0
+                "${id},${fasta}\n"
+            }.join('')
+        }
+        when {
+            params {
+                outdir = "$outputDir/results"
+                input = "$outputDir/samples.csv"
+                mode = 'colabfold'
+                colabfold_db = "${projectDir}/assets/dummy_db_dir"
+                msa_cache_dir = "$outputDir/cache"
+                boltz_msa_cache_id = 'revision'
+                boltz_msa_cache_tool_id = 'sha256:test-image'
+            }
+        }
+        then {
+            assert workflow.success
+            assert workflow.trace.succeeded().count { it.name.contains('MSA_CACHE_LOOKUP') } == 2
+            assert workflow.trace.succeeded().count { it.name.contains('MMSEQS_COLABFOLDSEARCH') } == 0
+            assert workflow.trace.succeeded().count { it.name.contains('COLABFOLD_BATCH') } == 2
+        }
+    }
+
     test("runs multiple ColabFold MSA batches") {
 
         when {
