@@ -258,6 +258,32 @@
                 }
             }
         },
+        "msa_cache_options": {
+            "title": "MSA cache options",
+            "type": "object",
+            "fa_icon": "fas fa-database",
+            "description": "Shared MMseqs MSA cache for ColabFold and Boltz.",
+            "properties": {
+                "use_msa_cache": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Cache local MMseqs MSAs by default; set false to disable."
+                },
+                "msa_cache_dir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Absolute local cache directory; overrides PROTEINFOLD_MSA_CACHE_DIR and the default <outdir>/msa_cache."
+                },
+                "msa_cache_id": {
+                    "type": "string",
+                    "description": "Optional database revision namespace; change when the database changes."
+                },
+                "msa_cache_tool_id": {
+                    "type": "string",
+                    "description": "Optional search-tool version or image digest namespace; change when the image changes."
+                }
+            }
+        },
         "boltz_options": {
             "title": "Boltz options",
             "type": "object",
@@ -276,6 +302,19 @@
                 "boltz_model": {
                     "type": "string",
                     "description": "Sets the model to use for prediction. Default is boltz2"
+                },
+                "boltz_msa_cache_dir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Legacy Boltz cache directory; use --msa_cache_dir instead."
+                },
+                "boltz_msa_cache_id": {
+                    "type": "string",
+                    "description": "Optional Boltz database revision namespace."
+                },
+                "boltz_msa_cache_tool_id": {
+                    "type": "string",
+                    "description": "Optional Boltz search-tool image digest namespace."
                 }
             }
         },
@@ -988,6 +1027,9 @@
         },
         {
             "$ref": "#/$defs/esmfold_options"
+        },
+        {
+            "$ref": "#/$defs/msa_cache_options"
         },
         {
             "$ref": "#/$defs/boltz_options"

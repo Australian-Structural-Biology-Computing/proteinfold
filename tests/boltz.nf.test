@@ -7,6 +7,66 @@ nextflow_pipeline {
     tag "test_boltz"
     profile "test_boltz"
 
+    test("default cache directory runs lookup and MMSEQS") {
+        when {
+            params {
+                outdir = "$outputDir"
+            }
+        }
+        then {
+            assert workflow.success
+            assert workflow.trace.succeeded().any { it.name.contains('MSA_CACHE_LOOKUP') }
+            assert workflow.trace.succeeded().any { it.name.contains('MMSEQS_COLABFOLDSEARCH') }
+            assert workflow.trace.succeeded().count { it.name.contains('MSA_CACHE_LOOKUP') } == 2
+        }
+    }
+
+    test("cache miss runs MMSEQS") {
+        when {
+            params {
+                outdir = "$outputDir"
+                boltz_msa_cache_dir = "$outputDir/cache"
+                boltz_msa_cache_id = "revision"
+                boltz_msa_cache_tool_id = "sha256:test-image"
+            }
+        }
+        then {
+            assert workflow.success
+            assert workflow.trace.succeeded().any { it.name.contains('MMSEQS_COLABFOLDSEARCH') }
+            assert workflow.trace.succeeded().any { it.name.contains('MSA_CACHE_LOOKUP') }
+        }
+    }
+
+    test("multimer cache hit skips MMSEQS and reaches splitter") {
+        setup {
+                def cacheDir = file("$outputDir/cache")
+                cacheDir.mkdirs()
+                def query = file("$outputDir/stub-query.fasta")
+                query.text = ''
+                def helper = file(projectDir + '/bin/msa_cache.py')
+                def payload = file(projectDir + '/modules/local/msa_cache_lookup/tests/multimer.json')
+                def a3mPayload = file("$outputDir/alignment.a3m")
+                a3mPayload.text = '>query\nACDEFG\n'
+                def command = ['python3', helper.toString(), 'store', query.toString(), 'revision', 'sha256:test-image', '', cacheDir.toString(), payload.toString(), a3mPayload.toString()]
+                assert command.execute().waitFor() == 0
+                assert cacheDir.listFiles().count { it.name.endsWith('.zip') } == 1
+        }
+        when {
+            params {
+                outdir = "$outputDir"
+                boltz_msa_cache_dir = "$outputDir/cache"
+                boltz_msa_cache_id = "revision"
+                boltz_msa_cache_tool_id = "sha256:test-image"
+            }
+        }
+        then {
+            assert workflow.success
+            assert workflow.trace.succeeded().any { it.name.contains('MSA_CACHE_LOOKUP') }
+            assert workflow.trace.succeeded().any { it.name.contains('SPLIT_MSA') }
+            assert !workflow.trace.succeeded().any { it.name.contains('MMSEQS_COLABFOLDSEARCH') }
+        }
+    }
+
     test("-profile test_boltz") {
 
         when {
