@@ -25,6 +25,16 @@ process MMSEQS_COLABFOLDSEARCH {
         error("Local MMSEQS_COLABFOLDSEARCH module does not support Conda. Please use Docker / Singularity / Podman instead.")
     }
     def args = task.ext.args ?: ''
+    def cache_dir = MsaCache.directory(params) ?: ''
+    def cache_id = task.ext.msa_cache_id ?: ''
+    def tool_id = task.ext.msa_cache_tool_id ?: ''
+    def quotedDir = "'${cache_dir.toString().replace("'", "'\\''")}'"
+    def quotedId = "'${cache_id.toString().replace("'", "'\\''")}'"
+    def quotedToolId = "'${tool_id.toString().replace("'", "'\\''")}'"
+    def quotedArgs = "'${args.toString().replace("'", "'\\''")}'"
+    def quotedFasta = "'${fasta.toString().replace("'", "'\\''")}'"
+    def quotedJson = "'${("results/" + meta.id + ".json").replace("'", "'\\''")}'"
+    def quotedA3m = "'${("results/" + meta.id + ".a3m").replace("'", "'\\''")}'"
 
     """
     for f in uniref30/*; do
@@ -41,6 +51,9 @@ process MMSEQS_COLABFOLDSEARCH {
         ./db \\
         --af3-json \\
         "results/"
+    if [ -n ${quotedDir} ]; then
+        msa_cache.py store ${quotedFasta} ${quotedId} ${quotedToolId} ${quotedArgs} ${quotedDir} ${quotedJson} ${quotedA3m}
+    fi
     """
 
     stub:
@@ -76,6 +89,13 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
         error("Local MMSEQS_COLABFOLDSEARCH_BATCH module does not support Conda. Please use Docker / Singularity / Podman instead.")
     }
     def args = task.ext.args ?: ''
+    def cache_dir = MsaCache.directory(params) ?: ''
+    def cache_id = task.ext.msa_cache_id ?: ''
+    def tool_id = task.ext.msa_cache_tool_id ?: ''
+    def quotedDir = "'${cache_dir.toString().replace("'", "'\\''")}'"
+    def quotedId = "'${cache_id.toString().replace("'", "'\\''")}'"
+    def quotedToolId = "'${tool_id.toString().replace("'", "'\\''")}'"
+    def quotedArgs = "'${args.toString().replace("'", "'\\''")}'"
     """
     for f in uniref30/*; do
         [ -e "db/\$(basename \$f)" ] || ln -sf \$(realpath \$f) db/\$(basename \$f)
@@ -90,6 +110,9 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
         id=\$(basename "\$f" .csv)
         test -s "results/\${id}.a3m" || { echo "Missing A3M output for \$id" >&2; exit 1; }
         test -s "results/\${id}.json" || { echo "Missing JSON output for \$id" >&2; exit 1; }
+        if [ -n ${quotedDir} ]; then
+            msa_cache.py store "\$f" ${quotedId} ${quotedToolId} ${quotedArgs} ${quotedDir} "results/\${id}.json" "results/\${id}.a3m"
+        fi
     done
     """
 

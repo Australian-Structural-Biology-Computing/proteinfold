@@ -1,0 +1,6 @@
+{
+    "sequences": [
+        { "protein": { "id": "B", "sequence": "FGHI", "unpairedMsa": ">B\nFGHI\n", "pairedMsa": "" } },
+        { "protein": { "id": "A", "sequence": "ACDE", "unpairedMsa": ">A\nACDE\n", "pairedMsa": "" } }
+    ]
+}
