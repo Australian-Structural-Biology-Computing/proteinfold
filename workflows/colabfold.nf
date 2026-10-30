@@ -11,6 +11,7 @@ include { COLABFOLD_BATCH        } from '../modules/local/colabfold_batch'
 include { MMSEQS_COLABFOLDSEARCH } from '../modules/local/mmseqs_colabfoldsearch'
 include { MMSEQS_COLABFOLDSEARCH_BATCH } from '../modules/local/mmseqs_colabfoldsearch'
 include { MULTIFASTA_TO_CSV      } from '../modules/local/multifasta_to_csv'
+include { MSA_CACHE_LOOKUP } from '../modules/local/msa_cache_lookup'
 
 include { modeChannel            } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { collectMultiqcMetrics  } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
@@ -67,15 +68,27 @@ workflow COLABFOLD {
         if (batch_size == 0 || batch_size < -1) {
             error("MSA batch size must be -1 or a positive integer, got ${batch_size}")
         }
+        if (MsaCache.directory(params)) {
+            MSA_CACHE_LOOKUP(MULTIFASTA_TO_CSV.out.input_csv)
+            MSA_CACHE_LOOKUP.out.branch { meta, csv, result ->
+                hit: result.resolve('hit.a3m').exists()
+                miss: true
+            }.set { ch_cache_results }
+            ch_search_input = ch_cache_results.miss.map { meta, csv, result -> [meta, csv] }
+            ch_cached_msa = ch_cache_results.hit.map { meta, csv, result -> [meta, result.resolve('hit.a3m')] }
+        } else {
+            ch_search_input = MULTIFASTA_TO_CSV.out.input_csv
+            ch_cached_msa = Channel.empty()
+        }
         if (batch_size == 1) {
             MMSEQS_COLABFOLDSEARCH (
-                MULTIFASTA_TO_CSV.out.input_csv,
+                ch_search_input,
                 ch_colabfold_db,
                 ch_uniref30
             )
             ch_generated_msa = MMSEQS_COLABFOLDSEARCH.out.a3m
         } else {
-            ch_batches = MULTIFASTA_TO_CSV.out.input_csv
+            ch_batches = ch_search_input
                 .map { meta, csv -> [meta.id, meta, csv] }
                 .collect(flat: false)
                 .flatMap { rows ->
@@ -99,7 +112,7 @@ workflow COLABFOLD {
                     }
                 }
         }
-        ch_colabfold_input = ch_colabfold_input.mix(ch_generated_msa)
+        ch_colabfold_input = ch_colabfold_input.mix(ch_generated_msa, ch_cached_msa)
     }
 
     COLABFOLD_BATCH(

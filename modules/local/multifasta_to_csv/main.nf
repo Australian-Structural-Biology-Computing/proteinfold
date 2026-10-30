@@ -24,7 +24,14 @@ process MULTIFASTA_TO_CSV {
     """
 
     stub:
-    """
-    touch ${meta.id}.csv
-    """
+    if (params.use_msa_server) {
+        """
+        touch ${meta.id}.csv
+        """
+    } else {
+        """
+        awk '/^>/ {printf("\\n%s\\n",\$0);next; } { printf("%s",\$0);} END {printf("\\n");}' ${fasta} > single_line.fasta
+        echo -e id,sequence'\\n'${meta.id},`awk '!/^>/ {print \$0}' single_line.fasta | tr '\\n' ':' | sed 's/:\$//' | sed 's/^://'` > ${meta.id}.csv
+        """
+    }
 }
