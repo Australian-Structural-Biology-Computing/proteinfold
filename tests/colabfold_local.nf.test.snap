@@ -1,7 +1,7 @@
 {
     "-profile test_colabfold_local": {
         "content": [
-            9,
+            11,
             [
                 "colabfold",
                 "colabfold/T1024",
@@ -77,15 +77,15 @@
                 "T1026_5_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024.csv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026.csv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1024.csv:md5,22afe170c0e30d4de850a0b24e490bfd",
+                "T1026.csv:md5,af7fbbd6d4e80843f7993b069dc1acf0",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_colabfold_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_colabfold_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-10-26T16:05:45.615012313",
+        "timestamp": "2026-10-29T16:38:36.435985015",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "26.04.6"

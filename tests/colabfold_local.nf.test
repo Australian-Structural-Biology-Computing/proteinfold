@@ -7,6 +7,55 @@ nextflow_pipeline {
     tag "test_colabfold_local"
     profile "test_colabfold_local"
 
+    test("default cache directory runs lookup and MMSEQS") {
+        when {
+            params {
+                outdir = "$outputDir"
+            }
+        }
+        then {
+            assert workflow.success
+            assert workflow.trace.succeeded().any { it.name.contains('MSA_CACHE_LOOKUP') }
+            assert workflow.trace.succeeded().any { it.name.contains('MMSEQS_COLABFOLDSEARCH') }
+            assert workflow.trace.succeeded().count { it.name.contains('MSA_CACHE_LOOKUP') } == 2
+        }
+    }
+
+    test("cache miss runs MMSEQS and reaches prediction") {
+        when {
+            params {
+                outdir = "$outputDir"
+                msa_batch_size = 1
+                msa_cache_dir = "$outputDir/cache"
+                msa_cache_id = 'revision'
+                msa_cache_tool_id = 'sha256:test-image'
+            }
+        }
+        then {
+            assert workflow.success
+            assert workflow.trace.succeeded().any { it.name.contains('MSA_CACHE_LOOKUP') }
+            assert workflow.trace.succeeded().any { it.name.contains('MMSEQS_COLABFOLDSEARCH') }
+            assert workflow.trace.succeeded().any { it.name.contains('COLABFOLD_BATCH') }
+        }
+    }
+
+    test("cache opt-out bypasses lookup and does not create cache") {
+        when {
+            params {
+                outdir = "$outputDir"
+                use_msa_cache = false
+                msa_batch_size = 1
+                msa_cache_dir = "$outputDir/cache"
+            }
+        }
+        then {
+            assert workflow.success
+            assert !workflow.trace.tasks().any { it.name.contains('MSA_CACHE_LOOKUP') }
+            assert workflow.trace.succeeded().any { it.name.contains('MMSEQS_COLABFOLDSEARCH') }
+            assert !file("${params.outdir}/cache").exists()
+        }
+    }
+
     test("-profile test_colabfold_local") {
 
         when {

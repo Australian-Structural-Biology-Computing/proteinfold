@@ -1,0 +1,15 @@
+version: 1
+sequences:
+  - protein:
+      id: A
+      sequence: ACDE
+      modifications:
+        - position: 1
+          ccd: MSE
+  - protein:
+      id: B
+      sequence: FGHI
+      cyclic: true
+properties:
+  - affinity:
+      binder: A

@@ -26,9 +26,9 @@ nextflow run nf-core/proteinfold \
 By default, `--mode colabfold` will generate MSA files required for structure prediction using a local execution of the [ColabFold](https://github.com/sokrypton/ColabFold) search protocol. This protocol uses [MMseqs2](https://github.com/soedinglab/MMseqs2) to search a uniref30 expandable profile database and construct paired alignments using taxonomic labels. MSAs are enriched with additional unpaired sequences by searching an expandable profile databased of environmental sequences.
 
 > [!NOTE]
-> Local ColabFold search occurs in a separate module to model inference and the resulting MSA will be cached if downstream modules need to be re-run.
+> Local MMseqs searches use a persistent cache by default at `<outdir>/msa_cache` for local filesystem output. Set `PROTEINFOLD_MSA_CACHE_DIR` or `--msa_cache_dir` to an absolute local path (CLI takes precedence over the environment and legacy `--boltz_msa_cache_dir`), or disable with `--use_msa_cache false`. For remote output URIs, caching is disabled unless an explicit local cache path is supplied. Cache hits depend on the sequence, search arguments, and optional explicit namespace IDs, **not** the database directories or container image. After changing a database or search image, clear the cache or set `--msa_cache_id` and/or `--msa_cache_tool_id` (legacy `--boltz_msa_cache_id` and `--boltz_msa_cache_tool_id` also work) if you want separate results; neither is required. Each query stores one compressed ZIP bundle containing the exact A3M and AF3 JSON; Boltz reads JSON and ColabFold reads A3M. Older raw cache entries are not reused. Cache is bypassed with `--use_msa_server` or a supplied MSA.
 
-For local searches, inputs can be processed in batches with `--msa_batch_size`. The default is `-1`, which processes all inputs in one search task; use `--msa_batch_size 1` to retain one search task per sample.
+For local searches, inputs can be processed in batches with `--msa_batch_size`. The default is `-1`, which processes all inputs in one search task; use `--msa_batch_size 1` to retain one search task per sample. With persistent caching, batches contain only samples not already cached.
 
 ### Bring your own MSA
 
