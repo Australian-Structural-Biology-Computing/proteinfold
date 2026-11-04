@@ -14,7 +14,7 @@
                     [
                         "BOLTZ_YAML_TO_COLABFOLD_FASTA",
                         "python",
-                        "3.14.0"
+                        "3.14.3"
                     ]
                 ],
                 "query_fasta": [
@@ -29,7 +29,7 @@
                     [
                         "BOLTZ_YAML_TO_COLABFOLD_FASTA",
                         "python",
-                        "3.14.0"
+                        "3.14.3"
                     ]
                 ]
             }
