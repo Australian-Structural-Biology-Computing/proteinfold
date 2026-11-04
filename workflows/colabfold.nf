@@ -10,6 +10,7 @@
 include { COLABFOLD_BATCH        } from '../modules/local/colabfold_batch'
 include { MMSEQS_COLABFOLDSEARCH } from '../modules/local/mmseqs_colabfoldsearch'
 include { MMSEQS_COLABFOLDSEARCH_BATCH } from '../modules/local/mmseqs_colabfoldsearch'
+include { COLABFOLD_MSA_SERVER } from '../modules/local/colabfold_msa_server'
 include { MULTIFASTA_TO_CSV      } from '../modules/local/multifasta_to_csv'
 
 include { modeChannel            } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
@@ -59,8 +60,9 @@ workflow COLABFOLD {
     )
 
     if (params.use_msa_server) {
+        COLABFOLD_MSA_SERVER(MULTIFASTA_TO_CSV.out.input_csv)
         ch_colabfold_input = ch_colabfold_input.mix(
-            MULTIFASTA_TO_CSV.out.input_csv
+            COLABFOLD_MSA_SERVER.out.a3m
         )
     } else {
         def batch_size = msa_batch_size instanceof Number ? msa_batch_size : msa_batch_size.toString().toInteger()

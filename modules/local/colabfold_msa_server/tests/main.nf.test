@@ -1,0 +1,29 @@
+nextflow_process {
+
+    name "Test Process COLABFOLD_MSA_SERVER"
+    script "../main.nf"
+    process "COLABFOLD_MSA_SERVER"
+
+    tag "modules"
+    tag "modules_local"
+    tag "colabfold_msa_server"
+    profile "test"
+
+    test("emits an MSA from CSV input") {
+
+        when {
+            process {
+                """
+                def csv = file('query.csv')
+                csv.text = 'id,sequence\\nquery,ACDE\\n'
+                input[0] = [[id: 'query'], csv]
+                """
+            }
+        }
+
+        then {
+            assert process.success
+            assert file(process.out.a3m[0][1]).text.startsWith('#4\t1\n>101\nACDE')
+        }
+    }
+}

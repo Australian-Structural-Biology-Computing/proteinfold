@@ -16,6 +16,7 @@ nextflow_pipeline {
                 outdir     = "$outputDir"
                 input      = 'https://raw.githubusercontent.com/nf-core/test-datasets/proteinfold/testdata/samplesheet/v2.0/samplesheet.csv'
                 colabfold_db = System.getenv("PROTEINFOLD_TEST_DB") ?: 's3://proteinfold-dataset/test-data/mini_dbs'
+                use_msa_server = false
             }
         }
 

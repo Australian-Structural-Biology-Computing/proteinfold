@@ -1,0 +1,41 @@
+name: "colabfold_msa_server"
+description: Retrieve ColabFold MSAs from an MSA server without running structure prediction.
+tools: []
+input:
+  - - meta:
+        type: map
+        description: Groovy Map containing sample information.
+    - input_csv:
+        type: file
+        description: CSV containing query identifiers and protein sequences.
+        pattern: "*.csv"
+output:
+  a3m:
+    - - meta:
+          type: map
+          description: Groovy Map containing sample information.
+      - "*.a3m":
+          type: file
+          description: Multiple sequence alignment retrieved from the MSA server.
+          pattern: "*.a3m"
+  versions_colabfold:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from.
+      - colabfold:
+          type: string
+          description: The tool name.
+      - 'pip list | grep -i "^colabfold " | awk ''{print $2}'' 2>/dev/null || echo "unknown"':
+          type: eval
+          description: The expression to obtain the ColabFold version.
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from.
+      - colabfold:
+          type: string
+          description: The tool name.
+      - 'pip list | grep -i "^colabfold " | awk ''{print $2}'' 2>/dev/null || echo "unknown"':
+          type: eval
+          description: The expression to obtain the ColabFold version.
