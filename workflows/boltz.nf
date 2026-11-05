@@ -17,11 +17,11 @@
 //
 // MODULE: Installed directly from nf-core/modules
 //
-include { MULTIQC } from '../modules/nf-core/multiqc/main'
 include { BOLTZ_FASTA } from '../modules/local/boltz_fasta'
 include { BOLTZ_YAML_TO_COLABFOLD_FASTA } from '../modules/local/boltz_yaml_to_colabfold_fasta'
 include { SPLIT_MSA } from '../modules/local/split_msa'
 include { MMSEQS_COLABFOLDSEARCH } from '../modules/local/mmseqs_colabfoldsearch'
+include { MSA_CACHE_LOOKUP } from '../modules/local/msa_cache_lookup'
 include { modeChannel } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
 
 //
@@ -73,13 +73,36 @@ workflow BOLTZ {
             ch_boltz_yaml_input
         )
 
+        if (MsaCache.directory(params)) {
+            MSA_CACHE_LOOKUP(BOLTZ_YAML_TO_COLABFOLD_FASTA.out.query_fasta)
+
+            MSA_CACHE_LOOKUP.out
+                .branch { meta, fasta, result ->
+                    hit: result.resolve('hit.json').exists()
+                    miss: true
+                }
+                .set { ch_msa_cache_results }
+
+            ch_msa_cache_results.miss
+                .map { meta, fasta, result -> [meta, fasta] }
+                .set { ch_msa_search_input }
+
+            ch_msa_cache_results.hit
+                .map { meta, fasta, result -> [meta, result.resolve('hit.json')] }
+                .set { ch_cached_msa }
+        } else {
+            BOLTZ_YAML_TO_COLABFOLD_FASTA.out.query_fasta.set { ch_msa_search_input }
+            ch_cached_msa = Channel.empty()
+        }
+
         MMSEQS_COLABFOLDSEARCH (
-                BOLTZ_YAML_TO_COLABFOLD_FASTA.out.query_fasta,
+                ch_msa_search_input,
                 ch_colabfold_db,
                 ch_uniref30
         )
 
-        MMSEQS_COLABFOLDSEARCH.out.json
+        ch_cached_msa
+            .mix(MMSEQS_COLABFOLDSEARCH.out.json)
             .join(ch_boltz_yaml_input)
             .set { ch_split_msa_input }
 
@@ -104,101 +127,25 @@ workflow BOLTZ {
         ch_mols
     )
 
-    RUN_BOLTZ
-        .out
-        .pdb
-        .map { it ->
-            def meta = it[0].clone();
-            meta.model = "boltz"
-            [ meta, it[1] ]
-        }
-        .set {ch_pdb}
+    modeChannel(RUN_BOLTZ.out.pdb, "boltz").set { ch_pdb }
 
-    RUN_BOLTZ
-        .out
-        .top_ranked_pdb
-        .map { it ->
-            def meta = it[0].clone();
-            meta.model = "boltz"
-            [ meta, it[1] ]
-        }
-        .set { ch_top_ranked_pdb }
+    modeChannel(RUN_BOLTZ.out.top_ranked_pdb, "boltz").set { ch_top_ranked_pdb }
 
-    RUN_BOLTZ
-        .out
-        .msa
-        .map { it ->
-            def meta = it[0].clone();
-            meta.model = "boltz"
-            [ meta, it[1] ]
-        }
-        .set { ch_msa }
+    modeChannel(RUN_BOLTZ.out.msa, "boltz").set { ch_msa }
 
-    RUN_BOLTZ
-        .out
-        .pae
-        .map { it ->
-            def meta = it[0].clone();
-            meta.model = "boltz"
-            [ meta, it[1] ]
-        }
-        .set { ch_pae }
+    modeChannel(RUN_BOLTZ.out.pae, "boltz").set { ch_pae }
 
-    RUN_BOLTZ
-        .out
-        .iptm
-        .map { it ->
-            def meta = it[0].clone();
-            meta.model = "boltz"
-            [ meta, it[1] ]
-        }
-        .set { ch_iptm }
+    modeChannel(RUN_BOLTZ.out.iptm, "boltz").set { ch_iptm }
 
-    RUN_BOLTZ
-        .out
-        .ipsae
-        .map { it ->
-            def meta = it[0].clone();
-            meta.model = "boltz"
-            [ meta, it[1] ]
-        }
-        .set { ch_ipsae }
+    modeChannel(RUN_BOLTZ.out.ipsae, "boltz").set { ch_ipsae }
 
-    RUN_BOLTZ
-        .out
-        .chainwise_iptm
-        .map { it ->
-            def meta = it[0].clone();
-            meta.model = "boltz"
-            [ meta, it[1] ]
-        }
-        .set { ch_chainwise_iptm }
+    modeChannel(RUN_BOLTZ.out.chainwise_iptm, "boltz").set { ch_chainwise_iptm }
 
-    RUN_BOLTZ
-        .out
-        .chainwise_ipsae
-        .map { it ->
-            def meta = it[0].clone();
-            meta.model = "boltz"
-            [ meta, it[1] ]
-        }
-        .set { ch_chainwise_ipsae }
+    modeChannel(RUN_BOLTZ.out.chainwise_ipsae, "boltz").set { ch_chainwise_ipsae }
 
-    RUN_BOLTZ.out.plddt
-        .map { meta, metric ->
-            def modeMeta = meta.clone()
-            modeMeta.model = "boltz"
-            [modeMeta, metric]
-        }
-        .set { ch_plddt }
+    modeChannel(RUN_BOLTZ.out.plddt, "boltz").set { ch_plddt }
 
-    RUN_BOLTZ.out.ptm
-        .map { meta, metric ->
-            def modeMeta = meta.clone()
-            modeMeta.model = "boltz"
-            [modeMeta, metric]
-        }
-        .set { ch_ptm }
+    modeChannel(RUN_BOLTZ.out.ptm, "boltz").set { ch_ptm }
 
     // Hand MultiQC every metric this model actually produces, not just pLDDT.
     ch_multiqc_metrics = collectMultiqcMetrics("boltz", [
