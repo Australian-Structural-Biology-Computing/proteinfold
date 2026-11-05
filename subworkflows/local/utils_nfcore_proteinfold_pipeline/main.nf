@@ -39,8 +39,6 @@ workflow PIPELINE_INITIALISATION {
 
     main:
 
-    ch_versions = channel.empty()
-
     //
     // Print version and exit if required and dump pipeline parameters to JSON file
     //
@@ -90,7 +88,8 @@ ${colors.purple}  nf-core/proteinfold ${workflow.manifest.version}${colors.reset
         show_hidden,
         before_text,
         after_text,
-        command
+        command,
+        false
     )
 
     //
@@ -105,14 +104,35 @@ ${colors.purple}  nf-core/proteinfold ${workflow.manifest.version}${colors.reset
     //
     // Create channel from input file provided through input
     //
-    ch_samplesheet = channel.fromList(samplesheetToList(input, "assets/schema_input.json"))
+    def sample_entries = samplesheetToList(input, "assets/schema_input.json")
+    def sample_ids = sample_entries.collect { item ->
+        def meta = item[0]
+        meta.id ?: meta.sequence
+    }
+    if (sample_ids.size() != sample_ids.toSet().size()) {
+        error("Duplicate sample IDs are not allowed: ${sample_ids}")
+    }
+    ch_samplesheet = channel.fromList(sample_entries)
 
-    ch_samplesheet
-        .map { meta, fasta ->
+    ch_samplesheet = ch_samplesheet
+        .map { item ->
+            def meta = item[0]
+            def fasta = item[1]
+            def msa = item.size() > 2 ? item[2] : null
             // This mapping supports legacy samplesheets that use 'sequence' as metadata.
             // If meta.id is missing or empty, meta.sequence is used as the identifier.
             def identifier = meta.id ? meta.id : meta.sequence
-            return [[id: identifier], fasta]
+            def normalized_meta = [id: identifier]
+            if (msa) {
+                if (!params.mode.toLowerCase().split(',').collect { it.trim() }.contains('colabfold')) {
+                    error("The 'msa' samplesheet column is currently supported only with --mode colabfold.")
+                }
+                if (params.split_fasta) {
+                    error("The 'msa' samplesheet column cannot be used with --split_fasta.")
+                }
+                normalized_meta.msa = msa
+            }
+            return [normalized_meta, fasta]
         }
 
     if (params.split_fasta) {
@@ -136,7 +156,6 @@ ${colors.purple}  nf-core/proteinfold ${workflow.manifest.version}${colors.reset
 
     emit:
     samplesheet  = ch_samplesheet
-    versions     = ch_versions
 }
 
 /*
@@ -211,6 +230,75 @@ def modeChannel(ch, mode) {
         meta_clone.model = mode
         [ meta_clone, value ]
     }
+}
+
+//
+// Collect the per-model metric TSVs that the MultiQC custom content consumes.
+// `metric_channels` is a List of [name, channel] pairs. Each channel yields a
+// tuple whose [1] and [2] fields are the meta map and the metric file; pinning
+// that position is what makes this safe for emits with extra trailing fields
+// (boltz emits 5, alphafold2 4). The first non-empty channel seeds the fold and
+// the rest are mixed in one at a time, because mix() is a channel operator -- it
+// does not exist on ArrayList.
+//
+def collectMultiqcMetrics(model, metric_channels) {
+    def acc = null
+    metric_channels.each { entry ->
+        def ch = entry[1].map { it -> [ [id: model, model: model], it[1] ] }
+        acc = acc == null ? ch : acc.mix(ch)
+    }
+    if (acc == null) {
+        return channel.empty()
+    }
+    return acc
+        .unique { entry -> entry[1] }
+        .groupTuple()
+        .map { _model, paths ->
+            [ [id: model, model: model], paths.flatten() ]
+        }
+}
+
+// Join predictor outputs and substitute placeholders for unavailable optional metrics.
+def modelcifInput(structs, msa, plddt, pae, ptm, iptm, versions, softwareDetails, msaTool, missingMetrics = [], modelParams = [:], plddtScale = null) {
+    def dummyMetrics = [
+        pae: file("$projectDir/assets/DUMMY_PAE.tsv", checkIfExists: true),
+        ptm: file("$projectDir/assets/DUMMY_PTM.tsv", checkIfExists: true),
+        iptm: file("$projectDir/assets/DUMMY_IPTM.tsv", checkIfExists: true)
+    ]
+    def input = structs.join(msa).join(plddt)
+    [pae: pae, ptm: ptm, iptm: iptm].each { name, metric ->
+        input = input.join(metric, remainder: true)
+            .filter { values -> values[1] != null }
+            .map { values ->
+                def missing = values[-1] == null
+                values[0..-2] + [missing ? dummyMetrics[name] : values[-1], missing]
+            }
+    }
+    input
+        .combine(versions)
+        .map { values ->
+            def meta = values[0]
+            def structureFiles = values[1]
+            def msaFile = values[2]
+            def plddtFile = values[3]
+            def paeFile = values[4]
+            def paeMissing = values[5]
+            def ptmFile = values[6]
+            def ptmMissing = values[7]
+            def iptmFile = values[8]
+            def iptmMissing = values[9]
+            def versionsFile = values[10]
+            def modelcifMeta = meta.clone()
+            modelcifMeta.msa_tool = msaTool
+            modelcifMeta.missing_metrics = (missingMetrics + [paeMissing ? 'pae' : null, ptmMissing ? 'ptm' : null, iptmMissing ? 'iptm' : null]).findAll().unique()
+            modelcifMeta.modelcif_params = modelParams
+            modelcifMeta.plddt_scale = plddtScale
+            [modelcifMeta, structureFiles, msaFile, plddtFile, paeFile, ptmFile, iptmFile, versionsFile, softwareDetails]
+        }
+}
+
+def modelcifDummyMetric(structs, dummyFile) {
+    structs.map { meta, _files -> [meta.clone(), dummyFile] }
 }
 
 def countMolecularEntitiesInFasta(fasta) {

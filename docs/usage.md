@@ -8,7 +8,7 @@
 
 ## Samplesheet input
 
-You will need to create a samplesheet with information about the sequences you would like to analyse before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 2 columns, and a header row as shown in the examples below.
+You will need to create a samplesheet with information about the sequences you would like to analyse before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with a header row as shown in the examples below.
 
 ```bash
 --input '[path to samplesheet file]'
@@ -26,14 +26,17 @@ T1026,https://raw.githubusercontent.com/nf-core/test-datasets/proteinfold/testda
 
 The samplesheet can have as many columns as you desire, however, there is a strict requirement for the first 2 columns to match those defined in the table below:
 
-| Column  | Description                                                                                          |
-| ------- | ---------------------------------------------------------------------------------------------------- |
-| `id`    | Custom sequence name. Spaces in sequence names are automatically converted to underscores (`_`).     |
-| `fasta` | Full path to fasta file for the provided sequence. File has to have the extension ".fasta" or ".fa". |
+| Column  | Description                                                                                                         |
+| ------- | ------------------------------------------------------------------------------------------------------------------- |
+| `id`    | Custom sequence name. Spaces in sequence names are automatically converted to underscores (`_`).                    |
+| `fasta` | Full path to fasta file for the provided sequence. File has to have the extension ".fasta" or ".fa".                |
+| `msa`   | Optional full path to an A3M MSA file for ColabFold. When provided, ColabFold uses it instead of generating an MSA. |
 
 An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
 
-To provide a FASTA file with multiple sequences for individual folding, use one or more FASTA files with the `--split_fasta` parameter. This will treat each sequence in the FASTA file as a separate entry, folding them individually and in parallel, as if each sequence were listed separately in the samplesheet.
+For ColabFold, add an `msa` column containing one A3M file per sample. Samples with an `msa` entry bypass both local MMseqs2 search and the MSA server; samples without one retain the selected default MSA path.
+
+To provide a FASTA file with multiple sequences for individual folding, use one or more FASTA files with the `--split_fasta` parameter. This will treat each sequence in the FASTA file as a separate entry, folding them individually and in parallel, as if each sequence were listed separately in the samplesheet. The `msa` column cannot be combined with `--split_fasta`.
 
 ## Running the pipeline
 
@@ -44,7 +47,7 @@ nextflow run nf-core/proteinfold \
    -profile <docker/singularity/.../institute> \
    --input samplesheet.csv \
    --outdir <OUTDIR> \
-   --mode <alphafold2/esmfold/colabfold/rosettafold2na/rosettafold-all-atom/alphafold3/boltz/helixfold3> \
+   --mode <alphafold2/alphafold3/esmfold/colabfold/boltz> \
    --db <DBDIR>
 ```
 
@@ -91,9 +94,7 @@ Each mode has specific reference data requirements. To support all modes the `--
 │   ├── esm2_t36_3B_UR50D-contact-regression.pt
 │   ├── esm2_t36_3B_UR50D.pt
 │   ├── esmfold_3B_v1.pt
-│   ├── HelixFold3-240814.pdparams
 │   ├── mols
-│   └── RFAA_paper_weights.pt
 ├── pdb100
 │   ├── LICENSE
 │   ├── pdb100_2021Mar03_a3m.ffdata
@@ -154,9 +155,6 @@ Alternatively, the required data layout for each of the individual modes is desc
 - [Boltz](./usage/boltz.md)
 - [ColabFold](./usage/colabfold.md)
 - [ESMFold](./usage/esmfold.md)
-- [HelixFold3](./usage/helixfold3.md)
-- [RoseTTAFold-All-Atom](./usage/rosettafold_all_atom.md)
-- [RoseTTAFold2NA](./usage/rosettafold2na.md)
 
 > Omitting the `--db` flag will allow the pipeline to download the reference data required to execute the selected modes.
 
@@ -305,7 +303,7 @@ If `-profile` is not specified, the pipeline will run locally and expect all sof
 - `apptainer`
   - A generic configuration profile to be used with [Apptainer](https://apptainer.org/)
 - `wave`
-  - A generic configuration profile to enable [Wave](https://seqera.io/wave/) containers. Use together with one of the above (requires Nextflow ` 24.03.0-edge` or later).
+  - A generic configuration profile to enable [Wave](https://seqera.io/wave/) containers. Use together with one of the above (requires Nextflow `24.03.0-edge` or later).
 - `conda`
   - A generic configuration profile to be used with [Conda](https://conda.io/docs/). Please only use Conda as a last resort i.e. when it's not possible to run the pipeline with Docker, Singularity, Podman, Shifter, Charliecloud, or Apptainer.
 

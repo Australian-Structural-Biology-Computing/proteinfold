@@ -1,10 +1,11 @@
 lint:
   actions_schema_validation: false
   files_unchanged:
+    - .github/workflows/branch.yml
     - .github/workflows/linting.yml
     - .gitignore
   multiqc_config: false
-nf_core_version: 4.0.3
+nf_core_version: 4.1.0
 repository_type: pipeline
 template:
   author: Athanasios Baltzis, Jose Espinosa-Carrasco, Harshil Patel
