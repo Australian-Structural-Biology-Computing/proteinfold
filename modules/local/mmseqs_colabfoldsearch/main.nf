@@ -3,7 +3,7 @@ process MMSEQS_COLABFOLDSEARCH {
     label 'process_high_memory'
     label 'process_high'
 
-    container "ghcr.io/tlitfin/wisps-colabfold-search:1.1"
+    container "ghcr.io/jscgh/proteinfold_mmseqs_colabfoldsearch:2.1.0dev"
 
     input:
     tuple val(meta), path(fasta)
@@ -13,7 +13,8 @@ process MMSEQS_COLABFOLDSEARCH {
     output:
     tuple val(meta), path("**.a3m"), emit: a3m
     tuple val(meta), path("**.json"), emit: json
-    path "versions.yml", emit: versions
+    tuple val("${task.process}"), val('colabfold_search'), eval("pip list | grep \"^colabfold\" | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold_search, topic: versions
+    tuple val("${task.process}"), val('mmseqs'), eval("mmseqs version 2>/dev/null | head -1"), emit: versions_mmseqs, topic: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -40,12 +41,6 @@ process MMSEQS_COLABFOLDSEARCH {
         ./db \\
         --af3-json \\
         "results/"
-
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        colabfold_search: \$(pip list | grep "^colabfold" | awk '{print \$2}' 2>/dev/null || echo "unknown")
-        mmseqs: \$(mmseqs version)
-    END_VERSIONS
     """
 
     stub:
@@ -53,11 +48,54 @@ process MMSEQS_COLABFOLDSEARCH {
     mkdir results
     touch results/${meta.id}.a3m
     touch results/${meta.id}.json
+    """
+}
 
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        colabfold_search: \$(pip list | grep "^colabfold" | awk '{print \$2}' 2>/dev/null || echo "unknown")
-        mmseqs: \$(mmseqs version)
-    END_VERSIONS
+process MMSEQS_COLABFOLDSEARCH_BATCH {
+    tag "batch_${batch_meta*.id.join('_')}"
+    label 'process_high_memory'
+    label 'process_high'
+    container "ghcr.io/jscgh/proteinfold_mmseqs_colabfoldsearch:2.1.0dev"
+
+    input:
+    tuple val(batch_meta), path(csvs)
+    path ('db/*')
+    path ('uniref30/*')
+
+    output:
+    tuple val(batch_meta), path("results/*.a3m"), emit: a3m
+    tuple val(batch_meta), path("results/*.json"), emit: json
+    tuple val("${task.process}"), val('colabfold_search'), eval("pip list | grep \"^colabfold\" | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold_search, topic: versions
+    tuple val("${task.process}"), val('mmseqs'), eval("mmseqs version 2>/dev/null | head -1"), emit: versions_mmseqs, topic: versions
+
+    when:
+    task.ext.when == null || task.ext.when
+
+    script:
+    if (workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1) {
+        error("Local MMSEQS_COLABFOLDSEARCH_BATCH module does not support Conda. Please use Docker / Singularity / Podman instead.")
+    }
+    def args = task.ext.args ?: ''
+    """
+    for f in uniref30/*; do
+        [ -e "db/\$(basename \$f)" ] || ln -sf \$(realpath \$f) db/\$(basename \$f)
+    done
+    first=1
+    for f in ${csvs}; do
+        if [ \$first -eq 1 ]; then cat "\$f" > input.csv; first=0
+        else tail -n +2 "\$f" >> input.csv; fi
+    done
+    colabfold_search $args --threads $task.cpus input.csv ./db --af3-json results/
+    for f in ${csvs}; do
+        id=\$(basename "\$f" .csv)
+        test -s "results/\${id}.a3m" || { echo "Missing A3M output for \$id" >&2; exit 1; }
+        test -s "results/\${id}.json" || { echo "Missing JSON output for \$id" >&2; exit 1; }
+    done
+    """
+
+    stub:
+    """
+    mkdir results
+    for f in ${csvs}; do id=\$(basename "\$f" .csv); printf '>stub\n' > results/\${id}.a3m; printf '{"stub":true}\n' > results/\${id}.json; done
     """
 }

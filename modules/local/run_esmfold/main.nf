@@ -13,8 +13,15 @@ process RUN_ESMFOLD {
     output:
     tuple val(meta), path ("${meta.id}_esmfold.pdb")  , emit: top_ranked_pdb
     tuple val(meta), path ("*.pdb")                   , emit: pdb
-    tuple val(meta), path ("${meta.id}_plddt_mqc.tsv"), emit: multiqc
-    path "versions.yml"                               , emit: versions
+    tuple val(meta), path ("${meta.id}_plddt.tsv"), emit: plddt
+    tuple val(meta), path ("${meta.id}_pae.tsv"), emit: pae
+    tuple val(meta), path ("${meta.id}_ptm.tsv"), emit: ptm
+    tuple val("${task.process}"), val('esm-fold'), eval("python3 -m pip show fair-esm | sed -n 's/^Version: //p'"), emit: versions_esmfold, topic: versions
+    tuple val("${task.process}"), val('python'), eval("python3 --version | sed 's/Python //g'"), emit: versions_python, topic: versions
+    tuple val("${task.process}"), val('pytorch'), eval("python3 -c \"import torch; print(torch.__version__)\" 2>/dev/null || echo \"unknown\""), emit: versions_pytorch, topic: versions
+    tuple val("${task.process}"), val('openfold'), eval("python -m pip show openfold | grep \"^Version\" | sed 's/.*Version: //' 2>/dev/null || echo \"unknown\""), emit: versions_openfold, topic: versions
+    tuple val("${task.process}"), val('numpy'), eval("python3 -c \"import numpy; print(numpy.__version__)\" 2>/dev/null || echo \"unknown\""), emit: versions_numpy, topic: versions
+    tuple val("${task.process}"), val('biopython'), eval("python3 -c \"import Bio; print(Bio.__version__)\" 2>/dev/null || echo \"unknown\""), emit: versions_biopython, topic: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -24,48 +31,36 @@ process RUN_ESMFOLD {
         error("Local RUN_ESMFOLD module does not support Conda. Please use Docker / Singularity / Podman instead.")
     }
     def args = task.ext.args ?: ''
-    def VERSION = '1.0.3' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
-
-    // KR - note: removed the *.pdb -> tmp.pdb, tmp.pdb  -> esmfold.pdb. Why not just take directly?
-    // Only one .pdb per ESMFold run
     """
-    esm-fold \
+    # Capture PAE and pTM from esm-fold's one inference through Python startup.
+    cp "\$(command -v esmfold_metrics_sitecustomize.py)" sitecustomize.py
+    ESMFOLD_PAE_FILE="\$PWD/${meta.id}_pae.tsv" ESMFOLD_PTM_FILE="\$PWD/${meta.id}_ptm.tsv" PYTHONPATH="\$PWD" esm-fold \
         -i ${fasta} \
         -o \$PWD \
         -m \$PWD \
         --num-recycles ${numRec} \
         $args
 
+    test -s "${meta.id}_pae.tsv"
+    test -s "${meta.id}_ptm.tsv"
     mv  *.pdb ${meta.id}_esmfold.pdb
 
     extract_metrics.py --name ${meta.id} \\
         --structs ${meta.id}_esmfold.pdb
-
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        esm-fold: $VERSION
-        python: \$(python3 --version | sed 's/Python //g')
-        pytorch: \$(python3 -c "import torch; print(torch.__version__)" 2>/dev/null || echo "unknown")
-        openfold: \$(python -m pip show openfold | grep "^Version" | sed 's/.*Version: //' 2>/dev/null || echo "unknown")
-        numpy: \$(python3 -c "import numpy; print(numpy.__version__)" 2>/dev/null || echo "unknown")
-        biopython: \$(python3 -c "import Bio; print(Bio.__version__)" 2>/dev/null || echo "unknown")
-    END_VERSIONS
     """
 
     stub:
-    def VERSION = '1.0.3' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     """
-    touch "${meta.id}_esmfold.pdb"
-    touch "${meta.id}_plddt_mqc.tsv"
-
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        esm-fold: $VERSION
-        python: \$(python3 --version 2>/dev/null | sed 's/Python //g' || echo "unknown")
-        pytorch: \$(python3 -c "import torch; print(torch.__version__)" 2>/dev/null || echo "unknown")
-        openfold: \$(python -m pip show openfold 2>/dev/null | grep "^Version" | sed 's/.*Version: //' || echo "unknown")
-        numpy: \$(python3 -c "import numpy; print(numpy.__version__)" 2>/dev/null || echo "unknown")
-        biopython: \$(python3 -c "import Bio; print(Bio.__version__)" 2>/dev/null || echo "unknown")
-    END_VERSIONS
+    if [ "${params.write_modelcif}" = "true" ]; then
+        printf 'HEADER    MODEL CIF TEST\\nSEQRES   1 A    2  ALA GLY\\nATOM      1  CA  ALA A   1      10.000  10.000  10.000  1.00 50.00           C\\nATOM      2  CA  GLY A   2      11.000  10.000  10.000  1.00 50.00           C\\nTER\\nEND\\n' > "${meta.id}_esmfold.pdb"
+        printf 'Positions\\trank_0\\n0\\t50.0\\n1\\t50.0\\n' > "${meta.id}_plddt.tsv"
+        printf '0.0\\t0.0\\n0.0\\t0.0\\n' > "${meta.id}_pae.tsv"
+        printf 'rank_0\\t0.5\\n' > "${meta.id}_ptm.tsv"
+    else
+        touch "${meta.id}_esmfold.pdb"
+        touch "${meta.id}_plddt.tsv"
+        touch "${meta.id}_pae.tsv"
+        touch "${meta.id}_ptm.tsv"
+    fi
     """
 }

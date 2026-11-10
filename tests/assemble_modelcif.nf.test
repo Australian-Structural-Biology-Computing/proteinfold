@@ -1,0 +1,497 @@
+nextflow_process {
+
+    name "Test metrics are inserted properly by MODELCIF_ASSEMBLE process"
+    script "../modules/local/assemble_modelcif/main.nf"
+    process "MODELCIF_ASSEMBLE"
+    tag "ci_img_misc"
+
+    tag "assemble_modelcif"
+    config "./assemble_modelcif_software.config"
+
+    def assertModelcifOutput = { proc, modelcifPath, expectEmbeddedPAE, expectBinaryCIF ->
+        assert proc.success
+        assert proc.out.modelcif.size() == 1
+        assert path(proc.out.versions[0]).getFileName().toString() == 'versions.yml'
+
+        def outName = modelcifPath.getFileName().toString()
+        if (expectBinaryCIF) {
+            assert outName.endsWith('.bcif')
+            assert modelcifPath.bytes.length > 0
+
+            return
+        }
+
+        def mmcif = modelcifPath.text
+        assertAll(
+            { assert outName.endsWith('.mmcif') },
+            { assert mmcif.contains("_ma_qa_metric_local"),
+                "pLDDT qa_metric table missing from output mmCIF" },
+
+            { assert mmcif.contains("_ma_qa_metric_global"),
+                "Global qa_metric table (pTM/ipTM) missing from output mmCIF" },
+
+            { assert mmcif.contains("pTM"),
+                "pTM metric type missing from output mmCIF" },
+
+            { assert mmcif.contains("ipTM"),
+                "ipTM metric type missing from output mmCIF" },
+
+            {
+                if (expectEmbeddedPAE) {
+                    assert mmcif.contains("_ma_qa_metric_local_pairwise")
+                } else {
+                    assert mmcif.contains("_ma_entry_associated_files")
+                }
+            },
+
+            {
+                if (expectEmbeddedPAE) {
+                    assert mmcif.contains("PAE")
+                } else {
+                    assert (mmcif =~ /\S+\.tsv[^\n]*file other other/).find()
+                }
+            },
+
+            {
+                if (expectEmbeddedPAE) {
+                    assert !mmcif.contains("_ma_entry_associated_files")
+                } else {
+                    assert (mmcif =~ /Predicted aligned error|\bPAE\b/).find()
+                }
+            },
+
+            { assert mmcif.contains("coevolution MSA"),
+                "Coevolution MSA protocol step missing from output mmCIF" },
+
+            { assert mmcif.contains("modeling"),
+                "Modeling protocol step missing from output mmCIF" }
+        )
+    }
+
+    test("dummy inputs produce modelcif with associated PAE") {
+
+        when {
+            params {
+                outdir = "$outputDir"
+            }
+            process {
+                (0..1).each { rank ->
+                    new File(outputDir, "rank_${rank}.mmcif").text = new URL((params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/') + "testdata/models/DUMMY_MODELCIF.mmcif").text
+                    new File(outputDir, "rank_${rank}_pae.tsv").text = new File(projectDir, 'assets/DUMMY_PAE.tsv').text
+                }
+                def plddt = new File(outputDir, 'two_rank_plddt.tsv')
+                plddt.text = new URL((params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/') + "testdata/metrics/DUMMY_PLDDT.tsv").readLines()
+                    .collect { it.split('\t')[0..2].join('\t') }.join('\n') + '\n'
+                def scores = 'rank_0\t0.5\nrank_1\t0.6\n'
+                new File(outputDir, 'ptm.tsv').text = scores
+                new File(outputDir, 'iptm.tsv').text = scores
+                """
+                input[0] = [
+                    [id: 'test', model: 'alphafold2', msa_tool: 'jackhmmer'],
+                    [file("$outputDir/rank_0.mmcif"), file("$outputDir/rank_1.mmcif")],
+                    file("$projectDir/assets/DUMMY_MSA.tsv", checkIfExists: true),
+                    file("$outputDir/two_rank_plddt.tsv", checkIfExists: true),
+                    [file("$outputDir/rank_0_pae.tsv"), file("$outputDir/rank_1_pae.tsv")],
+                    file("$outputDir/ptm.tsv", checkIfExists: true),
+                    file("$outputDir/iptm.tsv", checkIfExists: true),
+                    file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/metrics/DUMMY_SOFTWARE_VERSIONS.yml", checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
+                ]
+                """
+            }
+        }
+        then {
+            assert process.success
+            def outputFile = path(process.out.modelcif[0][1])
+            assert outputFile.text.contains('_ma_qa_metric')
+            assert outputFile.text.contains('_ma_protocol_step')
+            (0..1).each { rank ->
+                def relativePath = "pae/rank_${rank}_pae.tsv"
+                assert outputFile.text.contains("model ${relativePath} file other other")
+                assert java.nio.file.Files.isRegularFile(outputFile.parent.resolve(relativePath))
+            }
+            assert process.out.pae[0].size() == 2
+            assert path(process.out.versions[0]).getFileName().toString() == 'versions.yml'
+            assert outputFile.text.contains('nf-core/proteinfold')
+            assert outputFile.text.contains('2.3.2')
+        }
+    }
+
+    test("dummy inputs produce modelcif with embedded PAE") {
+        config "./assemble_modelcif_embed.config"
+
+        when {
+            process {
+                (0..1).each { rank ->
+                    new File(outputDir, "rank_${rank}.mmcif").text = new URL((params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/') + "testdata/models/DUMMY_MODELCIF.mmcif").text
+                    new File(outputDir, "rank_${rank}_pae.tsv").text = new File(projectDir, 'assets/DUMMY_PAE.tsv').text
+                        .replaceFirst('0\\.2601', rank == 0 ? '0.2601' : '1.2601')
+                }
+                def plddt = new File(outputDir, 'two_rank_plddt.tsv')
+                plddt.text = new URL((params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/') + "testdata/metrics/DUMMY_PLDDT.tsv").readLines()
+                    .collect { it.split('\t')[0..2].join('\t') }.join('\n') + '\n'
+                def scores = 'rank_0\t0.5\nrank_1\t0.6\n'
+                new File(outputDir, 'ptm.tsv').text = scores
+                new File(outputDir, 'iptm.tsv').text = scores
+                """
+                input[0] = [
+                    [id: 'test_embed', model: 'alphafold2', msa_tool: 'jackhmmer'],
+                    [file("$outputDir/rank_0.mmcif"), file("$outputDir/rank_1.mmcif")],
+                    file("$projectDir/assets/DUMMY_MSA.tsv", checkIfExists: true),
+                    file("$outputDir/two_rank_plddt.tsv", checkIfExists: true),
+                    [file("$outputDir/rank_0_pae.tsv"), file("$outputDir/rank_1_pae.tsv")],
+                    file("$outputDir/ptm.tsv", checkIfExists: true),
+                    file("$outputDir/iptm.tsv", checkIfExists: true),
+                    file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/metrics/DUMMY_SOFTWARE_VERSIONS.yml", checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
+                ]
+                """
+            }
+        }
+        then {
+            assert process.success
+            def outputFile = path(process.out.modelcif[0][1])
+            assert outputFile.text.contains('_ma_qa_metric_local_pairwise')
+            assert outputFile.text.contains('1.260')
+            assert !outputFile.text.contains('_ma_entry_associated_files')
+            assert path(process.out.versions[0]).getFileName().toString() == 'versions.yml'
+        }
+    }
+
+    test("rejects a mismatch between structures and pLDDT ranks") {
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: 'test', model: 'alphafold2', msa_tool: 'jackhmmer' ],
+                    file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_MODELCIF.mmcif", checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_MSA.tsv",         checkIfExists: true),
+                    file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/metrics/DUMMY_PLDDT.tsv",       checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_PAE.tsv",         checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_PTM.tsv",         checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_IPTM.tsv",        checkIfExists: true),
+                    file("$projectDir/assets/NO_FILE",               checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assert process.failed
+        }
+    }
+
+    test("dummy inputs produce binaryCIF") {
+        config "./assemble_modelcif_binary.config"
+
+        when {
+            process {
+                def plddt = new File(outputDir, 'one_rank_plddt.tsv')
+                plddt.text = new URL((params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/') + "testdata/metrics/DUMMY_PLDDT.tsv").readLines()
+                    .collect { it.split('\t')[0..1].join('\t') }.join('\n') + '\n'
+                new File(outputDir, 'ptm.tsv').text = 'rank_0\t0.5\n'
+                new File(outputDir, 'iptm.tsv').text = 'rank_0\t0.6\n'
+                """
+                input[0] = [
+                    [ id: 'test_binary', model: 'alphafold2', msa_tool: 'jackhmmer' ],
+                    file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_MODELCIF.mmcif", checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_MSA.tsv",         checkIfExists: true),
+                    file("$outputDir/one_rank_plddt.tsv",           checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_PAE.tsv",         checkIfExists: true),
+                    file("$outputDir/ptm.tsv",                       checkIfExists: true),
+                    file("$outputDir/iptm.tsv",                      checkIfExists: true),
+                    file("$projectDir/assets/NO_FILE",               checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def modelcifPath = path(process.out.modelcif[0][1])
+            assertModelcifOutput(process, modelcifPath, false, true)
+        }
+    }
+
+    test("dummy inputs include all ranked models by default") {
+        when {
+            process {
+                """
+                def testdataBase = params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/'
+                def sourceFile = File.createTempFile('DUMMY_MMCIF_rank_0', '.mmcif')
+                sourceFile.bytes = new URL(testdataBase + 'testdata/models/DUMMY_MMCIF_rank_0.mmcif').bytes
+                def generator = ['python3', "$projectDir/tests/generate_ranked_modelcif.py", sourceFile.absolutePath, "$outputDir/ranked"].execute()
+                assert generator.waitFor() == 0 : generator.err.text
+                sourceFile.delete()
+                (0..4).each { rank ->
+                    new File("$outputDir/rank_\${rank}_pae.tsv").text =
+                        new File("$projectDir/assets/DUMMY_PAE.tsv").text
+                }
+                input[0] = [
+                    [ id: 'test_multi_default', model: 'alphafold2', msa_tool: 'jackhmmer' ],
+                    [
+                        file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_MMCIF_rank_0.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_1.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_2.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_3.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_4.mmcif", checkIfExists: true)
+                    ],
+                    file("$projectDir/assets/DUMMY_MSA.tsv",         checkIfExists: true),
+                    file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/metrics/DUMMY_PLDDT.tsv",       checkIfExists: true),
+                    file("$outputDir/rank_*_pae.tsv",               checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_PTM.tsv",         checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_IPTM.tsv",        checkIfExists: true),
+                    file("$projectDir/assets/NO_FILE",               checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def modelcifPath = path(process.out.modelcif[0][1])
+            assertModelcifOutput(process, modelcifPath, false, false)
+
+            def mmcif = modelcifPath.text
+            assertAll(
+                { assert mmcif.contains("test_multi_default rank_0") },
+                { assert mmcif.contains("test_multi_default rank_1") },
+                { assert mmcif.contains("test_multi_default rank_2") },
+                { assert mmcif.contains("test_multi_default rank_3") },
+                { assert mmcif.contains("test_multi_default rank_4") }
+            )
+            assert process.out.versions.size() == 1
+        }
+    }
+
+    test("dummy inputs produce modelcif from five mmcif structures") {
+        config "./assemble_modelcif_all_structs.config"
+
+        when {
+            process {
+                """
+                def testdataBase = params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/'
+                def sourceFile = File.createTempFile('DUMMY_MMCIF_rank_0', '.mmcif')
+                sourceFile.bytes = new URL(testdataBase + 'testdata/models/DUMMY_MMCIF_rank_0.mmcif').bytes
+                def generator = ['python3', "$projectDir/tests/generate_ranked_modelcif.py", sourceFile.absolutePath, "$outputDir/ranked"].execute()
+                assert generator.waitFor() == 0 : generator.err.text
+                sourceFile.delete()
+                (0..4).each { rank ->
+                    new File("$outputDir/rank_\${rank}_pae.tsv").text =
+                        new File("$projectDir/assets/DUMMY_PAE.tsv").text
+                }
+                input[0] = [
+                    [ id: 'test_multi', model: 'alphafold2', msa_tool: 'jackhmmer' ],
+                    [
+                        file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_MMCIF_rank_0.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_1.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_2.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_3.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_4.mmcif", checkIfExists: true)
+                    ],
+                    file("$projectDir/assets/DUMMY_MSA.tsv",         checkIfExists: true),
+                    file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/metrics/DUMMY_PLDDT.tsv",       checkIfExists: true),
+                    file("$outputDir/rank_*_pae.tsv",               checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_PTM.tsv",         checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_IPTM.tsv",        checkIfExists: true),
+                    file("$projectDir/assets/NO_FILE",               checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def modelcifPath = path(process.out.modelcif[0][1])
+            assertModelcifOutput(process, modelcifPath, false, false)
+
+            def mmcif = modelcifPath.text
+            assertAll(
+                { assert mmcif.contains("test_multi rank_0") },
+                { assert mmcif.contains("test_multi rank_1") },
+                { assert mmcif.contains("test_multi rank_2") },
+                { assert mmcif.contains("test_multi rank_3") },
+                { assert mmcif.contains("test_multi rank_4") }
+            )
+            assert process.out.versions.size() == 1
+        }
+    }
+
+    test("pLDDT metric type follows --plddt-scale") {
+        config "./assemble_modelcif_plddt_scale.config"
+
+        when {
+            process {
+                """
+                def testdataBase = params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/'
+                def sourceFile = File.createTempFile('DUMMY_MMCIF_rank_0', '.mmcif')
+                sourceFile.bytes = new URL(testdataBase + 'testdata/models/DUMMY_MMCIF_rank_0.mmcif').bytes
+                def generator = ['python3', "$projectDir/tests/generate_ranked_modelcif.py", sourceFile.absolutePath, "$outputDir/ranked"].execute()
+                assert generator.waitFor() == 0 : generator.err.text
+                sourceFile.delete()
+                input[0] = [
+                    [ id: 'test_scale', model: 'alphafold2', msa_tool: 'jackhmmer',
+                      missing_metrics: ['pae'] ],
+                    [
+                        file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_MMCIF_rank_0.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_1.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_2.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_3.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_4.mmcif", checkIfExists: true)
+                    ],
+                    file("$projectDir/assets/DUMMY_MSA.tsv",         checkIfExists: true),
+                    file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/metrics/DUMMY_PLDDT.tsv",       checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_PAE.tsv",         checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_PTM.tsv",         checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_IPTM.tsv",        checkIfExists: true),
+                    file("$projectDir/assets/NO_FILE",               checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def mmcif = path(process.out.modelcif[0][1]).text
+            assertAll(
+                { assert mmcif.contains("'pLDDT in [0,1]' local") },
+                { assert !mmcif.contains("'pLDDT-CA'") }
+            )
+            assert process.out.versions.size() == 1
+        }
+    }
+
+    test("--seed tsv attaches container and seed software parameters") {
+        config "./assemble_modelcif_seed.config"
+
+        when {
+            process {
+                """
+                def testdataBase = params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/'
+                def sourceFile = File.createTempFile('DUMMY_MMCIF_rank_0', '.mmcif')
+                sourceFile.bytes = new URL(testdataBase + 'testdata/models/DUMMY_MMCIF_rank_0.mmcif').bytes
+                def generator = ['python3', "$projectDir/tests/generate_ranked_modelcif.py", sourceFile.absolutePath, "$outputDir/ranked"].execute()
+                assert generator.waitFor() == 0 : generator.err.text
+                sourceFile.delete()
+                input[0] = [
+                    [ id: 'test_seed', model: 'alphafold2', msa_tool: 'jackhmmer',
+                      missing_metrics: ['pae'] ],
+                    [
+                        file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_MMCIF_rank_0.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_1.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_2.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_3.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_4.mmcif", checkIfExists: true)
+                    ],
+                    file("$projectDir/assets/DUMMY_MSA.tsv",         checkIfExists: true),
+                    file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/metrics/DUMMY_PLDDT.tsv",       checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_PAE.tsv",         checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_PTM.tsv",         checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_IPTM.tsv",        checkIfExists: true),
+                    file("$projectDir/assets/NO_FILE",               checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def mmcif = path(process.out.modelcif[0][1]).text
+            assertAll(
+                { assert mmcif.contains("_ma_software_parameter") },
+                { assert mmcif.contains("integer seed 0") }
+            )
+            assert process.out.versions.size() == 1
+        }
+    }
+
+    test("chainwise metrics are skipped for monomer inputs") {
+        config "./assemble_modelcif_chainwise.config"
+
+        when {
+            process {
+                """
+                def testdataBase = params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/'
+                def sourceFile = File.createTempFile('DUMMY_MMCIF_rank_0', '.mmcif')
+                sourceFile.bytes = new URL(testdataBase + 'testdata/models/DUMMY_MMCIF_rank_0.mmcif').bytes
+                def generator = ['python3', "$projectDir/tests/generate_ranked_modelcif.py", sourceFile.absolutePath, "$outputDir/ranked"].execute()
+                assert generator.waitFor() == 0 : generator.err.text
+                sourceFile.delete()
+                input[0] = [
+                    [ id: 'test_cw', model: 'alphafold2', msa_tool: 'jackhmmer',
+                      missing_metrics: ['pae'] ],
+                    [
+                        file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_MMCIF_rank_0.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_1.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_2.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_3.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_4.mmcif", checkIfExists: true)
+                    ],
+                    file("$projectDir/assets/DUMMY_MSA.tsv",         checkIfExists: true),
+                    file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/metrics/DUMMY_PLDDT.tsv",       checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_PAE.tsv",         checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_PTM.tsv",         checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_IPTM.tsv",        checkIfExists: true),
+                    file("$projectDir/assets/NO_FILE",               checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def mmcif = path(process.out.modelcif[0][1]).text
+            assertAll(
+                { assert !mmcif.contains("_ma_qa_metric_feature") },
+                { assert mmcif.contains("LocalPLDDT") }
+            )
+            assert process.out.versions.size() == 1
+        }
+    }
+
+    test("template search step is attributed to its own tool") {
+        when {
+            process {
+                """
+                def testdataBase = params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/'
+                def sourceFile = File.createTempFile('DUMMY_MMCIF_rank_0', '.mmcif')
+                sourceFile.bytes = new URL(testdataBase + 'testdata/models/DUMMY_MMCIF_rank_0.mmcif').bytes
+                def generator = ['python3', "$projectDir/tests/generate_ranked_modelcif.py", sourceFile.absolutePath, "$outputDir/ranked"].execute()
+                assert generator.waitFor() == 0 : generator.err.text
+                sourceFile.delete()
+                input[0] = [
+                    [ id: 'test_tpl', model: 'alphafold2', msa_tool: 'jackhmmer',
+                      missing_metrics: ['pae'] ],
+                    [
+                        file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_MMCIF_rank_0.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_1.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_2.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_3.mmcif", checkIfExists: true),
+                        file("$outputDir/ranked/DUMMY_MMCIF_rank_4.mmcif", checkIfExists: true)
+                    ],
+                    file("$projectDir/assets/DUMMY_MSA.tsv",         checkIfExists: true),
+                    file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/metrics/DUMMY_PLDDT.tsv",       checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_PAE.tsv",         checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_PTM.tsv",         checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_IPTM.tsv",        checkIfExists: true),
+                    file("$projectDir/assets/NO_FILE",               checkIfExists: true),
+                    file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def mmcif = path(process.out.modelcif[0][1]).text
+            assertAll(
+                { assert mmcif.contains("'template search'") },
+                { assert mmcif.contains("HHsearch") },
+                // the template step must not be lumped in with the modeling software
+                { assert mmcif.contains("'coevolution MSA'") }
+            )
+            assert process.out.versions.size() == 1
+        }
+    }
+
+}

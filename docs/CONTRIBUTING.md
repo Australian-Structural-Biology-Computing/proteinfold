@@ -33,12 +33,12 @@ The nf-core stance on the use of AI and LLMs is that humans are still ultimately
 
 If you’re using AI tools, try to stick by these guidelines:
 
-- Keep PRs as small and focussed as possible
+- Keep PRs as small and focused as possible
 - Avoid any unnecessary changes, such as moving or refactoring code (unless that is the explicit intention of the PR)
 - Review all generated code yourself before opening a PR, and ensure that you understand it
 - Engage with the community review process and expect to make revisions
 
-For more detail, see the the [blog post](https://nf-co.re/blog/2026/statement-on-ai) for a statement from the nf-core/core team.
+For more detail, see the [blog post](https://nf-co.re/blog/2026/statement-on-ai) for a statement from the nf-core/core team.
 
 ### Getting help
 
@@ -67,8 +67,20 @@ If you have added new functionality, ensure you update the test assertions in th
 Update the snapshots with the following command:
 
 ```bash
-nf-test test --tag test --profile +docker --verbose --update-snapshots
+nf-test test --tag test --profile +docker --verbose --update-snapshot
 ```
+
+### ProteinFold test data
+
+The CPU integration tests use the shared ProteinFold microDBs from S3 by default. Developers can use a local mirror instead:
+
+```bash
+export PROTEINFOLD_TEST_DB=/path/to/proteinfold_microdbs
+```
+
+The mirror must have the same directory layout as `s3://proteinfold-dataset/test-data/mini_dbs`.
+
+GPU tests use validated CPU outputs from the ProteinFold branch of `test-datasets`. These inputs can be overridden locally with `PROTEINFOLD_AF2_FEATURES` and `PROTEINFOLD_AF3_DATA_JSON`. AlphaFold3 model parameters can be provided with `PROTEINFOLD_AF3_PARAMS`.
 
 When you create a pull request with changes, GitHub Actions will run automatic tests.
 Pull requests are typically reviewed when these tests are passing.
@@ -121,7 +133,7 @@ Please also refer to the [pipeline-specific contribution guidelines](#pipeline-s
 - [ ] Perform local tests to validate that the new code works as expected.
   - [ ] If applicable, add a new test in the `tests` directory.
 - [ ] Update `usage.md`, `output.md`, and `citation.md` as appropriate.
-- [ ] [Lint](lint) the code with nf-core/tools.
+- [ ] [Lint](#lint-tests) the code with nf-core/tools.
 - [ ] Update any diagrams or pipeline images as necessary.
 - [ ] Update MultiQC config `assets/multiqc_config.yml` so relevant suffixes, file name cleanup, and module plots are in the appropriate order.
 - [ ] If applicable, create a [MultiQC](https://seqera.io/multiqc/) module.
@@ -159,7 +171,7 @@ Specify these with generic `withLabel:` selectors, so they can be shared across 
 nf-core provides a set of standard labels that you should follow where possible, as seen in the [nf-core pipeline template](https://github.com/nf-core/tools/blob/main/nf_core/pipeline-template/conf/base.config).
 These labels define resource defaults for single-core processes, modules that require a GPU, and different levels of multi-core configurations with increasing memory requirements.
 
-Values assigned within these labels can be dynamically passed to a tool using the the `${task.cpus}` and `${task.memory}` Nextflow variables in the `script:` block of a module (see an example in the [modules repository](https://github.com/nf-core/modules/blob/bd1b6a40f55933d94b8c9ca94ec8c1ea0eaf4b82/modules/nf-core/samtools/bam2fq/main.nf#L30)).
+Values assigned within these labels can be dynamically passed to a tool using the `${task.cpus}` and `${task.memory}` Nextflow variables in the `script:` block of a module (see an example in the [modules repository](https://github.com/nf-core/modules/blob/bd1b6a40f55933d94b8c9ca94ec8c1ea0eaf4b82/modules/nf-core/samtools/bam2fq/main.nf#L30)).
 
 #### Nextflow version bumping
 

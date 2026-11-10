@@ -2,12 +2,37 @@
     "versions": {
         "content": [
             [
-                "versions.yml:md5,7f5bf1e283695753ebd6e554eba80b36"
+                [
+                    "COLABFOLD_BATCH",
+                    "alphafold_colabfold",
+                    "2.3.20"
+                ]
+            ],
+            [
+                [
+                    "COLABFOLD_BATCH",
+                    "colabfold_batch",
+                    "1.6.3"
+                ]
+            ],
+            [
+                [
+                    "COLABFOLD_BATCH",
+                    "colabfold_binaries",
+                    "0.1.0"
+                ]
+            ],
+            [
+                [
+                    "COLABFOLD_BATCH",
+                    "colabfold_legacy_kernels",
+                    "0.2.0"
+                ]
             ]
         ],
-        "timestamp": "2026-07-17T15:46:51.311726739",
+        "timestamp": "2026-10-27T14:19:12.289501874",
         "meta": {
-            "nf-test": "0.9.5",
+            "nf-test": "0.9.4",
             "nextflow": "26.04.6"
         }
     }

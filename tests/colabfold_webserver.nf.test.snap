@@ -1,23 +1,7 @@
 {
     "-profile test_colabfold_webserver": {
         "content": [
-            7,
-            {
-                "COLABFOLD_BATCH": {
-                    "alphafold_colabfold": "2.3.10",
-                    "colabfold_batch": "1.5.5"
-                },
-                "GENERATE_REPORT": {
-                    "python": "3.12.7",
-                    "generate_report.py": "Python 3.12.7"
-                },
-                "MULTIFASTA_TO_CSV": {
-                    "sed": 4.7
-                },
-                "Workflow": {
-                    "nf-core/proteinfold": "v2.1.0dev"
-                }
-            },
+            8,
             [
                 "colabfold",
                 "colabfold/T1024",
@@ -52,7 +36,8 @@
                 "colabfold/top_ranked_structures/T1024.pdb",
                 "colabfold/top_ranked_structures/T1026.pdb",
                 "multifasta",
-                "multifasta/input.csv",
+                "multifasta/T1024.csv",
+                "multifasta/T1026.csv",
                 "multiqc",
                 "multiqc/multiqc_data",
                 "multiqc/multiqc_data/.stub",
@@ -92,17 +77,18 @@
                 "T1026_5_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026.pdb:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "input.csv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1024.csv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026.csv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_colabfold_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_colabfold_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-05-29T12:03:19.488094161",
+        "timestamp": "2026-10-26T16:06:07.006001217",
         "meta": {
-            "nf-test": "0.9.5",
-            "nextflow": "26.04.0"
+            "nf-test": "0.9.4",
+            "nextflow": "26.04.6"
         }
     }
 }
