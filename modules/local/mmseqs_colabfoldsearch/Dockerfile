@@ -1,4 +1,4 @@
-ARG COLABFOLD_REF=v1.6.3
+ARG COLABFOLD_REF=792f6f604b4480065366a2a11b44164afc0f3162
 ARG MMSEQS2_REPOSITORY=https://github.com/jscgh/MMseqs2.git
 ARG MMSEQS2_REF=48f2a22d5f68f595afdfb5e601ca11721cf17449
 
@@ -42,7 +42,7 @@ RUN apt-get update && \
     ln -sf /usr/bin/python3 /usr/bin/python && \
     \
     pip install --no-cache-dir --break-system-packages \
-        "colabfold @ git+https://github.com/sokrypton/ColabFold.git@${COLABFOLD_REF}" && \
+        "colabfold @ git+https://github.com/tlitfin/ColabFold.git@${COLABFOLD_REF}" && \
     \
     apt-get remove -y \
         python3-dev \
