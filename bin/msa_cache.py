@@ -6,6 +6,7 @@ import os
 import tempfile
 import sys
 import zipfile
+import zlib
 
 CACHE_FORMAT_VERSION = 3
 
@@ -101,7 +102,7 @@ def lookup(directory, key, destination, artifact):
                 return False
             os.replace(temporary, destination)
             return True
-    except (OSError, ValueError, KeyError, EOFError, RuntimeError, zipfile.BadZipFile):
+    except (OSError, ValueError, KeyError, EOFError, RuntimeError, zipfile.BadZipFile, zlib.error):
         return False
     finally:
         if temporary and os.path.exists(temporary):
