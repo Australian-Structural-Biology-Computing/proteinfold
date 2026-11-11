@@ -22,7 +22,9 @@ nextflow_pipeline {
             assert file("${params.outdir}/multiqc/multiqc_report.html").exists(): "MultiQC report missing - the reporting channel went empty"
             assert snapshot(
                 workflow.trace.succeeded().size(),
-                removeNextflowVersion("$outputDir/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml"),
+                removeNextflowVersion("$outputDir/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml").collectEntries { key, value ->
+                    [(key): key.contains('GENERATE_MULTIQC_CONTENTS:') ? value.replaceFirst(/3\.14\.\d+/, '3.14.x') : value]
+                },
                 stableName,
                 stableContent
             ).match()

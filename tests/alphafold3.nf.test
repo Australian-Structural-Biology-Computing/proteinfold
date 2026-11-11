@@ -29,7 +29,9 @@ nextflow_pipeline {
                     // Number of successful tasks
                     workflow.trace.succeeded().size(),
                     // pipeline versions.yml file for multiqc from which Nextflow version is removed because we test pipelines on multiple Nextflow versions
-                    removeNextflowVersion("$outputDir/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml"),
+                    removeNextflowVersion("$outputDir/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml").collectEntries { key, value ->
+                        [(key): key.contains('GENERATE_MULTIQC_CONTENTS:') ? value.replaceFirst(/3\.14\.\d+/, '3.14.x') : value]
+                    },
                     // All stable path name, with a relative path
                     stable_name,
                     // All files with stable contents
