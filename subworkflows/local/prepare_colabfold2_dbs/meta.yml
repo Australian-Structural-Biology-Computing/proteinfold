@@ -1,0 +1,54 @@
+name: "PREPARE_COLABFOLD2_DBS"
+description: Reuse a complete local ColabFold2 weights cache or download the selected checkpoint into a task-local directory
+keywords:
+  - colabfold2
+  - weights
+  - checkpoint
+components:
+  - aria2_uncompress
+  - mmseqs/createindex
+input:
+  - colabfold2_params_path:
+      type: string
+      description: Optional explicit root of the ColabFold2 weights cache
+  - colabfold_db:
+      type: string
+      description: Local database directory that may contain a ColabFold2 weights cache
+  - colabfold2_model:
+      type: string
+      description: Selected upstream model
+  - colabfold2_precision:
+      type: string
+      description: Checkpoint precision
+  - use_msa_server:
+      type: boolean
+      description: Whether to fetch MSAs from a server instead of local databases
+  - colabfold_envdb_path:
+      type: directory
+      description: Local ColabFold environment database directory
+  - colabfold_uniref30_path:
+      type: directory
+      description: Local UniRef30 database directory
+  - colabfold_db_link:
+      type: string
+      description: URL to download the ColabFold environment database
+  - colabfold_uniref30_link:
+      type: string
+      description: URL to download the UniRef30 database
+  - colabfold_create_index:
+      type: boolean
+      description: Whether to create MMseqs database indices after download
+output:
+  - params_path:
+      type: directory
+      description: Root containing the selected model weights under params/af3
+  - colabfold_db:
+      type: file
+      description: Collection of ColabFold environment database files for offline MSA search
+  - uniref30:
+      type: file
+      description: Collection of UniRef30 database files for offline MSA search
+authors:
+  - "@jscgh"
+maintainers:
+  - "@jscgh"

@@ -19,6 +19,13 @@ warnings.filterwarnings("error", category=PDBConstructionWarning, message=".*dis
 warnings.filterwarnings("error", category=PDBConstructionWarning, message=".*duplicate.*")
 warnings.filterwarnings("error", category=PDBConstructionWarning, message=".*could not assign element.*")
 
+INTERFACE_SUFFIXES = ("_iptm.tsv", "_chainwise_iptm.tsv", "_ipsae.tsv", "_chainwise_ipsae.tsv")
+
+COLABFOLD2_MODES = frozenset({
+    "colabfold2-alphafold3", "colabfold2-boltz2", "esmfold2", "protenix2",
+    "chai1", "intellifold2", "opendde", "openfold3", "openbind0", "rosettafold3",
+})
+
 
 def input_ids(samplesheet: str) -> list[str]:
     if samplesheet.startswith(("http://", "https://")):
@@ -76,27 +83,56 @@ def validate_structure(path: Path) -> int:
     return len(residues)
 
 
-def validate_plddt(path: Path) -> tuple[int, int, float]:
+def validate_plddt(path: Path, structure_only: bool = False) -> tuple[int, int, float | None]:
     rows = [line.split("\t") for line in path.read_text().splitlines()]
     assert len(rows) > 1, f"pLDDT file has no data rows: {path}"
     assert rows[0][0] == "Positions", f"Unexpected pLDDT header in {path}: {rows[0][0]}"
     values = []
+    unavailable = 0
     for row in rows[1:]:
         assert len(row) == len(rows[0]), f"Inconsistent pLDDT column count in {path}"
-        values.extend(float(value) for value in row[1:])
-    assert values, f"pLDDT file contains no scores: {path}"
-    assert all(math.isfinite(value) and 0 <= value <= 100 for value in values), (
-        f"pLDDT values outside 0-100 or non-finite: {path}"
-    )
+        for cell in row[1:]:
+            if cell == "n/a":
+                assert structure_only, f"pLDDT cell is 'n/a' without --structure-only: {path}"
+                unavailable += 1
+                continue
+            try:
+                value = float(cell)
+            except ValueError:
+                raise AssertionError(f"pLDDT value {cell!r} is not a number or 'n/a': {path}") from None
+            assert math.isfinite(value) and 0 <= value <= 100, f"pLDDT values outside 0-100 or non-finite: {path}"
+            values.append(value)
+    assert values or unavailable, f"pLDDT file contains no scores: {path}"
+    if structure_only:
+        total_cells = len(values) + unavailable
+        all_na = unavailable == total_cells
+        all_zero_legacy = unavailable == 0 and bool(values) and all(value == 0 for value in values)
+        all_scored = unavailable == 0 and bool(values) and sum(values) / len(values) >= 5.0
+        assert all_na or all_zero_legacy or all_scored, (
+            f"Language-model pLDDT must be all 'n/a', all-zero legacy values, or finite scores with mean >= 5: {path}"
+        )
+        return len(rows) - 1, total_cells, sum(values) / len(values) if all_scored else None
     mean_plddt = sum(values) / len(values)
     assert mean_plddt >= 5.0, f"Suspiciously low mean pLDDT: {path}"
     return len(rows) - 1, len(values), mean_plddt
 
 
-def validate_pae(path: Path) -> tuple[int, int]:
+def validate_pae(path: Path, structure_only: bool = False) -> tuple[int, int]:
     rows = [line.split("\t") for line in path.read_text().splitlines() if line]
     assert rows, f"Empty PAE matrix: {path}"
     assert all(len(row) == len(rows) for row in rows), f"PAE matrix is not square: {path}"
+    if structure_only:
+        values = []
+        for row in rows:
+            for cell in row:
+                try:
+                    values.append(float(cell))
+                except ValueError:
+                    raise AssertionError(f"PAE value {cell!r} is not a number: {path}") from None
+        all_na = values and all(math.isnan(value) for value in values)
+        all_scored = values and all(math.isfinite(value) and 0 <= value <= 31.75 for value in values)
+        assert all_na or all_scored, f"Language-model PAE must be all-NaN or finite values in 0-31.75: {path}"
+        return len(rows), len(rows[0])
     values = [float(value) for row in rows for value in row]
     assert all(math.isfinite(value) and 0 <= value <= 31.75 for value in values), (
         f"PAE values outside 0-31.75 or non-finite: {path}"
@@ -169,6 +205,36 @@ def validate_detailed_report(outdir: Path, identifier: str) -> None:
     print(f"Validated detailed report: {reports[0].name}")
 
 
+def validate_interface_metrics(path: Path) -> int:
+    """Validate one interface-metric TSV (ipTM/ipSAE, flat or chain-wise).
+
+    Flat files (``<id>_iptm.tsv`` / ``<id>_ipsae.tsv``) carry one
+    ``<rank>\\t<score>`` row per model; chain-wise files add a rank-label
+    header row (first cell empty) and one row per chain pair with the pair
+    label in the first column. Scores are probabilities in [0, 1]; 'n/a'
+    cells mark pairs a model did not score.
+    """
+    rows = [line.split("\t") for line in path.read_text().splitlines() if line]
+    assert rows, f"Interface metric file has no rows: {path}"
+    widths = {len(row) for row in rows}
+    assert len(widths) == 1, f"Inconsistent interface metric column count in {path}: {sorted(widths)}"
+    data_rows = [row for row in rows if row and row[0].strip()]
+    assert data_rows, f"Interface metric file contains only a header row: {path}"
+    checked = 0
+    for row in data_rows:
+        for cell in row[1:]:
+            if cell == "n/a":
+                continue
+            try:
+                value = float(cell)
+            except ValueError:
+                raise AssertionError(f"Interface score {cell!r} is not a number or 'n/a': {path}") from None
+            assert math.isfinite(value) and 0 <= value <= 1, f"Interface score outside 0-1 or non-finite: {path}"
+            checked += 1
+    assert checked, f"Interface metric file contains no scores: {path}"
+    return checked
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", required=True)
@@ -176,6 +242,17 @@ def main() -> None:
     parser.add_argument("--extension", required=True, choices=[".pdb", ".cif", ".mmcif"])
     parser.add_argument("--outdir", required=True, type=Path)
     parser.add_argument("--samplesheet", required=True)
+    parser.add_argument(
+        "--structure-only",
+        action="store_true",
+        help="For ESM-C language-model variants, accept unavailable or finite pLDDT "
+        "and PAE scores according to the checkpoint and runtime version.",
+    )
+    parser.add_argument(
+        "--require-pae",
+        action="store_true",
+        help="Require one PAE matrix per input. Some prediction modes do not emit PAE.",
+    )
     args = parser.parse_args()
 
     parser_canary()
@@ -202,24 +279,42 @@ def main() -> None:
             f"No {args.display_name} pLDDT metrics for input {identifier}"
         )
     for path in plddt_files:
-        position_count, score_count, mean_plddt = validate_plddt(path)
-        print(
-            f"Validated pLDDT: {path.name} "
-            f"({position_count} positions, {score_count} scores, mean={mean_plddt:.1f})"
-        )
+        position_count, score_count, mean_plddt = validate_plddt(path, structure_only=args.structure_only)
+        if mean_plddt is None:
+            print(f"Validated pLDDT: {path.name} ({position_count} positions, {score_count} cells; confidence unavailable)")
+        else:
+            print(f"Validated pLDDT: {path.name} ({position_count} positions, {score_count} scores, mean={mean_plddt:.1f})")
 
     pae_files = sorted(path for path in mode_dir.rglob("*.tsv") if path.parent.name == "paes")
+    if args.require_pae:
+        assert pae_files, f"{args.display_name} produced no PAE matrices"
+        for identifier in ids:
+            assert any(identifier in path.name for path in pae_files), (
+                f"No {args.display_name} PAE matrix for input {identifier}"
+            )
     for path in pae_files:
-        row_count, column_count = validate_pae(path)
+        row_count, column_count = validate_pae(path, structure_only=args.structure_only)
         print(f"Validated PAE: {path.name} ({row_count}x{column_count} matrix)")
 
-    validate_multiqc_report(args.outdir, args.mode, ids)
+    multiqc_model = "colabfold2" if args.mode in COLABFOLD2_MODES else args.mode
+    validate_multiqc_report(args.outdir, multiqc_model, ids)
     for identifier in ids:
         validate_detailed_report(args.outdir, identifier)
 
+    interface_files = sorted(
+        path for path in mode_dir.rglob("*.tsv") if path.name.endswith(INTERFACE_SUFFIXES)
+    )
+    for path in interface_files:
+        if path.stat().st_size == 0:
+            print(f"Interface metrics empty (expected for monomer/structure-only runs): {path.name}")
+            continue
+        checked = validate_interface_metrics(path)
+        print(f"Validated interface metrics: {path.name} ({checked} scores)")
+
     print(
         f"Validated {args.display_name}: {len(ids)} inputs, {len(structures)} structures, "
-        f"{len(plddt_files)} pLDDT files, {len(pae_files)} PAE matrices"
+        f"{len(plddt_files)} pLDDT files, {len(pae_files)} PAE matrices, "
+        f"{len(interface_files)} interface metric files"
     )
 
 
