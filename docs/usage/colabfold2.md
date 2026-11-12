@@ -7,7 +7,7 @@ weight: 25
 
 | Mode                                                 | Protein | RNA | Small-molecule | PTM | Constraints | pLM | MSA server | Split MSA |
 | :--------------------------------------------------- | :-----: | :-: | :------------: | :-: | :---------: | :-: | :--------: | :-------: |
-| [ColabFold2](https://github.com/sokrypton/ColabFold) |   ✅    | ✅  |       ✅       | ✅  |     ❌      | ✅  |     ✅     |    ❌     |
+| [ColabFold2](https://github.com/sokrypton/ColabFold) |   ✅    | ✅  |       ✅       | ✅  |     ❌      | ✅  |     ✅     |    ✅     |
 
 > [!WARNING]
 > ColabFold2 support is experimental and its upstream interfaces may change. Which entities a backend actually supports is decided by that backend.
