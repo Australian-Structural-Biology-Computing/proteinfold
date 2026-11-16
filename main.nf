@@ -260,6 +260,7 @@ workflow NFCORE_PROTEINFOLD {
         params.colabfold_num_recycles,
         msa_tool,
         params.msa_batch_size,
+        params.inference_batch_size,
         ch_colabfold2_db,
         ch_colabfold2_uniref30,
         params.alphafold2_full_dbs != null ? params.alphafold2_full_dbs : false,
