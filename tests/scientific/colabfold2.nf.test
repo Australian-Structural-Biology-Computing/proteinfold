@@ -9,8 +9,8 @@ nextflow_pipeline {
     profile "test_full_colabfold2,gpu"
 
     def backends = [
-        [mode: 'colabfold2-alphafold3'],
-        [mode: 'colabfold2-boltz2', kernel: 'cuda_legacy'],
+        [mode: 'alphafold3'],
+        [mode: 'boltz2', kernel: 'cuda_legacy'],
         [mode: 'protenix2', kernel: 'cuda_legacy'],
         [mode: 'chai1', kernel: 'cuda_legacy'],
         [mode: 'intellifold2', kernel: 'cuda_legacy'],

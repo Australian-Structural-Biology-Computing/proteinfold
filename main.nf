@@ -61,18 +61,17 @@ workflow NFCORE_PROTEINFOLD {
         )
     requested_modes      = params.mode.toLowerCase().split(",")
 
-    colabfold2_prefixed_models = [ 'alphafold3', 'boltz2' ]
-    colabfold2_bare_models     = [
-        'openfold3', 'openbind0', 'protenix2', 'chai1', 'intellifold2', 'opendde',
-        'rosettafold3', 'esmfold2',
+    colabfold2_models          = [
+        'alphafold3', 'boltz2', 'openfold3', 'openbind0', 'protenix2', 'chai1',
+        'intellifold2', 'opendde', 'rosettafold3', 'esmfold2',
         'alphafold2'
     ]
-    colabfold2_mode_tokens = ( colabfold2_prefixed_models.collect { "colabfold2-${it}".toString() } + colabfold2_bare_models )
+    colabfold2_mode_tokens = colabfold2_models
     colabfold2_submodes = requested_modes
         .collect { mode -> mode.trim() }
         .findAll { mode -> colabfold2_mode_tokens.contains(mode) }
     if (requested_modes.collect { it.trim() }.contains('colabfold2')) {
-        error("The bare `colabfold2` mode selects no backend. Name one, e.g. `--mode colabfold2-alphafold3`, or one of: ${colabfold2_bare_models.join(', ')}.")
+        error("The bare `colabfold2` mode selects no backend. Name one, e.g. `--mode alphafold3`, or one of: ${colabfold2_models.join(', ')}.")
     }
     colabfold2_lookalikes = requested_modes
         .collect { mode -> mode.trim() }
@@ -82,7 +81,7 @@ workflow NFCORE_PROTEINFOLD {
         .findAll { mode ->
             mode != 'colabfold2' &&
             !colabfold2_submodes.contains(mode) &&
-            ( colabfold2_lookalikes.contains(mode) || ( colabfold2_bare_models + colabfold2_prefixed_models ).any { backend -> mode.startsWith(backend) && mode != backend } )
+            ( colabfold2_lookalikes.contains(mode) || colabfold2_models.any { backend -> mode.startsWith(backend) && mode != backend } )
         }
     if (colabfold2_unknown_submodes) {
         error("Unknown ColabFold2 mode(s): ${colabfold2_unknown_submodes.join(', ')}. Supported modes: ${colabfold2_mode_tokens.join(', ')}.")
@@ -97,8 +96,8 @@ workflow NFCORE_PROTEINFOLD {
         'lm600m' : [ model_type: 'esmfold2_lm600m', use_esm: true  ]
     ]
     colabfold2_esmfold2_selection = params.esmfold2_model ?: 'msa'
-    if (colabfold2_public_mode == 'colabfold2-alphafold3' && params.colabfold2_weights_precision == 'int8') {
-        error("ColabFold2 official alphafold3 supports fp32 weights only; --colabfold2_weights_precision int8 cannot be used with --mode colabfold2-alphafold3.")
+    if (colabfold2_public_mode == 'alphafold3' && params.colabfold2_weights_precision == 'int8') {
+        error("ColabFold2 official alphafold3 supports fp32 weights only; --colabfold2_weights_precision int8 cannot be used with --mode alphafold3.")
     }
     if (colabfold2_public_mode && colabfold2_public_mode.startsWith('alphafold2') && params.colabfold2_weights_precision == 'int8') {
         error("The AlphaFold2 backends do not provide int8 weights; --colabfold2_weights_precision int8 cannot be used with --mode ${colabfold2_public_mode}.")
@@ -111,8 +110,7 @@ workflow NFCORE_PROTEINFOLD {
         colabfold2_model_for_submode = esmfold2_model.model_type
         colabfold2_use_esm = esmfold2_model.use_esm
     } else {
-        colabfold2_model_for_submode = colabfold2_public_mode ?
-            colabfold2_public_mode.replaceFirst(/^colabfold2-/, '') : null
+        colabfold2_model_for_submode = colabfold2_public_mode
         colabfold2_use_esm = false
         // The plain alphafold2 token delegates monomer/multimer selection to
         // colabfold_batch ('auto': alphafold2_ptm / alphafold2_multimer_v3).
@@ -120,7 +118,7 @@ workflow NFCORE_PROTEINFOLD {
             colabfold2_model_for_submode = 'auto'
         }
     }
-    if (colabfold2_submodes && !(colabfold2_model_for_submode in ( colabfold2_prefixed_models + colabfold2_bare_models + [ 'esmfold2_lm300m', 'esmfold2_lm600m', 'auto' ] ))) {
+    if (colabfold2_submodes && !(colabfold2_model_for_submode in ( colabfold2_models + [ 'esmfold2_lm300m', 'esmfold2_lm600m', 'auto' ] ))) {
         error("ColabFold2 mode '${colabfold2_submodes[0]}' resolved to backend '${colabfold2_model_for_submode}', which is not a supported AlphaFold3-family backend. Supported modes: ${colabfold2_mode_tokens.join(', ')}.")
     }
 
