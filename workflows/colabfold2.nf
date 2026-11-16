@@ -13,6 +13,7 @@ include { ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA } from '../modules/local/alphafold3
 include { MERGE_ALPHAFOLD3_MSA               } from '../modules/local/merge_alphafold3_msa'
 include { MMSEQS_COLABFOLDSEARCH              } from '../modules/local/mmseqs_colabfoldsearch'
 include { collectMultiqcMetrics; modeChannel   } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
+include { MULTIFASTA_TO_CSV      } from '../modules/local/multifasta_to_csv'
 
 workflow COLABFOLD2 {
 
