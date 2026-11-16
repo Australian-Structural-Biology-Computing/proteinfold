@@ -80,14 +80,15 @@ nextflow_pipeline {
 
         when {
             params {
-                outdir = "$outputDir"
-                mode   = 'alphafold2_ptm'
+                outdir         = "$outputDir"
+                mode           = 'alphafold2_ptm'
+                validate_params = false
             }
         }
 
         then {
-            // The retired token is rejected by nf-schema parameter validation
-            // (the mode enum no longer carries the per-variant tokens).
+            // With parameter validation disabled, the workflow's own exact-list
+            // mode check rejects the retired token.
             assert !workflow.success
         }
     }

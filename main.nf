@@ -59,37 +59,23 @@ workflow NFCORE_PROTEINFOLD {
             newLine: true,
             sort: true
         )
-    requested_modes      = params.mode.toLowerCase().split(",")
-
+    // The accepted --mode tokens are pinned by the nf-schema enum in
+    // nextflow_schema.json; the exact-list check below keeps a readable error
+    // when parameter validation is disabled (--validate_params false).
     colabfold2_models          = [
         'alphafold3', 'boltz2', 'openfold3', 'openbind0', 'protenix2', 'chai1',
         'intellifold2', 'opendde', 'rosettafold3', 'esmfold2',
         'alphafold2'
     ]
-    colabfold2_mode_tokens = colabfold2_models
-    colabfold2_submodes = requested_modes
-        .collect { mode -> mode.trim() }
-        .findAll { mode -> colabfold2_mode_tokens.contains(mode) }
-    if (requested_modes.collect { it.trim() }.contains('colabfold2')) {
-        error("The bare `colabfold2` mode selects no backend. Name one, e.g. `--mode alphafold3`, or one of: ${colabfold2_models.join(', ')}.")
-    }
-    colabfold2_lookalikes = requested_modes
-        .collect { mode -> mode.trim() }
-        .findAll { mode -> mode.startsWith('colabfold2') || mode.startsWith('colabfold-') }
-    colabfold2_unknown_submodes = requested_modes
-        .collect { mode -> mode.trim() }
-        .findAll { mode ->
-            mode != 'colabfold2' &&
-            !colabfold2_submodes.contains(mode) &&
-            ( colabfold2_lookalikes.contains(mode) || colabfold2_models.any { backend -> mode.startsWith(backend) && mode != backend } )
-        }
-    if (colabfold2_unknown_submodes) {
-        error("Unknown ColabFold2 mode(s): ${colabfold2_unknown_submodes.join(', ')}. Supported modes: ${colabfold2_mode_tokens.join(', ')}.")
+    requested_modes      = params.mode.toLowerCase().split(",").collect { it.trim() }
+    colabfold2_submodes  = requested_modes.findAll { colabfold2_models.contains(it) }
+    if (colabfold2_submodes != requested_modes) {
+        error("Unknown ColabFold2 mode(s): ${(requested_modes - colabfold2_submodes).join(', ')}. Supported modes: ${colabfold2_models.join(', ')}.")
     }
     if (colabfold2_submodes.size() > 1) {
         error("Running multiple ColabFold2 backends in one invocation is not supported yet; run them separately.")
     }
-    colabfold2_public_mode = colabfold2_submodes ? colabfold2_submodes[0] : null
+    colabfold2_public_mode = colabfold2_submodes[0]
     colabfold2_esmfold2_models = [
         'msa'    : [ model_type: 'esmfold2',        use_esm: false ],
         'lm300m' : [ model_type: 'esmfold2_lm300m', use_esm: true  ],
@@ -118,10 +104,6 @@ workflow NFCORE_PROTEINFOLD {
             colabfold2_model_for_submode = 'auto'
         }
     }
-    if (colabfold2_submodes && !(colabfold2_model_for_submode in ( colabfold2_models + [ 'esmfold2_lm300m', 'esmfold2_lm600m', 'auto' ] ))) {
-        error("ColabFold2 mode '${colabfold2_submodes[0]}' resolved to backend '${colabfold2_model_for_submode}', which is not a supported AlphaFold3-family backend. Supported modes: ${colabfold2_mode_tokens.join(', ')}.")
-    }
-
     //
     // Resolve the MSA generation module
     //
