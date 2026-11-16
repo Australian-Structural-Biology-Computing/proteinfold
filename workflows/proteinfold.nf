@@ -415,6 +415,7 @@ workflow PROTEINFOLD {
     modeChannel(ch_batch.chainwise_iptms, 'colabfold2').set { ch_chainwise_iptm }
     modeChannel(ch_batch.chainwise_ipsaes, 'colabfold2').set { ch_chainwise_ipsae }
     modeChannel(ch_batch.confidence, 'colabfold2').set { ch_confidence }
+    modeChannel(ch_batch.plddt, 'colabfold2').set { ch_plddt }
 
     ch_multiqc_metrics = collectMultiqcMetrics('colabfold2', [
         [ 'plddt', ch_batch.plddt ],
@@ -434,5 +435,6 @@ workflow PROTEINFOLD {
     chainwise_iptm  = ch_chainwise_iptm
     chainwise_ipsae = ch_chainwise_ipsae
     confidence      = ch_confidence
+    plddt           = ch_plddt
     multiqc_metrics = ch_multiqc_metrics
 }
