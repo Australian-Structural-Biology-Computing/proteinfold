@@ -3,12 +3,12 @@ description: Extract the protein chains of an AlphaFold3 JSON into a multi-recor
 tools: []
 input:
   - - meta:
-          type: map
-          description: Groovy Map containing sample information.
+        type: map
+        description: Groovy Map containing sample information.
     - input_json:
-          type: file
-          description: AlphaFold3 input JSON.
-          pattern: "*.json"
+        type: file
+        description: AlphaFold3 input JSON.
+        pattern: "*.json"
 output:
   query_fasta:
     - - meta:
