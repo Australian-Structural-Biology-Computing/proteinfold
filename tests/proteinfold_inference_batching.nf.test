@@ -22,10 +22,10 @@ nextflow_pipeline {
             // no per-sample inference task was run
             assert workflow.trace.succeeded().count { it.name ==~ /.*:ALPHAFOLD3 \(.*/ } == 0
             // outputs are split back per sample and published flat
-            assert file("${params.outdir}/colabfold2-alphafold3/top_ranked_structures/T1024.cif").exists()
-            assert file("${params.outdir}/colabfold2-alphafold3/top_ranked_structures/T1026.cif").exists()
-            assert file("${params.outdir}/colabfold2-alphafold3/T1024_plddt.tsv").exists()
-            assert file("${params.outdir}/colabfold2-alphafold3/T1026_confidence.tsv").exists()
+            assert file("${params.outdir}/alphafold3/top_ranked_structures/T1024.cif").exists()
+            assert file("${params.outdir}/alphafold3/top_ranked_structures/T1026.cif").exists()
+            assert file("${params.outdir}/alphafold3/T1024_plddt.tsv").exists()
+            assert file("${params.outdir}/alphafold3/T1026_confidence.tsv").exists()
             def stable_name = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
             def stable_path = getAllFilesFromDir(params.outdir, ignoreFile: 'tests/.nftignore')
             assert snapshot(
@@ -51,8 +51,8 @@ nextflow_pipeline {
             assert batches.size() == 2
             assert batches.any { it.name.contains('batch_T1024_T1026') }
             assert batches.any { it.name.contains('batch_T1027') }
-            assert file("${params.outdir}/colabfold2-alphafold3/top_ranked_structures/T1027.cif").exists()
-            assert file("${params.outdir}/colabfold2-alphafold3/T1027_iptm.tsv").exists()
+            assert file("${params.outdir}/alphafold3/top_ranked_structures/T1027.cif").exists()
+            assert file("${params.outdir}/alphafold3/T1027_iptm.tsv").exists()
         }
     }
 
