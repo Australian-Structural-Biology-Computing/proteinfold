@@ -1,0 +1,25 @@
+name: "validate_af3_msa_json"
+description: Validate an AlphaFold3-format JSON with pre-computed MSAs and pass it through for ColabFold2 inference.
+tools: []
+input:
+  - - meta:
+        type: map
+        description: Groovy Map containing sample information.
+    - json:
+        type: file
+        description: AlphaFold3-format data JSON produced by the AlphaFold3 data pipeline.
+        pattern: "*.json"
+output:
+  json:
+    - - meta:
+          type: map
+          description: Groovy Map containing sample information.
+      - "${meta.id}.json":
+          type: file
+          description: Validated AlphaFold3-format job JSON.
+          pattern: "*.json"
+  versions:
+    - - "versions.yml":
+          type: file
+          description: File containing software versions.
+          pattern: "versions.yml"

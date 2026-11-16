@@ -134,7 +134,10 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
     done
     colabfold_search $args --threads $task.cpus input.csv ./db --af3-json results/
     for f in ${csvs}; do
-        id=\$(basename "\$f" .csv)
+        # Strip the last extension whatever it is: inputs are query CSVs
+        # (multifasta_to_csv) or extracted FASTAs (json-origin samples).
+        id=\$(basename "\$f")
+        id="\${id%.*}"
         test -s "results/\${id}.a3m" || { echo "Missing A3M output for \$id" >&2; exit 1; }
         test -s "results/\${id}.json" || { echo "Missing JSON output for \$id" >&2; exit 1; }
         if [ -n ${quotedDir} ]; then
@@ -146,6 +149,6 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
     stub:
     """
     mkdir results
-    for f in ${csvs}; do id=\$(basename "\$f" .csv); printf '>stub\n' > results/\${id}.a3m; printf '{"stub":true}\n' > results/\${id}.json; done
+    for f in ${csvs}; do id=\$(basename "\$f"); id="\${id%.*}"; printf '>stub\n' > results/\${id}.a3m; printf '{"stub":true}\n' > results/\${id}.json; done
     """
 }

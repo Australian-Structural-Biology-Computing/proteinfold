@@ -14,8 +14,8 @@ process MSA_CACHE_LOOKUP {
 
     script:
     def cache_dir = MsaCache.directory(params) ?: ''
-    def cache_id = (params.msa_cache_id ?: params.boltz_msa_cache_id) ?: ''
-    def tool_id = (params.msa_cache_tool_id ?: params.boltz_msa_cache_tool_id) ?: ''
+    def cache_id = params.msa_cache_id ?: ''
+    def tool_id = params.msa_cache_tool_id ?: ''
     def args = task.ext.args ?: ''
     def artifact = task.ext.msa_cache_artifact ?: 'af3_json'
     def extension = artifact == 'a3m' ? 'a3m' : 'json'
@@ -33,8 +33,8 @@ process MSA_CACHE_LOOKUP {
 
     stub:
     def cache_dir = MsaCache.directory(params) ?: ''
-    def cache_id = (params.msa_cache_id ?: params.boltz_msa_cache_id) ?: ''
-    def tool_id = (params.msa_cache_tool_id ?: params.boltz_msa_cache_tool_id) ?: ''
+    def cache_id = params.msa_cache_id ?: ''
+    def tool_id = params.msa_cache_tool_id ?: ''
     def args = task.ext.args ?: ''
     def artifact = task.ext.msa_cache_artifact ?: 'af3_json'
     def extension = artifact == 'a3m' ? 'a3m' : 'json'

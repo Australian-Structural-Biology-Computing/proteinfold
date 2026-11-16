@@ -52,8 +52,8 @@ nextflow_pipeline {
                 assert workflow.success
                 def versions_path = new File(params.outdir.toString() + "/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml").absolutePath
                 def versions_report = new File(versions_path).readLines()
-                assert versions_report.any { it.contains(":COLABFOLD2:${sub.alias}:") }
-                assert !versions_report.any { it.contains(":COLABFOLD2:COLABFOLD2_INFERENCE:") }
+                assert versions_report.any { it.contains(":PROTEINFOLD:${sub.alias}:") }
+                assert !versions_report.any { it.contains(":PROTEINFOLD:COLABFOLD2_INFERENCE:") }
                 // One published artifact per publishDir category per sample.
                 ['T1024', 'T1026'].each { id ->
                     assert stable_name.contains("${sub.mode}/top_ranked_structures/${id}.cif".toString())

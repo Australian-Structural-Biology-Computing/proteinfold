@@ -24,8 +24,9 @@ process RUN_ALPHAFOLD2_MSA {
     path ('uniprot/*')
 
     output:
-    path ("raw/**")                           , emit: raw
-    tuple val(meta), path ("raw/features.pkl"), emit: features
+    path ("raw/**")                             , emit: raw
+    tuple val(meta), path ("raw")               , emit: raw_dir
+    tuple val(meta), path ("raw/*/features.pkl"), emit: features
     tuple val("${task.process}"), val('python'), eval("python3 --version 2>/dev/null | sed 's/Python //g' || echo \"unknown\""), emit: versions_python, topic: versions
     tuple val("${task.process}"), val('alphafold2'), eval("cd /app/alphafold && git rev-parse HEAD 2>/dev/null || echo \"unknown\""), emit: versions_alphafold2, topic: versions
     tuple val("${task.process}"), val('numpy'), eval("python3 -c \"import numpy; print(numpy.__version__)\" 2>/dev/null || echo \"unknown\""), emit: versions_numpy, topic: versions
@@ -72,7 +73,8 @@ process RUN_ALPHAFOLD2_MSA {
 
     stub:
     """
-    mkdir ./raw
-    touch ./raw/features.pkl
+    mkdir -p ./raw/${fasta.baseName}/msas/A
+    touch ./raw/${fasta.baseName}/features.pkl
+    touch ./raw/${fasta.baseName}/msas/chain_id_map.json
     """
 }

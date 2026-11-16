@@ -17,24 +17,13 @@
 
 include { PREPARE_ALPHAFOLD2_DBS           } from './subworkflows/local/prepare_alphafold2_dbs'
 include { PREPARE_ALPHAFOLD3_DBS           } from './subworkflows/local/prepare_alphafold3_dbs'
-include { PREPARE_ESMFOLD_DBS              } from './subworkflows/local/prepare_esmfold_dbs'
-include { PREPARE_BOLTZ_DBS                } from './subworkflows/local/prepare_boltz_dbs'
 
-include { PREPARE_COLABFOLD_DBS  as PREPARE_COLABFOLD_DBS_COLABFOLD } from './subworkflows/local/prepare_colabfold_dbs'
-include { PREPARE_COLABFOLD_DBS  as PREPARE_COLABFOLD_DBS_BOLTZ     } from './subworkflows/local/prepare_colabfold_dbs'
-include { PREPARE_COLABFOLD2_DBS               } from './subworkflows/local/prepare_colabfold2_dbs'
+include { PREPARE_COLABFOLD2_DBS           } from './subworkflows/local/prepare_colabfold2_dbs'
 
-include { ALPHAFOLD2                       } from './workflows/alphafold2'
-include { ALPHAFOLD3                       } from './workflows/alphafold3'
-include { COLABFOLD                        } from './workflows/colabfold'
-include { COLABFOLD2                       } from './workflows/colabfold2'
-include { ESMFOLD                          } from './workflows/esmfold'
-include { BOLTZ                            } from './workflows/boltz'
+include { PROTEINFOLD                      } from './workflows/proteinfold'
 
 include { PIPELINE_INITIALISATION          } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { PIPELINE_COMPLETION              } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
-include { modelcifInput                    } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
-include { modelcifDummyMetric              } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { POST_PROCESSING                  } from './subworkflows/local/post_processing'
 
 /*
@@ -58,8 +47,6 @@ workflow NFCORE_PROTEINFOLD {
     ch_report_input      = channel.empty()
     ch_top_ranked_model  = channel.empty()
     ch_modelcif          = channel.empty()
-    modelcif_dummy_msa  = file("$projectDir/assets/DUMMY_MSA.tsv", checkIfExists: true)
-    modelcif_dummy_iptm = file("$projectDir/assets/DUMMY_IPTM.tsv", checkIfExists: true)
     modelcif_software_details = file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
     def ch_software_versions = channel.topic('versions')
         .unique()
@@ -73,11 +60,7 @@ workflow NFCORE_PROTEINFOLD {
             sort: true
         )
     requested_modes      = params.mode.toLowerCase().split(",")
-    requested_modes_size = requested_modes.size()
-
-    if (requested_modes.contains("colabfold") && params.colabfold_use_templates && !params.use_msa_server) {
-        error("`--colabfold_use_templates` requires `--use_msa_server` in ColabFold mode.")
-    }
+    requested_modes_size = 1  // single unified workflow; comparison report has one mode per run
 
     colabfold2_prefixed_models = [ 'alphafold3', 'boltz2' ]
     colabfold2_bare_models     = [
@@ -133,13 +116,38 @@ workflow NFCORE_PROTEINFOLD {
         error("ColabFold2 mode '${colabfold2_submodes[0]}' resolved to backend '${colabfold2_model_for_submode}', which is not a supported AlphaFold3-family backend. Supported modes: ${colabfold2_mode_tokens.join(', ')}.")
     }
 
-    ch_dummy_file = channel.fromPath("$projectDir/assets/NO_FILE")
-    ch_dummy_file_pae = channel.fromPath("$projectDir/assets/NO_FILE_PAE")
+    //
+    // Resolve the MSA generation module
+    //
+    msa_tool = params.use_msa_server ? 'msa_server' : params.msa_tool.toLowerCase()
+    msa_tools = ['colabfold_search', 'alphafold2_msa', 'alphafold3_msa']
+    if (!params.use_msa_server && !msa_tools.contains(msa_tool)) {
+        error("Unknown --msa_tool '${msa_tool}'. Choose one of: ${msa_tools.join(', ')} or set --use_msa_server.")
+    }
 
-    //
-    // WORKFLOW: Run alphafold2
-    //
-    if(requested_modes.contains("alphafold2")) {
+    ch_af2_params       = channel.empty()
+    ch_af2_bfd          = channel.empty()
+    ch_af2_small_bfd    = channel.empty()
+    ch_af2_mgnify       = channel.empty()
+    ch_af2_pdb70        = channel.empty()
+    ch_af2_pdb_mmcif    = channel.empty()
+    ch_af2_pdb_obsolete = channel.empty()
+    ch_af2_uniref30     = channel.empty()
+    ch_af2_uniref90     = channel.empty()
+    ch_af2_pdb_seqres   = channel.empty()
+    ch_af2_uniprot      = channel.empty()
+
+    ch_af3_small_bfd    = channel.empty()
+    ch_af3_mgnify       = channel.empty()
+    ch_af3_mmcif_files  = channel.empty()
+    ch_af3_uniref90     = channel.empty()
+    ch_af3_pdb_seqres   = channel.empty()
+    ch_af3_uniprot      = channel.empty()
+    ch_af3_nt_rna       = channel.empty()
+    ch_af3_rfam         = channel.empty()
+    ch_af3_rnacentral   = channel.empty()
+
+    if (msa_tool == 'alphafold2_msa') {
 
         //
         // SUBWORKFLOW: Prepare Alphafold2 DBs
@@ -172,70 +180,20 @@ workflow NFCORE_PROTEINFOLD {
             params.alphafold2_uniprot_trembl_link
         )
 
-        //
-        // WORKFLOW: Run nf-core/alphafold2 workflow
-        //
-        ALPHAFOLD2 (
-            ch_samplesheet,
-            params.alphafold2_full_dbs,
-            params.alphafold2_model_preset,
-            params.uniref30_prefix,
-            PREPARE_ALPHAFOLD2_DBS.out.params,
-            PREPARE_ALPHAFOLD2_DBS.out.bfd,
-            PREPARE_ALPHAFOLD2_DBS.out.small_bfd,
-            PREPARE_ALPHAFOLD2_DBS.out.mgnify,
-            PREPARE_ALPHAFOLD2_DBS.out.pdb70,
-            PREPARE_ALPHAFOLD2_DBS.out.pdb_mmcif,
-            PREPARE_ALPHAFOLD2_DBS.out.pdb_obsolete,
-            PREPARE_ALPHAFOLD2_DBS.out.uniref30,
-            PREPARE_ALPHAFOLD2_DBS.out.uniref90,
-            PREPARE_ALPHAFOLD2_DBS.out.pdb_seqres,
-            PREPARE_ALPHAFOLD2_DBS.out.uniprot
-        )
-        ch_multiqc          = ch_multiqc.mix(ALPHAFOLD2.out.multiqc_metrics)
-        ch_report_input     = ch_report_input
-                                .mix(ALPHAFOLD2
-                                .out
-                                .pdb
-                                .map { it ->
-                                    [ it[0],
-                                        it[1].sort { path ->
-                                            def filename = path.name
-                                            def matcher = filename =~ /ranked_(\d+)\.pdb/
-                                            if (matcher.matches()) {
-                                                return matcher[0][1].toInteger()
-                                            } else {
-                                                return 0  // fallback if no match
-                                            }
-                                        }.subList(0, Math.min(5, it[1].size() as int))
-                                    ]
-                                }
-                                .join(ALPHAFOLD2.out.msa)
-                                .join(ALPHAFOLD2.out.pae)
-                                .join(ALPHAFOLD2.out.iptm)
-                                .join(ALPHAFOLD2.out.ipsae)
-                                .join(ALPHAFOLD2.out.chainwise_iptm)
-                                .join(ALPHAFOLD2.out.chainwise_ipsae)
-                            )
-
-        ch_top_ranked_model = ch_top_ranked_model.mix(ALPHAFOLD2.out.top_ranked_pdb)
-        ch_modelcif = ch_modelcif.mix(modelcifInput(
-            ALPHAFOLD2.out.pdb,
-            ALPHAFOLD2.out.msa,
-            ALPHAFOLD2.out.plddt,
-            ALPHAFOLD2.out.pae,
-            ALPHAFOLD2.out.ptm,
-            ALPHAFOLD2.out.iptm,
-            ch_software_versions,
-            modelcif_software_details,
-            'jackhmmer'
-        ))
+        ch_af2_params       = PREPARE_ALPHAFOLD2_DBS.out.params
+        ch_af2_bfd          = PREPARE_ALPHAFOLD2_DBS.out.bfd
+        ch_af2_small_bfd    = PREPARE_ALPHAFOLD2_DBS.out.small_bfd
+        ch_af2_mgnify       = PREPARE_ALPHAFOLD2_DBS.out.mgnify
+        ch_af2_pdb70        = PREPARE_ALPHAFOLD2_DBS.out.pdb70
+        ch_af2_pdb_mmcif    = PREPARE_ALPHAFOLD2_DBS.out.pdb_mmcif
+        ch_af2_pdb_obsolete = PREPARE_ALPHAFOLD2_DBS.out.pdb_obsolete
+        ch_af2_uniref30     = PREPARE_ALPHAFOLD2_DBS.out.uniref30
+        ch_af2_uniref90     = PREPARE_ALPHAFOLD2_DBS.out.uniref90
+        ch_af2_pdb_seqres   = PREPARE_ALPHAFOLD2_DBS.out.pdb_seqres
+        ch_af2_uniprot      = PREPARE_ALPHAFOLD2_DBS.out.uniprot
     }
 
-    //
-    // WORKFLOW: Run alphafold3 (data pipeline + inference as separate steps)
-    //
-    if(requested_modes.contains("alphafold3")) {
+    if (msa_tool == 'alphafold3_msa') {
 
         //
         // SUBWORKFLOW: Prepare Alphafold3 DBs
@@ -263,298 +221,90 @@ workflow NFCORE_PROTEINFOLD {
             params.alphafold3_rfam_link
         )
 
-        //
-        // WORKFLOW: Run nf-core/alphafold3 workflow
-        //
-        ALPHAFOLD3 (
-            ch_samplesheet,
-            channel.empty(),
-            PREPARE_ALPHAFOLD3_DBS.out.params,
-            PREPARE_ALPHAFOLD3_DBS.out.small_bfd,
-            PREPARE_ALPHAFOLD3_DBS.out.mgnify,
-            PREPARE_ALPHAFOLD3_DBS.out.pdb_mmcif,
-            PREPARE_ALPHAFOLD3_DBS.out.uniref90,
-            PREPARE_ALPHAFOLD3_DBS.out.pdb_seqres,
-            PREPARE_ALPHAFOLD3_DBS.out.uniprot,
-            PREPARE_ALPHAFOLD3_DBS.out.nt_rna,
-            PREPARE_ALPHAFOLD3_DBS.out.rfam,
-            PREPARE_ALPHAFOLD3_DBS.out.rnacentral
-        )
+        ch_af3_small_bfd    = PREPARE_ALPHAFOLD3_DBS.out.small_bfd
+        ch_af3_mgnify       = PREPARE_ALPHAFOLD3_DBS.out.mgnify
+        ch_af3_mmcif_files  = PREPARE_ALPHAFOLD3_DBS.out.pdb_mmcif
+        ch_af3_uniref90     = PREPARE_ALPHAFOLD3_DBS.out.uniref90
+        ch_af3_pdb_seqres   = PREPARE_ALPHAFOLD3_DBS.out.pdb_seqres
+        ch_af3_uniprot      = PREPARE_ALPHAFOLD3_DBS.out.uniprot
+        ch_af3_nt_rna       = PREPARE_ALPHAFOLD3_DBS.out.nt_rna
+        ch_af3_rfam         = PREPARE_ALPHAFOLD3_DBS.out.rfam
+        ch_af3_rnacentral   = PREPARE_ALPHAFOLD3_DBS.out.rnacentral
+    }
 
-        ch_multiqc      = ch_multiqc.mix(ALPHAFOLD3.out.multiqc_metrics)
-        ch_report_input = ch_report_input
-                            .mix(
-                                ALPHAFOLD3
-                                    .out
-                                    .pdb
-                                    .map { it ->
-                                        [
-                                            it[0],
-                                            it[1].sort { path ->
-                                                def filename = path.name
-                                                def matcher = filename =~ /.*_ranked_(\d+)\.(?:pdb|cif|mmcif)/
-                                                if (matcher.matches()) {
-                                                    return matcher[0][1].toInteger()
-                                                } else {
-                                                    return 0  // fallback if no match
-                                                }
-                                            }.subList(0, Math.min(5, it[1].size() as int))
-                                        ]
-                                    }
-                                .join(ALPHAFOLD3.out.msa)
-                                .join(ALPHAFOLD3.out.pae)
-                                .join(ALPHAFOLD3.out.iptm)
-                                .join(ALPHAFOLD3.out.ipsae)
-                                .join(ALPHAFOLD3.out.chainwise_iptm)
-                                .join(ALPHAFOLD3.out.chainwise_ipsae)
-                            )
-        ch_top_ranked_model = ch_top_ranked_model.mix(ALPHAFOLD3.out.top_ranked_pdb)
-        ch_modelcif = ch_modelcif.mix(modelcifInput(
-            ALPHAFOLD3.out.pdb,
-            ALPHAFOLD3.out.msa,
-            ALPHAFOLD3.out.plddt,
-            ALPHAFOLD3.out.pae,
-            ALPHAFOLD3.out.ptm,
-            ALPHAFOLD3.out.iptm,
-            ch_software_versions,
-            modelcif_software_details,
-            'jackhmmer'
-        ))
+    if (!params.colabfold2_params_path && !params.colabfold_db && !params.use_msa_server) {
+        error("ColabFold2 needs weights: provide --colabfold2_params_path, --db/--colabfold_db, or use --use_msa_server. Weights are downloaded separately when no local weights root is provided.")
     }
 
     //
-    // WORKFLOW: Run colabfold
+    // SUBWORKFLOW: Prepare ColabFold2 weights/DBs
     //
-    if(requested_modes.contains("colabfold")) {
-
-        //
-        // SUBWORKFLOW: Prepare Colabfold DBs
-        //
-        PREPARE_COLABFOLD_DBS_COLABFOLD (
-            params.colabfold_db,
-            params.use_msa_server,
-            params.colabfold_alphafold2_params_path,
-            params.colabfold_envdb_path,
-            params.colabfold_uniref30_path,
-            params.colabfold_alphafold2_params_link,
-            params.colabfold_db_link,
-            params.colabfold_uniref30_link,
-            params.colabfold_create_index
-        )
-
-        //
-        // WORKFLOW: Run nf-core/colabfold workflow
-        //
-        COLABFOLD (
-            ch_samplesheet,
-            PREPARE_COLABFOLD_DBS_COLABFOLD.out.params,
-            PREPARE_COLABFOLD_DBS_COLABFOLD.out.colabfold_db,
-            PREPARE_COLABFOLD_DBS_COLABFOLD.out.uniref30,
-            params.colabfold_num_recycles,
-            params.msa_batch_size
-        )
-
-        ch_multiqc          = ch_multiqc.mix(COLABFOLD.out.multiqc_metrics)
-        ch_report_input     = ch_report_input
-                                .mix(COLABFOLD.out.pdb.map { it ->
-                                    [ it[0],
-                                        it[1].sort { path ->
-                                            def filename = path.name
-                                            def matcher = filename =~ /_relaxed_rank_(\d+)\.pdb/
-                                            if (matcher.matches()) {
-                                                return matcher[0][1].toInteger()
-                                            } else {
-                                                return 0  // fallback if no match
-                                            }
-                                        }.subList(0, Math.min(5, it[1].size() as int))
-                                    ]
-                                }
-                                .join(COLABFOLD.out.msa)
-                                .join(COLABFOLD.out.pae)
-                                .join(COLABFOLD.out.iptm)
-                                .join(COLABFOLD.out.ipsae)
-                                .join(COLABFOLD.out.chainwise_iptm)
-                                .join(COLABFOLD.out.chainwise_ipsae)
-                            )
-
-        ch_top_ranked_model = ch_top_ranked_model.mix(COLABFOLD.out.top_ranked_pdb)
-        ch_modelcif = ch_modelcif.mix(modelcifInput(
-            COLABFOLD.out.pdb,
-            COLABFOLD.out.msa,
-            COLABFOLD.out.plddt,
-            COLABFOLD.out.pae,
-            COLABFOLD.out.ptm,
-            COLABFOLD.out.iptm,
-            ch_software_versions,
-            modelcif_software_details,
-            'mmseqs2'
-        ))
-    }
-
-    if(!colabfold2_submodes.isEmpty()) {
-        if (!params.colabfold2_params_path && !params.colabfold_db && !params.use_msa_server) {
-            error("ColabFold2 needs weights: provide --colabfold2_params_path, --db/--colabfold_db, or use --use_msa_server. Weights are downloaded separately when no local weights root is provided.")
-        }
-        PREPARE_COLABFOLD2_DBS (
-            params.colabfold2_params_path,
-            params.colabfold_db,
-            colabfold2_model_for_submode,
-            params.colabfold2_weights_precision,
-            params.use_msa_server,
-            params.colabfold_envdb_path,
-            params.colabfold_uniref30_path,
-            params.colabfold_db_link,
-            params.colabfold_uniref30_link,
-            params.colabfold_create_index
-        )
-        ch_colabfold2_params_path = PREPARE_COLABFOLD2_DBS.out.params_path
-        ch_colabfold2_db          = PREPARE_COLABFOLD2_DBS.out.colabfold_db
-        ch_colabfold2_uniref30    = PREPARE_COLABFOLD2_DBS.out.uniref30
-
-        COLABFOLD2(
-            ch_samplesheet,
-            ch_colabfold2_params_path,
-            colabfold2_model_for_submode,
-            colabfold2_use_esm,
-            colabfold2_public_mode,
-            params.colabfold_num_recycles,
-            ch_colabfold2_db,
-            ch_colabfold2_uniref30
-        )
-
-        ch_multiqc      = ch_multiqc.mix(COLABFOLD2.out.multiqc_metrics)
-        ch_report_input = ch_report_input.mix(
-            COLABFOLD2.out.pdb
-                .join(COLABFOLD2.out.msa)
-                .join(COLABFOLD2.out.pae)
-                .join(COLABFOLD2.out.iptm)
-                .join(COLABFOLD2.out.ipsae)
-                .join(COLABFOLD2.out.chainwise_iptm)
-                .join(COLABFOLD2.out.chainwise_ipsae)
-        )
-        ch_top_ranked_model = ch_top_ranked_model.mix(COLABFOLD2.out.top_ranked_pdb)
-    }
+    PREPARE_COLABFOLD2_DBS (
+        params.colabfold2_params_path,
+        params.colabfold_db,
+        colabfold2_model_for_submode,
+        params.colabfold2_weights_precision,
+        params.use_msa_server,
+        params.colabfold_envdb_path,
+        params.colabfold_uniref30_path,
+        params.colabfold_db_link,
+        params.colabfold_uniref30_link,
+        params.colabfold_create_index
+    )
+    ch_colabfold2_params_path = PREPARE_COLABFOLD2_DBS.out.params_path
+    ch_colabfold2_db          = PREPARE_COLABFOLD2_DBS.out.colabfold_db
+    ch_colabfold2_uniref30    = PREPARE_COLABFOLD2_DBS.out.uniref30
 
     //
-    // WORKFLOW: Run esmfold
+    // WORKFLOW: Run the unified proteinfold workflow
     //
-    if(requested_modes.contains("esmfold")) {
+    PROTEINFOLD (
+        ch_samplesheet,
+        ch_colabfold2_params_path,
+        colabfold2_model_for_submode,
+        colabfold2_use_esm,
+        colabfold2_public_mode,
+        params.colabfold_num_recycles,
+        msa_tool,
+        params.msa_batch_size,
+        ch_colabfold2_db,
+        ch_colabfold2_uniref30,
+        params.alphafold2_full_dbs != null ? params.alphafold2_full_dbs : false,
+        params.uniref30_prefix ?: 'UniRef30_2023_02',
+        ch_af2_params,
+        ch_af2_bfd,
+        ch_af2_small_bfd,
+        ch_af2_mgnify,
+        ch_af2_pdb70,
+        ch_af2_pdb_mmcif,
+        ch_af2_pdb_obsolete,
+        ch_af2_uniref30,
+        ch_af2_uniref90,
+        ch_af2_pdb_seqres,
+        ch_af2_uniprot,
+        ch_af3_small_bfd,
+        ch_af3_mgnify,
+        ch_af3_mmcif_files,
+        ch_af3_uniref90,
+        ch_af3_pdb_seqres,
+        ch_af3_uniprot,
+        ch_af3_nt_rna,
+        ch_af3_rfam,
+        ch_af3_rnacentral
+    )
 
-        //
-        // SUBWORKFLOW: Prepare esmfold DBs
-        //
-        PREPARE_ESMFOLD_DBS (
-            params.esmfold_db,
-            params.esmfold_params_path,
-            params.esmfold_3B_v1,
-            params.esm2_t36_3B_UR50D,
-            params.esm2_t36_3B_UR50D_contact_regression
-        )
+    ch_multiqc      = ch_multiqc.mix(PROTEINFOLD.out.multiqc_metrics)
+    ch_report_input = ch_report_input.mix(
+        PROTEINFOLD.out.pdb
+            .join(PROTEINFOLD.out.msa)
+            .join(PROTEINFOLD.out.pae)
+            .join(PROTEINFOLD.out.iptm)
+            .join(PROTEINFOLD.out.ipsae)
+            .join(PROTEINFOLD.out.chainwise_iptm)
+            .join(PROTEINFOLD.out.chainwise_ipsae)
+    )
+    ch_top_ranked_model = ch_top_ranked_model.mix(PROTEINFOLD.out.top_ranked_pdb)
 
-        //
-        // WORKFLOW: Run nf-core/esmfold workflow
-        //
-        ESMFOLD (
-            ch_samplesheet,
-            PREPARE_ESMFOLD_DBS.out.params,
-            params.esmfold_num_recycles
-        )
-
-        ch_multiqc      = ch_multiqc.mix(ESMFOLD.out.multiqc_metrics)
-        ch_report_input = ch_report_input.mix(
-            ESMFOLD.out.pdb
-                .combine(ch_dummy_file)
-                .join(ESMFOLD.out.pae)
-                .combine(ch_dummy_file)
-                .combine(ch_dummy_file)
-                .combine(ch_dummy_file)
-                .combine(ch_dummy_file)
-        )
-        ch_top_ranked_model = ch_top_ranked_model.mix(ESMFOLD.out.pdb)
-        ch_modelcif = ch_modelcif.mix(modelcifInput(
-            ESMFOLD.out.pdb,
-            modelcifDummyMetric(ESMFOLD.out.pdb, modelcif_dummy_msa),
-            ESMFOLD.out.plddt,
-            ESMFOLD.out.pae,
-            ESMFOLD.out.ptm,
-            modelcifDummyMetric(ESMFOLD.out.pdb, modelcif_dummy_iptm),
-            ch_software_versions,
-            modelcif_software_details,
-            'None',
-            ['msa', 'iptm'],
-            [num_recycles: params.esmfold_num_recycles,
-             checkpoint: 'esmfold_3B_v1.pt',
-             language_model_checkpoint: 'esm2_t36_3B_UR50D.pt',
-             language_model_parameters: '3B',
-             container_image: params.esmfold_container],
-            'plddt-allatom'
-        ))
-    }
-
-    // WORKFLOW: Run Boltz
-    //
-    if (requested_modes.contains("boltz")) {
-
-        PREPARE_BOLTZ_DBS(
-            params.boltz_db,
-            params.boltz_ccd_path,
-            params.boltz_model_path,
-            params.boltz2_aff_path,
-            params.boltz2_conf_path,
-            params.boltz2_mols_path,
-            params.boltz_ccd_link,
-            params.boltz_model_link,
-            params.boltz2_aff_link,
-            params.boltz2_conf_link,
-            params.boltz2_mols_link
-        )
-
-        PREPARE_COLABFOLD_DBS_BOLTZ (
-            params.colabfold_db,
-            params.use_msa_server,
-            params.colabfold_alphafold2_params_path,
-            params.colabfold_envdb_path,
-            params.colabfold_uniref30_path,
-            params.colabfold_alphafold2_params_link,
-            params.colabfold_db_link,
-            params.colabfold_uniref30_link,
-            params.colabfold_create_index
-        )
-
-        BOLTZ(
-            ch_samplesheet,
-            PREPARE_BOLTZ_DBS.out.boltz_ccd,
-            PREPARE_BOLTZ_DBS.out.boltz_model,
-            PREPARE_BOLTZ_DBS.out.boltz2_aff,
-            PREPARE_BOLTZ_DBS.out.boltz2_conf,
-            PREPARE_BOLTZ_DBS.out.boltz2_mols,
-            PREPARE_COLABFOLD_DBS_BOLTZ.out.colabfold_db,
-            PREPARE_COLABFOLD_DBS_BOLTZ.out.uniref30,
-            params.use_msa_server
-        )
-        ch_multiqc                  = ch_multiqc.mix(BOLTZ.out.multiqc_metrics)
-        ch_report_input             = ch_report_input.mix(
-            BOLTZ.out.pdb
-            .join(BOLTZ.out.msa)
-            .join(BOLTZ.out.pae)
-            .join(BOLTZ.out.iptm)
-            .join(BOLTZ.out.ipsae)
-            .join(BOLTZ.out.chainwise_iptm)
-            .join(BOLTZ.out.chainwise_ipsae)
-        )
-        ch_top_ranked_model         = ch_top_ranked_model.mix(BOLTZ.out.top_ranked_pdb)
-        ch_modelcif = ch_modelcif.mix(modelcifInput(
-            BOLTZ.out.pdb,
-            BOLTZ.out.msa,
-            BOLTZ.out.plddt,
-            BOLTZ.out.pae,
-            BOLTZ.out.ptm,
-            BOLTZ.out.iptm,
-            ch_software_versions,
-            modelcif_software_details,
-            'mmseqs2'
-        ))
-    }
     //
     // POST PROCESSING: generate visualisation reports
     //
@@ -565,19 +315,17 @@ workflow NFCORE_PROTEINFOLD {
     ch_report_template     = channel.value(file("$projectDir/assets/report_template.html", checkIfExists: true))
     ch_comparison_template = channel.value(file("$projectDir/assets/comparison_template.html", checkIfExists: true))
 
-    // Inject msa_tool into meta based on selected model for report provenance.
+    // Inject msa_tool into meta based on selected MSA module for report provenance.
     def msaToolMap = [
-        alphafold2:           'jackhmmer',
-        alphafold3:           'jackhmmer',
-        colabfold:            'mmseqs2',
-        colabfold2:           'mmseqs2',
-        boltz:                'mmseqs2',
-        esmfold:              'None',
+        colabfold_search: 'mmseqs2',
+        alphafold2_msa:   'jackhmmer',
+        alphafold3_msa:   'jackhmmer',
+        msa_server:       'mmseqs2-server',
     ]
     ch_report_input = ch_report_input.map { tupleData ->
         def meta = tupleData[0]
         def m = meta.clone()
-        m.msa_tool = msaToolMap.get(meta.model, 'None')
+        m.msa_tool = msaToolMap.get(msa_tool, 'None')
         [m] + tupleData.drop(1)
     }
 

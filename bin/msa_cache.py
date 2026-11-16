@@ -96,7 +96,10 @@ def lookup(directory, key, destination, artifact):
         with zipfile.ZipFile(source) as archive:
             fd, temporary = tempfile.mkstemp(prefix=".msa-hit-", dir=os.path.dirname(os.path.abspath(destination)))
             with os.fdopen(fd, "wb") as output, archive.open(member) as content:
-                while chunk := content.read(1024 * 1024):
+                while True:
+                    chunk = content.read(1024 * 1024)
+                    if not chunk:
+                        break
                     output.write(chunk)
             if not validate(temporary):
                 return False
