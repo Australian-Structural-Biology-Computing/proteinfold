@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Restored MSA cache lookups (`msa_cache`) and MMseqs MSA batching (`--msa_batch_size`) in the unified pipeline; cache hits now return the cached AlphaFold3-format MSA JSON directly.
 - Fixed multimer FASTA samples being searched as separate monomers in the ColabFold2 path: multi-chain FASTAs are colon-joined into a single complex query (`multifasta_to_csv`) before the search, matching the JSON extraction and enabling species pairing.
 - Removed the standalone AlphaFold2, AlphaFold3, ColabFold, ESMFold and Boltz workflows, their DB-preparation subworkflows, parameters, test profiles and usage documentation; ColabFold2 remains the only prediction path.
+- Re-added AlphaFold2 structure prediction through the ColabFold2 module: `--mode alphafold2` (auto model selection), `alphafold2_ptm` and `alphafold2_multimer_v1/v2/v3`. The new `ALPHAFOLD3_JSON_TO_COLABFOLD_A3M` adaptor converts the generated MSA JSON into ColabFold a3m queries, inference emits PDB structures for these backends, and `prepare_colabfold2_dbs` downloads the ColabFold AF2 parameter sets (`int8` precision is rejected for them).
 
 ### Enhancements & fixes
 
