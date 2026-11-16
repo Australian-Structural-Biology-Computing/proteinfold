@@ -215,10 +215,6 @@ workflow PIPELINE_COMPLETION {
 def validateInputParameters() {
     def requestedModes = params.mode.toLowerCase().split(",")*.trim()
 
-    if (requestedModes.contains("alphafold3")) {
-        alphafold3Warn(log)
-    }
-
     if (params.random_seed != null) {
         randomSeedModeWarn(log, requestedModes)
     }
@@ -402,14 +398,6 @@ def validateFasta(fasta) {
 //
 // Print a warning when using Alphafold3
 //
-def alphafold3Warn(log) {
-    log.warn "=============================================================================\n" +
-        "  You are using AlphaFold3 mode.\n" +
-        "  Be aware that the predicted structures can not be used for commercial purposes.\n" +
-        "  More information here: \"https://github.com/google-deepmind/alphafold3/blob/main/README.md#alphafold-3-source-code-and-model-parameters.\"\n" +
-        "==================================================================================="
-}
-
 def randomSeedModeWarn(log, requestedModes) {
     // The seed is forwarded to colabfold_batch (--random-seed) and is consumed
     // by the AlphaFold-family prediction backends; the other backends ignore it.
