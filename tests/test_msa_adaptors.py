@@ -22,6 +22,7 @@ PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AF2_SCRIPT = os.path.join(PROJECT, "bin", "af2_msa_to_colabfold_json.py")
 CHECK_SCRIPT = os.path.join(PROJECT, "bin", "check_af3_msa_json.py")
 JSON2FASTA_SCRIPT = os.path.join(PROJECT, "bin", "alphafold3_json_to_af2_fasta.py")
+JSON2A3M_SCRIPT = os.path.join(PROJECT, "bin", "af3_msa_json_to_a3m.py")
 
 
 def write(path, content):
@@ -348,6 +349,88 @@ class JsonToFastaTests(unittest.TestCase):
         result, dst = self._run([job, job])
         self.assertNotEqual(result.returncode, 0)
         self.assertIn(b"one AlphaFold3 job per samplesheet row", result.stderr)
+
+
+class JsonToA3mTests(unittest.TestCase):
+    """af3_msa_json_to_a3m.py: AF3-format MSA JSON -> ColabFold a3m."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp)
+
+    def _job(self, unpaired_a, paired_a, unpaired_b=None, paired_b=None):
+        sequences = [{"protein": {"id": ["A"], "sequence": "MKTAY",
+                                  "unpairedMsa": unpaired_a, "pairedMsa": paired_a}}]
+        if unpaired_b is not None:
+            sequences.append({"protein": {"id": ["B"], "sequence": "GGGC",
+                                          "unpairedMsa": unpaired_b, "pairedMsa": paired_b}})
+        return {"dialect": "alphafold3", "version": 2, "name": "t",
+                "sequences": sequences, "modelSeeds": [1]}
+
+    def _run(self, job):
+        src = write(os.path.join(self.tmp, "in.json"), json.dumps(job))
+        dst = os.path.join(self.tmp, "out.a3m")
+        result = subprocess.run(
+            [sys.executable, JSON2A3M_SCRIPT, src, "--output", dst],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        return result, dst
+
+    def test_complex_with_paired_msa(self):
+        job = self._job(
+            ">101\nMKTAY\n>102\nMKTAiY\n>103\nMKTAY\n",
+            ">101\nMKTAY\n>tr|x|x_00001\nMKTAY\n",
+            ">101\nGGGC\n>104\nGGGC\n",
+            ">101\nGGGC\n>tr|x|x_00001\nGG-G-\n",
+        )
+        result, dst = self._run(job)
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        lines = open(dst).read().splitlines()
+        # header: chain lengths and cardinalities
+        self.assertEqual(lines[0], "#5,4\t1,1")
+        # query row: tab-joined descriptions, concatenated sequences
+        self.assertEqual(lines[1], ">101\t101")
+        self.assertEqual(lines[2], "MKTAYGGGC")
+        # paired rows aligned by row index, tab-joined descriptions
+        self.assertEqual(lines[3], ">tr|x|x_00001\ttr|x|x_00001")
+        self.assertEqual(lines[4], "MKTAYGG-G-")
+        # unpaired block: per-chain rows padded to full complex width
+        self.assertEqual(lines[6], "MKTAY----")
+        self.assertEqual(lines[12], "-----GGGC")
+
+    def test_monomer_unpaired_only(self):
+        job = self._job(">101\nMKTAY\n>102\nMKTAiY\n", "")
+        result, dst = self._run(job)
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        lines = open(dst).read().splitlines()
+        self.assertEqual(lines[0], "#5\t1")
+        self.assertEqual(lines[1], ">101")
+        self.assertEqual(lines[2], "MKTAY")
+        self.assertIn("MKTAiY", lines)
+
+    def test_unequal_paired_depths_rejected(self):
+        job = self._job(
+            ">101\nMKTAY\n>102\nMKTAY\n", ">101\nMKTAY\n>tr|a|a_00001\nMKTAY\n",
+            ">101\nGGGC\n", ">101\nGGGC\n>tr|a|a_00001\nGGGCC\n>tr|b|b_00002\nGGGCC\n",
+        )
+        result, dst = self._run(job)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(b"unequal depth", result.stderr)
+
+    def test_missing_unpaired_rejected(self):
+        job = self._job("", "")
+        result, dst = self._run(job)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(b"no unpairedMsa", result.stderr)
+
+    def test_protein_free_json_rejected(self):
+        job = {"dialect": "alphafold3", "version": 2, "name": "t",
+               "sequences": [{"ligand": {"ccdCodes": ["ATP"]}}], "modelSeeds": [1]}
+        result, dst = self._run(job)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(b"no protein entity", result.stderr)
 
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@
     prediction step runs through the colabfold2 backends.
 */
 
+include { COLABFOLD2_INFERENCE as ALPHAFOLD2      } from '../modules/local/colabfold2_inference'
 include { COLABFOLD2_INFERENCE as ALPHAFOLD3      } from '../modules/local/colabfold2_inference'
 include { COLABFOLD2_INFERENCE as BOLTZ2          } from '../modules/local/colabfold2_inference'
 include { COLABFOLD2_INFERENCE as OPENFOLD3       } from '../modules/local/colabfold2_inference'
@@ -21,6 +22,7 @@ include { COLABFOLD2_INFERENCE as ESMFOLD2        } from '../modules/local/colab
 
 include { ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA } from '../modules/local/alphafold3_json_to_colabfold_fasta'
 include { ALPHAFOLD3_JSON_TO_AF2_FASTA       } from '../modules/local/alphafold3_json_to_af2_fasta'
+include { ALPHAFOLD3_JSON_TO_COLABFOLD_A3M   } from '../modules/local/af3_msa_json_to_a3m'
 include { MERGE_ALPHAFOLD3_MSA               } from '../modules/local/merge_alphafold3_msa'
 include { MMSEQS_COLABFOLDSEARCH             } from '../modules/local/mmseqs_colabfoldsearch'
 include { MMSEQS_COLABFOLDSEARCH_BATCH       } from '../modules/local/mmseqs_colabfoldsearch'
@@ -73,6 +75,12 @@ workflow PROTEINFOLD {
 
     main:
     def COLABFOLD2_BACKENDS = [
+        'auto'                   : 'ALPHAFOLD2',   // the plain alphafold2 token
+        'alphafold2'             : 'ALPHAFOLD2',   // token resolves to model_type 'auto'
+        'alphafold2_ptm'         : 'ALPHAFOLD2',
+        'alphafold2_multimer_v1' : 'ALPHAFOLD2',
+        'alphafold2_multimer_v2' : 'ALPHAFOLD2',
+        'alphafold2_multimer_v3' : 'ALPHAFOLD2',
         'alphafold3'      : 'ALPHAFOLD3',
         'boltz2'          : 'BOLTZ2',
         'openfold3'       : 'OPENFOLD3',
@@ -315,36 +323,66 @@ workflow PROTEINFOLD {
     // Structure prediction: colabfold2 backends
     //
 
-    if (backend_process == 'ALPHAFOLD3') {
-        ALPHAFOLD3(ch_msa_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
+    // The alphafold2 backends predate the AlphaFold3 input JSON: they consume
+    // ColabFold a3m queries (or a plain FASTA when the MSA server does the
+    // search). Convert whichever MSA JSON the selected tool produced.
+    def af2_backend = model_type == 'auto' || model_type.startsWith('alphafold2') || model_type.startsWith('deepfold')
+    if (af2_backend && msa_tool != 'msa_server') {
+        ALPHAFOLD3_JSON_TO_COLABFOLD_A3M(ch_msa_input)
+        ch_inference_input = ALPHAFOLD3_JSON_TO_COLABFOLD_A3M.out.a3m
+    } else if (af2_backend) {
+        // Server mode: let colabfold_batch run the server search itself; JSON
+        // inputs are reduced to their protein chains first.
+        ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA(ch_input_by_ext.json)
+        ch_inference_input = ch_input_by_ext.fasta.mix(ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA.out.query_fasta)
+    } else {
+        ch_inference_input = ch_msa_input
+    }
+
+    if (backend_process == 'ALPHAFOLD2') {
+        ALPHAFOLD2(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
+        ch_batch = ALPHAFOLD2.out
+        ch_batch_structures = ALPHAFOLD2.out.structures_pdb
+    } else if (backend_process == 'ALPHAFOLD3') {
+        ALPHAFOLD3(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
         ch_batch = ALPHAFOLD3.out
+        ch_batch_structures = ch_batch.structures
     } else if (backend_process == 'BOLTZ2') {
-        BOLTZ2(ch_msa_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
+        BOLTZ2(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
         ch_batch = BOLTZ2.out
+        ch_batch_structures = ch_batch.structures
     } else if (backend_process == 'OPENFOLD3') {
-        OPENFOLD3(ch_msa_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
+        OPENFOLD3(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
         ch_batch = OPENFOLD3.out
+        ch_batch_structures = ch_batch.structures
     } else if (backend_process == 'OPENBIND0') {
-        OPENBIND0(ch_msa_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
+        OPENBIND0(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
         ch_batch = OPENBIND0.out
+        ch_batch_structures = ch_batch.structures
     } else if (backend_process == 'PROTEINX2') {
-        PROTEINX2(ch_msa_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
+        PROTEINX2(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
         ch_batch = PROTEINX2.out
+        ch_batch_structures = ch_batch.structures
     } else if (backend_process == 'CHAI1') {
-        CHAI1(ch_msa_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
+        CHAI1(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
         ch_batch = CHAI1.out
+        ch_batch_structures = ch_batch.structures
     } else if (backend_process == 'INTELLIFOLD2') {
-        INTELLIFOLD2(ch_msa_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
+        INTELLIFOLD2(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
         ch_batch = INTELLIFOLD2.out
+        ch_batch_structures = ch_batch.structures
     } else if (backend_process == 'OPENDDE') {
-        OPENDDE(ch_msa_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
+        OPENDDE(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
         ch_batch = OPENDDE.out
+        ch_batch_structures = ch_batch.structures
     } else if (backend_process == 'ROSETTAFOLD3') {
-        ROSETTAFOLD3(ch_msa_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
+        ROSETTAFOLD3(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
         ch_batch = ROSETTAFOLD3.out
+        ch_batch_structures = ch_batch.structures
     } else if (backend_process == 'ESMFOLD2') {
-        ESMFOLD2(ch_msa_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
+        ESMFOLD2(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
         ch_batch = ESMFOLD2.out
+        ch_batch_structures = ch_batch.structures
     } else {
         error("ColabFold2 backend '${model_type}' resolved to unknown process '${backend_process}'.")
     }
@@ -357,7 +395,7 @@ workflow PROTEINFOLD {
         }
         .set { ch_top_ranked_structure }
 
-    ch_batch.structures
+    ch_batch_structures
         .map { meta, structures ->
             def report_meta = meta.clone()
             report_meta.model = 'colabfold2'
