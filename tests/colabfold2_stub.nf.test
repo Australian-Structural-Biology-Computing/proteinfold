@@ -21,8 +21,6 @@ nextflow_pipeline {
     def submodes = [
         [mode: 'colabfold2-alphafold3', backend: 'alphafold3',       alias: 'ALPHAFOLD3'],
         [mode: 'alphafold2',            backend: 'auto',             alias: 'ALPHAFOLD2', ext: 'pdb'],
-        [mode: 'alphafold2_ptm',        backend: 'alphafold2_ptm',   alias: 'ALPHAFOLD2', ext: 'pdb'],
-        [mode: 'alphafold2_multimer_v3',backend: 'alphafold2_multimer_v3', alias: 'ALPHAFOLD2', ext: 'pdb'],
         [mode: 'esmfold2',              backend: 'esmfold2',         esmfold2_model: 'msa',    alias: 'ESMFOLD2'],
         [mode: 'esmfold2',              backend: 'esmfold2_lm300m',  esmfold2_model: 'lm300m', alias: 'ESMFOLD2'],
         [mode: 'esmfold2',              backend: 'esmfold2_lm600m',  esmfold2_model: 'lm600m', alias: 'ESMFOLD2'],
@@ -74,6 +72,23 @@ nextflow_pipeline {
                     removeNextflowVersion("$outputDir/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml")
                 ).match()
             }
+        }
+    }
+
+    test("retired alphafold2 variant modes are rejected") {
+        tag "colabfold2-alphafold2-variants"
+
+        when {
+            params {
+                outdir = "$outputDir"
+                mode   = 'alphafold2_ptm'
+            }
+        }
+
+        then {
+            // The retired token is rejected by nf-schema parameter validation
+            // (the mode enum no longer carries the per-variant tokens).
+            assert !workflow.success
         }
     }
 

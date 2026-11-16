@@ -30,7 +30,7 @@ On release, automated continuous integration tests run the pipeline on a full-si
 
 All structure prediction runs through the [ColabFold2](https://github.com/sokrypton/ColabFold) inference module, which wraps the AlphaFold3-family backends below (plus the classic AlphaFold2 models). Users choose one MSA generation module with `--msa_tool`.
 
-\* `alphafold2` runs the classic AlphaFold2 models (`alphafold2_ptm` / `alphafold2_multimer_v1-v3` variants can be pinned); it emits PDB structures and only supports protein chains.
+\* `alphafold2` runs the classic AlphaFold2 models (monomer vs multimer is selected automatically per query); it emits PDB structures and only supports protein chains.
 
 | Backend (`--mode`)      | Protein | RNA | Small-molecule | PTM | pLM |
 | :---------------------- | :-----: | :-: | :------------: | :-: | :-: |

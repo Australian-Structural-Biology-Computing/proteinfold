@@ -399,8 +399,7 @@ def randomSeedModeWarn(log, requestedModes) {
     // by the AlphaFold-family prediction backends; the other backends ignore it.
     def supportedModes = [
         'colabfold2-alphafold3',
-        'alphafold2', 'alphafold2_ptm', 'alphafold2_multimer_v1',
-        'alphafold2_multimer_v2', 'alphafold2_multimer_v3'
+        'alphafold2'
     ] as Set
     def unsupportedModes = requestedModes.findAll { !supportedModes.contains(it) }.unique().sort()
 

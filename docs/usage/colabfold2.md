@@ -16,21 +16,19 @@ weight: 25
 
 A ColabFold2 backend is selected with `--mode`. Only one ColabFold2 backend can be run per invocation.
 
-| Mode token                     | Upstream model type                                                                                     |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| `colabfold2-alphafold3`        | `alphafold3`                                                                                            |
-| `colabfold2-boltz2`            | `boltz2`                                                                                                |
-| `esmfold2`                     | `esmfold2*`                                                                                             |
-| `protenix2`                    | `protenix2`                                                                                             |
-| `chai1`                        | `chai1`                                                                                                 |
-| `intellifold2`                 | `intellifold2`                                                                                          |
-| `opendde`                      | `opendde`                                                                                               |
-| `openfold3`                    | `openfold3`                                                                                             |
-| `openbind0`                    | `openbind0`                                                                                             |
-| `rosettafold3`                 | `rosettafold3`                                                                                          |
-| `alphafold2`                   | `auto` (colabfold_batch picks `alphafold2_ptm` for monomers and `alphafold2_multimer_v3` for complexes) |
-| `alphafold2_ptm`               | `alphafold2_ptm`                                                                                        |
-| `alphafold2_multimer_v1/v2/v3` | `alphafold2_multimer_v*`                                                                                |
+| Mode token              | Upstream model type                                                                                     |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- |
+| `colabfold2-alphafold3` | `alphafold3`                                                                                            |
+| `colabfold2-boltz2`     | `boltz2`                                                                                                |
+| `esmfold2`              | `esmfold2*`                                                                                             |
+| `protenix2`             | `protenix2`                                                                                             |
+| `chai1`                 | `chai1`                                                                                                 |
+| `intellifold2`          | `intellifold2`                                                                                          |
+| `opendde`               | `opendde`                                                                                               |
+| `openfold3`             | `openfold3`                                                                                             |
+| `openbind0`             | `openbind0`                                                                                             |
+| `rosettafold3`          | `rosettafold3`                                                                                          |
+| `alphafold2`            | `auto` (colabfold_batch picks `alphafold2_ptm` for monomers and `alphafold2_multimer_v3` for complexes) |
 
 ```console
 nextflow run nf-core/proteinfold \

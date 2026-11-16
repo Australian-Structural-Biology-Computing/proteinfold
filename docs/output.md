@@ -233,7 +233,7 @@ If `--save_intermediates` is enabled, extra raw intermediate files are published
 
 Examples include:
 
-- `<MODE>/<SEQUENCE NAME>/raw/` for the selected ColabFold2 mode (e.g. `colabfold2-alphafold3/<SEQUENCE NAME>/raw/` or `alphafold2_ptm/<SEQUENCE NAME>/raw/`)
+- `<MODE>/<SEQUENCE NAME>/raw/` for the selected ColabFold2 mode (e.g. `colabfold2-alphafold3/<SEQUENCE NAME>/raw/` or `alphafold2/<SEQUENCE NAME>/raw/`)
 
 These raw outputs are intended for advanced debugging, reproducibility and method-specific downstream analyses. For detailed, canonical tool-specific native output specifications, see:
 

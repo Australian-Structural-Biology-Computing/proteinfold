@@ -65,8 +65,7 @@ workflow NFCORE_PROTEINFOLD {
     colabfold2_bare_models     = [
         'openfold3', 'openbind0', 'protenix2', 'chai1', 'intellifold2', 'opendde',
         'rosettafold3', 'esmfold2',
-        'alphafold2', 'alphafold2_ptm', 'alphafold2_multimer_v1',
-        'alphafold2_multimer_v2', 'alphafold2_multimer_v3'
+        'alphafold2'
     ]
     colabfold2_mode_tokens = ( colabfold2_prefixed_models.collect { "colabfold2-${it}".toString() } + colabfold2_bare_models )
     colabfold2_submodes = requested_modes

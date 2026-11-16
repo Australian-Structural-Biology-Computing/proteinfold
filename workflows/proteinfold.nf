@@ -76,11 +76,7 @@ workflow PROTEINFOLD {
     main:
     def COLABFOLD2_BACKENDS = [
         'auto'                   : 'ALPHAFOLD2',   // the plain alphafold2 token
-        'alphafold2'             : 'ALPHAFOLD2',   // token resolves to model_type 'auto'
-        'alphafold2_ptm'         : 'ALPHAFOLD2',
-        'alphafold2_multimer_v1' : 'ALPHAFOLD2',
-        'alphafold2_multimer_v2' : 'ALPHAFOLD2',
-        'alphafold2_multimer_v3' : 'ALPHAFOLD2',
+        'alphafold2'             : 'ALPHAFOLD2',   // defensive alias for the same token
         'alphafold3'      : 'ALPHAFOLD3',
         'boltz2'          : 'BOLTZ2',
         'openfold3'       : 'OPENFOLD3',
