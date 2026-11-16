@@ -43,6 +43,8 @@ process COLABFOLD2_INFERENCE {
     def args = task.ext.args ?: ''
     def use_esm_arg = use_esm ? '--use-esm' : ''
     def precision = task.ext.weights_precision ?: 'fp32'
+    // Forward the global --random_seed; colabfold_batch defaults to 0 anyway.
+    def random_seed_arg = params.random_seed != null ? "--random-seed ${params.random_seed}" : ''
     def input_files = input instanceof Collection ? input.collect { file_path -> file_path.name } : [input.name]
     if (input_files.size() != 1) {
         error("COLABFOLD2_INFERENCE received multiple inputs for sample '${meta.id}'. Use --split_fasta to run each FASTA record independently.")
@@ -97,6 +99,7 @@ process COLABFOLD2_INFERENCE {
         --num-recycle ${num_recycles} \
         --weights-precision ${precision} \
         --data "${params_path}" \
+        ${random_seed_arg} \
         $args \
         msa_in/ \
         raw/

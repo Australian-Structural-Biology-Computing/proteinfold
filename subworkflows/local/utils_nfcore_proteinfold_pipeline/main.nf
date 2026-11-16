@@ -411,12 +411,19 @@ def alphafold3Warn(log) {
 }
 
 def randomSeedModeWarn(log, requestedModes) {
-    def supportedModes = ['alphafold2', 'boltz', 'colabfold'] as Set
+    // The seed is forwarded to colabfold_batch (--random-seed) and is consumed
+    // by the AlphaFold-family prediction backends; the other backends ignore it.
+    def supportedModes = [
+        'colabfold2-alphafold3',
+        'alphafold2', 'alphafold2_ptm', 'alphafold2_multimer_v1',
+        'alphafold2_multimer_v2', 'alphafold2_multimer_v3'
+    ] as Set
     def unsupportedModes = requestedModes.findAll { !supportedModes.contains(it) }.unique().sort()
 
     if (!unsupportedModes.isEmpty()) {
-        log.warn "=============================================================================\n" +
-            "  The global --random_seed parameter only applies to alphafold2, boltz, and colabfold.\n" +
+        log.warn "===================================================================================\n" +
+            "  The global --random_seed parameter only applies to the AlphaFold-family prediction backends\n" +
+            "  (colabfold2-alphafold3 and the alphafold2 modes).\n" +
             "  It will be ignored for the following selected mode(s): ${unsupportedModes.join(', ')}.\n" +
             "==================================================================================="
     }
