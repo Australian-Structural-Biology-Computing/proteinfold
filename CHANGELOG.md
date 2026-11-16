@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Unified pipeline restructuring
 
+- Added inference batching (`--inference_batch_size`): several samples share one `colabfold_batch` task so the model weights are loaded once per batch, mirroring `--msa_batch_size` semantics (`-1` runs all inputs in one batch). Batched outputs are split back per sample before reporting and are published flat under the selected mode token. Batching requires one query per samplesheet row and is not supported with `--use_msa_server`.
+- colabfold_batch job names are now pinned to the sample id for AlphaFold3 JSON inputs, so output naming no longer depends on the job name embedded in the input JSON.
 - Replaced the per-mode workflow dispatch (`alphafold2`, `alphafold3`, `colabfold`, `esmfold`, `boltz` and the ColabFold2 submodes) with a single unified workflow (`workflows/proteinfold.nf`). All structure prediction now runs through the ColabFold2 backends selected with `--mode`.
 - Added `--msa_tool` to choose the MSA generation module: `colabfold_search` (local MMseqs2, default), `alphafold2_msa` (AlphaFold2 jackhmmer data pipeline) or `alphafold3_msa` (AlphaFold3 data pipeline); `--use_msa_server` delegates the search to the ColabFold MSA server as before.
 - Added the `AF2_MSA_TO_COLABFOLD_JSON` adaptor: converts AlphaFold2 pipeline MSAs (including the species-based paired-MSA logic ported from `pipeline_multimer`) into the AlphaFold3-format input JSON consumed by ColabFold2, transparently handling zstd-compressed Stockholm alignments.

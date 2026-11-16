@@ -19,6 +19,7 @@ include { COLABFOLD2_INFERENCE as INTELLIFOLD2    } from '../modules/local/colab
 include { COLABFOLD2_INFERENCE as OPENDDE         } from '../modules/local/colabfold2_inference'
 include { COLABFOLD2_INFERENCE as ROSETTAFOLD3    } from '../modules/local/colabfold2_inference'
 include { COLABFOLD2_INFERENCE as ESMFOLD2        } from '../modules/local/colabfold2_inference'
+include { COLABFOLD2_INFERENCE_BATCH              } from '../modules/local/colabfold2_inference'
 
 include { ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA } from '../modules/local/alphafold3_json_to_colabfold_fasta'
 include { ALPHAFOLD3_JSON_TO_COLABFOLD_A3M   } from '../modules/local/af3_msa_json_to_a3m'
@@ -26,6 +27,61 @@ include { MSA_COLABFOLD_SEARCH } from '../subworkflows/local/msa_colabfold_searc
 include { MSA_ALPHAFOLD2       } from '../subworkflows/local/msa_alphafold2'
 include { MSA_ALPHAFOLD3       } from '../subworkflows/local/msa_alphafold3'
 include { collectMultiqcMetrics; modeChannel } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
+
+
+// Map a file produced by COLABFOLD2_INFERENCE_BATCH to its sample by matching
+// the longest sample-id prefix (sample ids may be prefixes of one another).
+def matchBatchSample(batch_metas, filename) {
+    def ids = batch_metas.collect { it.id as String }.sort { -it.length() }
+    def id = ids.find { filename.startsWith(it + '_') || filename.startsWith(it + '.') }
+    if (id == null) {
+        error("COLABFOLD2_INFERENCE_BATCH produced file '${filename}' that does not match any sample in the batch (${ids.join(', ')})")
+    }
+    return batch_metas.find { (it.id as String) == id }
+}
+
+// One file per sample: emit [meta, file] tuples.
+def splitBatchSingleFiles(out_channel) {
+    out_channel.flatMap { batch_meta, files ->
+        def list = files instanceof List ? files : [files]
+        list.collect { file -> [matchBatchSample(batch_meta, file.name), file] }
+    }
+}
+
+// Several files per sample (ranked structures): emit [meta, [files]] sorted by rank.
+def splitBatchGroupedFiles(out_channel) {
+    out_channel.flatMap { batch_meta, files ->
+        def list = files instanceof List ? files : [files]
+        def grouped = list
+            .collect { file -> [matchBatchSample(batch_meta, file.name), file] }
+            .groupBy { it[0] }
+        batch_meta.collect { meta ->
+            def sample_files = (grouped[meta] ?: []).collect { it[1] }.sort { file ->
+                def matcher = file.name =~ /_rank_(\d+)_/
+                matcher.find() ? matcher.group(1).toInteger() : Integer.MAX_VALUE
+            }
+            [meta, sample_files]
+        }
+    }
+}
+
+// Normalise the batch process outputs into the per-sample channel map the
+// single-sample dispatch produces.
+def splitBatchOutputs(out, af2_backend) {
+    [
+        top_ranked_structure: splitBatchSingleFiles(out.top_ranked_structures),
+        structures: splitBatchGroupedFiles(af2_backend ? out.structures_pdb : out.structures_cif),
+        msa: splitBatchSingleFiles(out.msa),
+        pae: splitBatchSingleFiles(out.pae),
+        ptms: splitBatchSingleFiles(out.ptms),
+        iptms: splitBatchSingleFiles(out.iptms),
+        ipsaes: splitBatchSingleFiles(out.ipsaes),
+        chainwise_iptms: splitBatchSingleFiles(out.chainwise_iptms),
+        chainwise_ipsaes: splitBatchSingleFiles(out.chainwise_ipsaes),
+        confidence: splitBatchSingleFiles(out.confidence),
+        plddt: splitBatchSingleFiles(out.plddt)
+    ]
+}
 
 workflow PROTEINFOLD {
 
@@ -38,6 +94,7 @@ workflow PROTEINFOLD {
     num_recycles    // int: Number of recycles for the selected backend
     msa_tool        // string: colabfold_search | alphafold2_msa | alphafold3_msa | msa_server
     msa_batch_size  // int: number of samples processed together during MSA search (-1 = one batch)
+    inference_batch_size // int: number of samples processed together during structure prediction (-1 = one batch)
     ch_colabfold_db // channel: path(colabfold_db)
     ch_uniref30     // channel: path(uniref30)
     // alphafold2_msa tool inputs
@@ -187,6 +244,39 @@ workflow PROTEINFOLD {
         ch_inference_input = ch_msa_input.mix(ch_byo_msa)
     }
 
+    // Inference batching mirrors --msa_batch_size: N samples share one
+    // colabfold_batch task (one model/weight load for the whole batch).
+    // -1 runs all samples in a single task; 1 (default) runs per sample.
+    def inference_batch = inference_batch_size instanceof Number ?
+        inference_batch_size : inference_batch_size.toString().toInteger()
+    if (inference_batch == 0 || inference_batch < -1) {
+        error("Inference batch size must be -1 or a positive integer, got ${inference_batch}")
+    }
+    def batched_inference = inference_batch != 1
+    if (batched_inference && msa_tool == 'msa_server') {
+        log.warn "Inference batching is not supported with --use_msa_server; running inference per sample."
+        batched_inference = false
+    }
+
+    def per_sample_outputs
+    if (batched_inference) {
+        ch_inference_batches = ch_inference_input
+            .map { meta, file -> [meta.id, meta, file] }
+            .collect(flat: false)
+            .flatMap { rows ->
+                def sorted = rows.sort { a, b -> a[0] <=> b[0] }
+                def ids = sorted.collect { it[0] }
+                if (ids.toSet().size() != ids.size()) {
+                    error("Duplicate sample IDs are not allowed for batched inference")
+                }
+                def effective = inference_batch == -1 ? Math.max(1, sorted.size()) : inference_batch
+                sorted.collate(effective).collect { batch ->
+                    [batch.collect { it[1] }, batch.collect { it[2] }]
+                }
+            }
+        COLABFOLD2_INFERENCE_BATCH(ch_inference_batches, model_type, use_esm, public_mode, num_recycles, ch_params_path)
+        per_sample_outputs = splitBatchOutputs(COLABFOLD2_INFERENCE_BATCH.out, af2_backend)
+    } else {
     if (backend_process == 'ALPHAFOLD2') {
         ALPHAFOLD2(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
         ch_batch = ALPHAFOLD2.out
@@ -234,8 +324,22 @@ workflow PROTEINFOLD {
     } else {
         error("ColabFold2 backend '${model_type}' resolved to unknown process '${backend_process}'.")
     }
+        per_sample_outputs = [
+            top_ranked_structure: ch_batch.top_ranked_structure,
+            structures: ch_batch_structures,
+            msa: ch_batch.msa,
+            pae: ch_batch.pae,
+            ptms: ch_batch.ptms,
+            iptms: ch_batch.iptms,
+            ipsaes: ch_batch.ipsaes,
+            chainwise_iptms: ch_batch.chainwise_iptms,
+            chainwise_ipsaes: ch_batch.chainwise_ipsaes,
+            confidence: ch_batch.confidence,
+            plddt: ch_batch.plddt
+        ]
+    }
 
-    ch_batch.top_ranked_structure
+    per_sample_outputs.top_ranked_structure
         .map { meta, structure ->
             def report_meta = meta.clone()
             report_meta.model = 'colabfold2'
@@ -243,7 +347,7 @@ workflow PROTEINFOLD {
         }
         .set { ch_top_ranked_structure }
 
-    ch_batch_structures
+    per_sample_outputs.structures
         .map { meta, structures ->
             def report_meta = meta.clone()
             report_meta.model = 'colabfold2'
@@ -255,21 +359,21 @@ workflow PROTEINFOLD {
         }
         .set { ch_structures }
 
-    modeChannel(ch_batch.msa, 'colabfold2').set { ch_msa }
-    modeChannel(ch_batch.pae, 'colabfold2').set { ch_pae }
-    modeChannel(ch_batch.ptms, 'colabfold2').set { ch_ptm }
-    modeChannel(ch_batch.iptms, 'colabfold2').set { ch_iptm }
-    modeChannel(ch_batch.ipsaes, 'colabfold2').set { ch_ipsae }
-    modeChannel(ch_batch.chainwise_iptms, 'colabfold2').set { ch_chainwise_iptm }
-    modeChannel(ch_batch.chainwise_ipsaes, 'colabfold2').set { ch_chainwise_ipsae }
-    modeChannel(ch_batch.confidence, 'colabfold2').set { ch_confidence }
-    modeChannel(ch_batch.plddt, 'colabfold2').set { ch_plddt }
+    modeChannel(per_sample_outputs.msa, 'colabfold2').set { ch_msa }
+    modeChannel(per_sample_outputs.pae, 'colabfold2').set { ch_pae }
+    modeChannel(per_sample_outputs.ptms, 'colabfold2').set { ch_ptm }
+    modeChannel(per_sample_outputs.iptms, 'colabfold2').set { ch_iptm }
+    modeChannel(per_sample_outputs.ipsaes, 'colabfold2').set { ch_ipsae }
+    modeChannel(per_sample_outputs.chainwise_iptms, 'colabfold2').set { ch_chainwise_iptm }
+    modeChannel(per_sample_outputs.chainwise_ipsaes, 'colabfold2').set { ch_chainwise_ipsae }
+    modeChannel(per_sample_outputs.confidence, 'colabfold2').set { ch_confidence }
+    modeChannel(per_sample_outputs.plddt, 'colabfold2').set { ch_plddt }
 
     ch_multiqc_metrics = collectMultiqcMetrics('colabfold2', [
-        [ 'plddt', ch_batch.plddt ],
-        [ 'msa',   ch_batch.msa ],
-        [ 'ptm',   ch_batch.ptms ],
-        [ 'iptm',  ch_batch.iptms ]
+        [ 'plddt', per_sample_outputs.plddt ],
+        [ 'msa',   per_sample_outputs.msa ],
+        [ 'ptm',   per_sample_outputs.ptms ],
+        [ 'iptm',  per_sample_outputs.iptms ]
     ])
 
     emit:
