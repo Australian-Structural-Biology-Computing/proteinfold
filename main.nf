@@ -65,7 +65,9 @@ workflow NFCORE_PROTEINFOLD {
     colabfold2_prefixed_models = [ 'alphafold3', 'boltz2' ]
     colabfold2_bare_models     = [
         'openfold3', 'openbind0', 'protenix2', 'chai1', 'intellifold2', 'opendde',
-        'rosettafold3', 'esmfold2'
+        'rosettafold3', 'esmfold2',
+        'alphafold2', 'alphafold2_ptm', 'alphafold2_multimer_v1',
+        'alphafold2_multimer_v2', 'alphafold2_multimer_v3'
     ]
     colabfold2_mode_tokens = ( colabfold2_prefixed_models.collect { "colabfold2-${it}".toString() } + colabfold2_bare_models )
     colabfold2_submodes = requested_modes
@@ -100,6 +102,9 @@ workflow NFCORE_PROTEINFOLD {
     if (colabfold2_public_mode == 'colabfold2-alphafold3' && params.colabfold2_weights_precision == 'int8') {
         error("ColabFold2 official alphafold3 supports fp32 weights only; --colabfold2_weights_precision int8 cannot be used with --mode colabfold2-alphafold3.")
     }
+    if (colabfold2_public_mode && colabfold2_public_mode.startsWith('alphafold2') && params.colabfold2_weights_precision == 'int8') {
+        error("The AlphaFold2 backends do not provide int8 weights; --colabfold2_weights_precision int8 cannot be used with --mode ${colabfold2_public_mode}.")
+    }
     if (colabfold2_public_mode == 'esmfold2') {
         def esmfold2_model = colabfold2_esmfold2_models[colabfold2_esmfold2_selection]
         if (esmfold2_model == null) {
@@ -111,8 +116,13 @@ workflow NFCORE_PROTEINFOLD {
         colabfold2_model_for_submode = colabfold2_public_mode ?
             colabfold2_public_mode.replaceFirst(/^colabfold2-/, '') : null
         colabfold2_use_esm = false
+        // The plain alphafold2 token delegates monomer/multimer selection to
+        // colabfold_batch ('auto': alphafold2_ptm / alphafold2_multimer_v3).
+        if (colabfold2_model_for_submode == 'alphafold2') {
+            colabfold2_model_for_submode = 'auto'
+        }
     }
-    if (colabfold2_submodes && !(colabfold2_model_for_submode in ( colabfold2_prefixed_models + colabfold2_bare_models + [ 'esmfold2_lm300m', 'esmfold2_lm600m' ] ))) {
+    if (colabfold2_submodes && !(colabfold2_model_for_submode in ( colabfold2_prefixed_models + colabfold2_bare_models + [ 'esmfold2_lm300m', 'esmfold2_lm600m', 'auto' ] ))) {
         error("ColabFold2 mode '${colabfold2_submodes[0]}' resolved to backend '${colabfold2_model_for_submode}', which is not a supported AlphaFold3-family backend. Supported modes: ${colabfold2_mode_tokens.join(', ')}.")
     }
 

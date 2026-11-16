@@ -20,6 +20,9 @@ nextflow_pipeline {
     // alias  = the COLABFOLD2_INFERENCE process alias it must dispatch to
     def submodes = [
         [mode: 'colabfold2-alphafold3', backend: 'alphafold3',       alias: 'ALPHAFOLD3'],
+        [mode: 'alphafold2',            backend: 'auto',             alias: 'ALPHAFOLD2', ext: 'pdb'],
+        [mode: 'alphafold2_ptm',        backend: 'alphafold2_ptm',   alias: 'ALPHAFOLD2', ext: 'pdb'],
+        [mode: 'alphafold2_multimer_v3',backend: 'alphafold2_multimer_v3', alias: 'ALPHAFOLD2', ext: 'pdb'],
         [mode: 'esmfold2',              backend: 'esmfold2',         esmfold2_model: 'msa',    alias: 'ESMFOLD2'],
         [mode: 'esmfold2',              backend: 'esmfold2_lm300m',  esmfold2_model: 'lm300m', alias: 'ESMFOLD2'],
         [mode: 'esmfold2',              backend: 'esmfold2_lm600m',  esmfold2_model: 'lm600m', alias: 'ESMFOLD2'],
@@ -55,8 +58,9 @@ nextflow_pipeline {
                 assert versions_report.any { it.contains(":PROTEINFOLD:${sub.alias}:") }
                 assert !versions_report.any { it.contains(":PROTEINFOLD:COLABFOLD2_INFERENCE:") }
                 // One published artifact per publishDir category per sample.
+                def structure_ext = sub.ext ?: 'cif'
                 ['T1024', 'T1026'].each { id ->
-                    assert stable_name.contains("${sub.mode}/top_ranked_structures/${id}.cif".toString())
+                    assert stable_name.contains("${sub.mode}/top_ranked_structures/${id}.${structure_ext}".toString())
                     assert stable_name.contains("${sub.mode}/${id}/paes/${id}_1_pae.tsv".toString())
                     assert stable_name.contains("${sub.mode}/${id}/${id}_plddt.tsv".toString())
                     assert stable_name.contains("${sub.mode}/${id}/${id}_colabfold2_msa.tsv".toString())

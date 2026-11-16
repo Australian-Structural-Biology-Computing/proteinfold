@@ -43,14 +43,12 @@
                 "colabfold2-alphafold3/top_ranked_structures/T1027.cif",
                 "msa",
                 "msa/colabfold_search",
-                "msa/colabfold_search/[:]",
-                "msa/colabfold_search/[:]/results",
-                "msa/colabfold_search/[:]/results/T1024.a3m",
-                "msa/colabfold_search/[:]/results/T1024.json",
-                "msa/colabfold_search/[:]/results/T1026.a3m",
-                "msa/colabfold_search/[:]/results/T1026.json",
-                "msa/colabfold_search/[:]/results/T1027.a3m",
-                "msa/colabfold_search/[:]/results/T1027.json",
+                "msa/colabfold_search/T1024.a3m",
+                "msa/colabfold_search/T1024.json",
+                "msa/colabfold_search/T1026.a3m",
+                "msa/colabfold_search/T1026.json",
+                "msa/colabfold_search/T1027.a3m",
+                "msa/colabfold_search/T1027.json",
                 "multifasta",
                 "multifasta/T1024.csv",
                 "multifasta/T1026.csv",
@@ -115,7 +113,7 @@
                 "T1027_colabfold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-16T21:58:12.443391586",
+        "timestamp": "2026-11-16T23:32:30.635571915",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"

@@ -33,6 +33,37 @@ process DOWNLOAD_COLABFOLD2_WEIGHTS {
     """
 }
 
+process DOWNLOAD_COLABFOLD2_AF2_WEIGHTS {
+    tag "alphafold2 (${colabfold2_variants.join(',')})"
+    label 'process_medium'
+    container "ghcr.io/jscgh/proteinfold_colabfold:af3-preview-e9e8bd0"
+
+    input:
+    val colabfold2_variants
+
+    output:
+    path 'af2_params', emit: params_path
+
+    script:
+    def variant_list = colabfold2_variants.collect { "'${it}'" }.join(', ')
+    """
+    set -euo pipefail
+    python3 - <<'PY'
+    from pathlib import Path
+    from colabfold.download import download_alphafold_params
+    for variant in [${variant_list}]:
+        download_alphafold_params(variant, data_dir=Path('af2_params'))
+    PY
+    test -d af2_params/params
+    """
+
+    stub:
+    """
+    mkdir -p af2_params/params
+    touch af2_params/params/download_finished.txt
+    """
+}
+
 workflow PREPARE_COLABFOLD2_DBS {
     take:
     colabfold2_params_path
@@ -69,7 +100,31 @@ workflow PREPARE_COLABFOLD2_DBS {
     def af3_dir = "${weightsRoot}/params/af3"
     def model_dir = "${af3_dir}/${colabfold2_model}${suffix}"
 
-    if (weightsRoot) {
+    // The alphafold2 backends use ColabFold's own AF2 parameter layout
+    // (<root>/params with alphafold_params .npz files), not the AF3 weights
+    // root. 'auto' (the plain alphafold2 mode token) needs both the ptm and
+    // the multimer_v3 parameter sets so colabfold_batch can pick per query.
+    def af2Variants = null
+    if (colabfold2_model == 'auto') {
+        af2Variants = ['alphafold2_ptm', 'alphafold2_multimer_v3']
+    } else if (colabfold2_model.startsWith('alphafold2') || colabfold2_model.startsWith('deepfold')) {
+        af2Variants = [colabfold2_model]
+    }
+
+    if (af2Variants) {
+        if (colabfold2_params_path) {
+            file(colabfold2_params_path, type: 'dir', checkIfExists: true)
+            if (!workflow.stubRun) {
+                file("${colabfold2_params_path}/params", type: 'dir', checkIfExists: true)
+            }
+            ch_params_path = channel.value(file(colabfold2_params_path, type: 'dir', checkIfExists: true))
+        } else if (workflow.stubRun) {
+            ch_params_path = channel.value(file('assets/dummy_db_dir', type: 'dir', checkIfExists: true))
+        } else {
+            DOWNLOAD_COLABFOLD2_AF2_WEIGHTS(af2Variants)
+            ch_params_path = DOWNLOAD_COLABFOLD2_AF2_WEIGHTS.out.params_path
+        }
+    } else if (weightsRoot) {
         file(weightsRoot, type: 'dir', checkIfExists: true)
         if (!workflow.stubRun) {
             file(model_dir, type: 'dir', checkIfExists: true)
