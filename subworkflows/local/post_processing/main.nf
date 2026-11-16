@@ -45,7 +45,9 @@ workflow POST_PROCESSING {
     def ch_multiqc_files = channel.empty()
     ch_modelcif_published = channel.empty()
 
-    if (write_modelcif) {
+    // ModelCIF assembly consumes real ranked-structure metrics; stub runs
+    // only produce empty placeholder files, so skip assembly entirely there.
+    if (write_modelcif && !workflow.stubRun) {
         MODELCIF_ASSEMBLE(ch_modelcif)
         MODELCIF_VALIDATE(MODELCIF_ASSEMBLE.out.modelcif)
         CIFCHECK(
