@@ -11,7 +11,6 @@ include { methodsDescriptionText } from '../utils_nfcore_proteinfold_pipeline'
 
 include { GENERATE_REPORT           } from '../../../modules/local/generate_report'
 include { GENERATE_MULTIQC_CONTENTS } from '../../../modules/local/generate_multiqc_contents'
-include { COMPARE_STRUCTURES        } from '../../../modules/local/compare_structures'
 include { FOLDSEEK_EASYSEARCH       } from '../../../modules/nf-core/foldseek/easysearch/main'
 include { MULTIQC                   } from '../../../modules/nf-core/multiqc/main'
 include { MODELCIF_ASSEMBLE         } from '../../../modules/local/assemble_modelcif/main'
@@ -22,10 +21,8 @@ workflow POST_PROCESSING {
 
     take:
     skip_visualisation
-    requested_modes_size
     ch_report_input
     ch_report_template
-    ch_comparison_template
     skip_foldseek
     foldseek_db
     foldseek_db_path
@@ -45,7 +42,6 @@ workflow POST_PROCESSING {
     modelcif_software_details
 
     main:
-    def ch_comparison_report_files = channel.empty()
     def ch_multiqc_files = channel.empty()
     ch_modelcif_published = channel.empty()
 
@@ -65,51 +61,6 @@ workflow POST_PROCESSING {
             ch_report_input,
             ch_report_template
         )
-
-        if (requested_modes_size > 1){
-            def dummy_file = file("$projectDir/assets/NO_FILE", checkIfExists: true)
-
-            def esm = ch_top_ranked_model.filter { it ->it[0].model == 'esmfold' }
-            def not_esm = ch_top_ranked_model.filter { it -> it[0].model != 'esmfold' }
-
-            esm = esm
-                    .map { meta, pdb ->
-                        [meta, pdb, dummy_file]
-                    }
-
-            not_esm = not_esm
-                        .map { it ->  [it[0], it[1]] }
-                        .join(GENERATE_REPORT.out.sequence_coverage)
-
-            ch_comparison_report_files = not_esm.mix(esm)
-
-            ch_comparison_report_files
-                .map { it ->
-                    [["id": it[0].id], it[0], it[1], it[2]]
-                }
-                .groupTuple(by: [0], size: requested_modes_size)
-                .map { it ->
-                    it[0].models=it[1].join(',');
-                    [it[0], it[2], it[3]]
-                }
-                .set { ch_comparison_report_input }
-
-            COMPARE_STRUCTURES(
-                ch_comparison_report_input
-                    .map { it ->
-                        [it[0], it[1].collect { file -> file.name} ]
-                    },
-                ch_comparison_report_input
-                    .map { it ->
-                        [ it[0], it[2].collect { file -> file.name } ]
-                    },
-                ch_comparison_report_input
-                    .map { it ->
-                        (it[1] + it[2]).unique()
-                    },
-                ch_comparison_template
-            )
-        }
     }
 
     if (!skip_foldseek) {

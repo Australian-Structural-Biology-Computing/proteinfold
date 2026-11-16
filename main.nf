@@ -60,7 +60,6 @@ workflow NFCORE_PROTEINFOLD {
             sort: true
         )
     requested_modes      = params.mode.toLowerCase().split(",")
-    requested_modes_size = 1  // single unified workflow; comparison report has one mode per run
 
     colabfold2_prefixed_models = [ 'alphafold3', 'boltz2' ]
     colabfold2_bare_models     = [
@@ -323,7 +322,6 @@ workflow NFCORE_PROTEINFOLD {
     ch_multiqc_logo          = params.multiqc_logo   ? channel.fromPath( params.multiqc_logo ).first()    : channel.empty()
     ch_multiqc_methods_description = params.multiqc_methods_description ? file(params.multiqc_methods_description, checkIfExists: true) : file("$projectDir/assets/methods_description_template.yml", checkIfExists: true)
     ch_report_template     = channel.value(file("$projectDir/assets/report_template.html", checkIfExists: true))
-    ch_comparison_template = channel.value(file("$projectDir/assets/comparison_template.html", checkIfExists: true))
 
     // Inject msa_tool into meta based on selected MSA module for report provenance.
     def msaToolMap = [
@@ -341,10 +339,8 @@ workflow NFCORE_PROTEINFOLD {
 
     POST_PROCESSING(
         params.skip_visualisation,
-        requested_modes_size,
         ch_report_input,
         ch_report_template,
-        ch_comparison_template,
         params.skip_foldseek,
         params.foldseek_db,
         params.foldseek_db_path,
