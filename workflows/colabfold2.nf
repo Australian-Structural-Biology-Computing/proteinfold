@@ -58,6 +58,10 @@ workflow COLABFOLD2 {
         }
         .set { ch_input_by_ext }
 
+    MULTIFASTA_TO_CSV(
+        ch_input_by_ext.fasta
+    )
+
     if (params.use_msa_server) {
         ch_msa_input = ch_input_by_ext.fasta.mix(ch_input_by_ext.json)
     } else {
