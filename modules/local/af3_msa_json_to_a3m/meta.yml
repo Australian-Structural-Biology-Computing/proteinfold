@@ -3,12 +3,12 @@ description: Convert an AlphaFold3-format MSA JSON into a ColabFold a3m query fi
 tools: []
 input:
   - - meta:
-          type: map
-          description: Groovy Map containing sample information.
+        type: map
+        description: Groovy Map containing sample information.
     - input_json:
-          type: file
-          description: AlphaFold3-format MSA JSON.
-          pattern: "*.json"
+        type: file
+        description: AlphaFold3-format MSA JSON.
+        pattern: "*.json"
 output:
   a3m:
     - - meta:
