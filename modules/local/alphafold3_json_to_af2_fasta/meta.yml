@@ -1,0 +1,25 @@
+name: "alphafold3_json_to_af2_fasta"
+description: Extract the protein chains of an AlphaFold3 JSON into a multi-record FASTA for the AlphaFold2 MSA pipeline.
+tools: []
+input:
+  - - meta:
+          type: map
+          description: Groovy Map containing sample information.
+    - input_json:
+          type: file
+          description: AlphaFold3 input JSON.
+          pattern: "*.json"
+output:
+  query_fasta:
+    - - meta:
+          type: map
+          description: Groovy Map containing sample information.
+      - "${meta.id}.fasta":
+          type: file
+          description: Multi-record FASTA with one record per protein chain copy.
+          pattern: "*.fasta"
+  versions:
+    - - "versions.yml":
+          type: file
+          description: File containing software versions.
+          pattern: "versions.yml"

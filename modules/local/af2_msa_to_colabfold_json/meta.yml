@@ -1,0 +1,31 @@
+name: "af2_msa_to_colabfold_json"
+description: Convert AlphaFold2 MSA pipeline output into an AlphaFold3-format input JSON with unpaired/paired MSAs for ColabFold2.
+tools: []
+input:
+  - - meta:
+        type: map
+        description: Groovy Map containing sample information.
+    - fasta:
+        type: file
+        description: Protein FASTA query input used for the AlphaFold2 MSA run.
+        pattern: "*.{fa,faa,fasta}"
+    - raw_dir:
+        type: directory
+        description: Output directory of RUN_ALPHAFOLD2_MSA containing chain_id_map.json and per-chain alignments.
+  - - use_small_bfd:
+        type: boolean
+        description: True when the AlphaFold2 MSA run used the reduced_dbs preset.
+output:
+  json:
+    - - meta:
+          type: map
+          description: Groovy Map containing sample information.
+      - "${meta.id}.json":
+          type: file
+          description: AlphaFold3-format job JSON with embedded unpairedMsa/pairedMsa a3m text.
+          pattern: "*.json"
+  versions:
+    - - "versions.yml":
+          type: file
+          description: File containing software versions.
+          pattern: "versions.yml"

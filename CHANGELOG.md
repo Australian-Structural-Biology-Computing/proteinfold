@@ -5,6 +5,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## v2.1.0dev - [unreleased<!-- TODO nf-core: replace with date on release -->]
 
+### Unified pipeline restructuring
+
+- Replaced the per-mode workflow dispatch (`alphafold2`, `alphafold3`, `colabfold`, `esmfold`, `boltz` and the ColabFold2 submodes) with a single unified workflow (`workflows/proteinfold.nf`). All structure prediction now runs through the ColabFold2 backends selected with `--mode`.
+- Added `--msa_tool` to choose the MSA generation module: `colabfold_search` (local MMseqs2, default), `alphafold2_msa` (AlphaFold2 jackhmmer data pipeline) or `alphafold3_msa` (AlphaFold3 data pipeline); `--use_msa_server` delegates the search to the ColabFold MSA server as before.
+- Added the `AF2_MSA_TO_COLABFOLD_JSON` adaptor: converts AlphaFold2 pipeline MSAs (including the species-based paired-MSA logic ported from `pipeline_multimer`) into the AlphaFold3-format input JSON consumed by ColabFold2, transparently handling zstd-compressed Stockholm alignments.
+- Added the `VALIDATE_ALPHAFOLD3_MSA_JSON` pass-through for AlphaFold3 data-pipeline MSAs.
+- AlphaFold3 JSON inputs are now supported by every local MSA tool: protein chains are extracted for MSA generation and the original JSON (PTMs, ligands, RNA, etc.) is repopulated with the generated MSAs via `merge_alphafold3_msa` (`ALPHAFOLD3_JSON_TO_AF2_FASTA` for `alphafold2_msa`).
+- Restored MSA cache lookups (`msa_cache`) and MMseqs MSA batching (`--msa_batch_size`) in the unified pipeline; cache hits now return the cached AlphaFold3-format MSA JSON directly.
+- Fixed multimer FASTA samples being searched as separate monomers in the ColabFold2 path: multi-chain FASTAs are colon-joined into a single complex query (`multifasta_to_csv`) before the search, matching the JSON extraction and enabling species pairing.
+- Removed the standalone AlphaFold2, AlphaFold3, ColabFold, ESMFold and Boltz workflows, their DB-preparation subworkflows, parameters, test profiles and usage documentation; ColabFold2 remains the only prediction path.
+
 ### Enhancements & fixes
 
 - [[PR #573](https://github.com/nf-core/proteinfold/pull/573)] - Adds affiliations for UNSW Structural Biology Facility (SBF).

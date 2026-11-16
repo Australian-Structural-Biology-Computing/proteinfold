@@ -33,11 +33,28 @@
                 },
                 "mode": {
                     "type": "string",
-                    "default": "alphafold2",
-                    "description": "Specifies the mode in which the pipeline will be run. mode can be any combination of [\"alphafold2\", \"alphafold3\", \"colabfold\", \"colabfold2-alphafold3\", \"colabfold2-boltz2\", \"esmfold2\", \"protenix2\", \"chai1\", \"intellifold2\", \"opendde\", \"openfold3\", \"openbind0\", \"rosettafold3\", \"esmfold\", \"boltz\"] separated by a comma with no spaces. ColabFold2 backends are named after the tool they run; alphafold3 and boltz2 carry a colabfold2- prefix because those names are already taken by the standalone AlphaFold3 and Boltz modes. Use --esmfold2_model to select the ESMFold2 variant.",
+                    "default": "colabfold2-alphafold3",
+                    "description": "Specifies the prediction backend mode. ColabFold2 backends are named after the tool they run; alphafold3 and boltz2 carry a colabfold2- prefix because those names are already taken by the standalone AlphaFold3 and Boltz modes. Use --esmfold2_model to select the ESMFold2 variant.",
                     "fa_icon": "fas fa-cogs",
-                    "pattern": "^(alphafold2|alphafold3|colabfold|colabfold2-alphafold3|colabfold2-boltz2|esmfold2|protenix2|chai1|intellifold2|opendde|openfold3|openbind0|rosettafold3|esmfold|boltz)(,(alphafold2|alphafold3|colabfold|colabfold2-alphafold3|colabfold2-boltz2|esmfold2|protenix2|chai1|intellifold2|opendde|openfold3|openbind0|rosettafold3|esmfold|boltz))*$",
-                    "errorMessage": "Mode must be a comma-separated list containing alphafold2, alphafold3, colabfold, colabfold2-alphafold3, colabfold2-boltz2, esmfold2, protenix2, chai1, intellifold2, opendde, openfold3, openbind0, rosettafold3, esmfold, or boltz with no spaces."
+                    "enum": [
+                        "colabfold2-alphafold3",
+                        "colabfold2-boltz2",
+                        "esmfold2",
+                        "protenix2",
+                        "chai1",
+                        "intellifold2",
+                        "opendde",
+                        "openfold3",
+                        "openbind0",
+                        "rosettafold3"
+                    ]
+                },
+                "msa_tool": {
+                    "type": "string",
+                    "default": "colabfold_search",
+                    "description": "MSA generation module used to produce the input MSAs for structure prediction. One of colabfold_search (local MMseqs2 ColabFold search), alphafold2_msa (AlphaFold2 jackhmmer data pipeline, incl. species pairing), alphafold3_msa (AlphaFold3 data pipeline), or set --use_msa_server to use the ColabFold MSA server.",
+                    "enum": ["colabfold_search", "alphafold2_msa", "alphafold3_msa"],
+                    "fa_icon": "fas fa-search"
                 },
                 "use_gpu": {
                     "type": "boolean",
@@ -276,23 +293,6 @@
                 }
             }
         },
-        "esmfold_options": {
-            "title": "ESMFold options",
-            "type": "object",
-            "fa_icon": "fas fa-coins",
-            "description": "ESMFold options.",
-            "properties": {
-                "esmfold_num_recycles": {
-                    "type": "integer",
-                    "default": 4,
-                    "description": "Specifies the number of recycles used by ESMFold",
-                    "fa_icon": "fas fa-server",
-                    "minimum": 1,
-                    "maximum": 20,
-                    "errorMessage": "Number of recycles must be a whole number between 1 and 20"
-                }
-            }
-        },
         "msa_cache_options": {
             "title": "MSA cache options",
             "type": "object",
@@ -316,40 +316,6 @@
                 "msa_cache_tool_id": {
                     "type": "string",
                     "description": "Optional search-tool version or image digest namespace; change when the image changes."
-                }
-            }
-        },
-        "boltz_options": {
-            "title": "Boltz options",
-            "type": "object",
-            "fa_icon": "fas fa-database",
-            "description": "Boltz options.",
-            "properties": {
-                "boltz_use_potentials": {
-                    "type": "boolean",
-                    "description": "run Boltz-2 using inference time potentials"
-                },
-                "boltz_use_kernels": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Use optimized Triton-based CUDA kernels for Boltz inference"
-                },
-                "boltz_model": {
-                    "type": "string",
-                    "description": "Sets the model to use for prediction. Default is boltz2"
-                },
-                "boltz_msa_cache_dir": {
-                    "type": "string",
-                    "format": "directory-path",
-                    "description": "Legacy Boltz cache directory; use --msa_cache_dir instead."
-                },
-                "boltz_msa_cache_id": {
-                    "type": "string",
-                    "description": "Optional Boltz database revision namespace."
-                },
-                "boltz_msa_cache_tool_id": {
-                    "type": "string",
-                    "description": "Optional Boltz search-tool image digest namespace."
                 }
             }
         },
@@ -809,129 +775,6 @@
                 }
             }
         },
-        "esmfold_parameters_link_options": {
-            "title": "ESMFold parameters links options",
-            "type": "object",
-            "description": "Parameters used to provide the links to the parameters public resources to ESMFold.",
-            "fa_icon": "fas fa-database",
-            "properties": {
-                "esmfold_3B_v1": {
-                    "type": "string",
-                    "default": "https://dl.fbaipublicfiles.com/fair-esm/models/esmfold_3B_v1.pt",
-                    "description": "Link to the ESMFold 3B-v1 model",
-                    "fa_icon": "fas fa-link"
-                },
-                "esm2_t36_3B_UR50D": {
-                    "type": "string",
-                    "default": "https://dl.fbaipublicfiles.com/fair-esm/models/esm2_t36_3B_UR50D.pt",
-                    "description": "Link to the ESMFold t36-3B-UR50D model",
-                    "fa_icon": "fas fa-link"
-                },
-                "esm2_t36_3B_UR50D_contact_regression": {
-                    "type": "string",
-                    "default": "https://dl.fbaipublicfiles.com/fair-esm/regression/esm2_t36_3B_UR50D-contact-regression.pt",
-                    "description": "Link to the ESMFold t36-3B-UR50D-contact-regression model",
-                    "fa_icon": "fas fa-link"
-                }
-            }
-        },
-        "esmfold_parameters_paths_options": {
-            "title": "ESMFold parameters paths options",
-            "type": "object",
-            "description": "Parameters used to provide the paths to the parameters public resources to ESMFold.",
-            "fa_icon": "fas fa-database",
-            "properties": {
-                "esmfold_db": {
-                    "type": "string",
-                    "format": "path",
-                    "exists": true,
-                    "description": "Specifies the PARAMS path used by 'esmfold' mode",
-                    "fa_icon": "fas fa-folder-open",
-                    "errorMessage": "Please provide a valid path to ESMFold database"
-                },
-                "esmfold_params_path": {
-                    "type": "string",
-                    "description": "Link to the ESMFold parameters",
-                    "fa_icon": "fas fa-folder-open",
-                    "default": "null/params/*"
-                }
-            }
-        },
-        "boltz_dbs_and_model_links_options": {
-            "title": "Boltz DBs and model links options",
-            "type": "object",
-            "fa_icon": "fas fa-database",
-            "description": "Links used to provide model links and weight links to Boltz",
-            "properties": {
-                "boltz_ccd_link": {
-                    "type": "string",
-                    "description": "Link to download CCD file",
-                    "icon": "fas fa-link",
-                    "default": "https://huggingface.co/boltz-community/boltz-1/resolve/main/ccd.pkl"
-                },
-                "boltz_model_link": {
-                    "type": "string",
-                    "description": "Link to download model file",
-                    "icon": "fas fa-link",
-                    "default": "https://huggingface.co/boltz-community/boltz-1/resolve/main/boltz1_conf.ckpt"
-                },
-                "boltz2_aff_link": {
-                    "type": "string",
-                    "default": "https://huggingface.co/boltz-community/boltz-2/resolve/main/boltz2_aff.ckpt",
-                    "description": "Link to download boltz affinity file"
-                },
-                "boltz2_conf_link": {
-                    "type": "string",
-                    "default": "https://huggingface.co/boltz-community/boltz-2/resolve/main/boltz2_conf.ckpt",
-                    "description": "Link to download boltz-2 conf file"
-                },
-                "boltz2_mols_link": {
-                    "type": "string",
-                    "default": "https://huggingface.co/boltz-community/boltz-2/resolve/main/mols.tar",
-                    "description": "Link to download boltz-2 mols"
-                }
-            }
-        },
-        "boltz_dbs_and_parameters_paths_options": {
-            "title": "Boltz DBs and model paths options",
-            "type": "object",
-            "fa_icon": "fas fa-database",
-            "description": "Paths used to provide model paths and weight paths to Boltz",
-            "properties": {
-                "boltz_db": {
-                    "type": "string",
-                    "description": "Path to boltz databases",
-                    "icon": "fas folder-open"
-                },
-                "boltz_ccd_path": {
-                    "type": "string",
-                    "description": "Path to CCD file",
-                    "icon": "fas folder-open",
-                    "default": "null/params/ccd.pkl"
-                },
-                "boltz_model_path": {
-                    "type": "string",
-                    "description": "Path to boltz Model file",
-                    "icon": "fas folder-open",
-                    "default": "null/params/boltz1_conf.ckpt"
-                },
-                "boltz2_aff_path": {
-                    "type": "string",
-                    "default": "null/params/boltz2_aff.ckpt",
-                    "description": "Path to boltz affinity file"
-                },
-                "boltz2_conf_path": {
-                    "type": "string",
-                    "default": "null/params/boltz2_conf.ckpt",
-                    "description": "Path to boltz-2 conf file"
-                },
-                "boltz2_mols_path": {
-                    "type": "string",
-                    "default": "null/params/mols/",
-                    "description": "Path to boltz-2 mols"
-                }
-            }
-        },
         "generic_options": {
             "title": "Generic options",
             "type": "object",
@@ -1064,13 +907,7 @@
             "$ref": "#/$defs/colabfold2_options"
         },
         {
-            "$ref": "#/$defs/esmfold_options"
-        },
-        {
             "$ref": "#/$defs/msa_cache_options"
-        },
-        {
-            "$ref": "#/$defs/boltz_options"
         },
         {
             "$ref": "#/$defs/foldseek_options"
@@ -1098,18 +935,6 @@
         },
         {
             "$ref": "#/$defs/colabfold_dbs_and_parameters_paths_options"
-        },
-        {
-            "$ref": "#/$defs/esmfold_parameters_link_options"
-        },
-        {
-            "$ref": "#/$defs/esmfold_parameters_paths_options"
-        },
-        {
-            "$ref": "#/$defs/boltz_dbs_and_model_links_options"
-        },
-        {
-            "$ref": "#/$defs/boltz_dbs_and_parameters_paths_options"
         },
         {
             "$ref": "#/$defs/generic_options"
