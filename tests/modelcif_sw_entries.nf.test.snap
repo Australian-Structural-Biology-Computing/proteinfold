@@ -1,0 +1,47 @@
+{
+    "dummy inputs include model software and software groups": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "sw_entries",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer",
+                            "no_template_search": true
+                        },
+                        "sw_entries_alphafold2.mmcif:md5,d77523b2282642b12a980032671f659f"
+                    ]
+                ],
+                "1": [
+                    "DUMMY_PAE.tsv:md5,303948e029199ff88b8242abb5b01182"
+                ],
+                "2": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ],
+                "modelcif": [
+                    [
+                        {
+                            "id": "sw_entries",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer",
+                            "no_template_search": true
+                        },
+                        "sw_entries_alphafold2.mmcif:md5,d77523b2282642b12a980032671f659f"
+                    ]
+                ],
+                "pae": [
+                    "DUMMY_PAE.tsv:md5,303948e029199ff88b8242abb5b01182"
+                ],
+                "versions": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ]
+            }
+        ],
+        "timestamp": "2026-11-17T08:56:39.36839471",
+        "meta": {
+            "nf-test": "0.9.4",
+            "nextflow": "25.10.4"
+        }
+    }
+}

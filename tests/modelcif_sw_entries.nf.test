@@ -38,6 +38,7 @@ nextflow_process {
 
         then {
             assert process.success
+            assert snapshot(process.out).match()
             assert process.out.modelcif.size() == 1
             def modelcifPath = path(process.out.modelcif[0][1])
             def mmcif = modelcifPath.text
