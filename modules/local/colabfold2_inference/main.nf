@@ -248,6 +248,9 @@ process COLABFOLD2_INFERENCE_BATCH {
     tuple val(batch_meta), path("raw/*_scores_rank_*.json")    , optional: true, emit: scores
     path "raw/**"                                              , optional: true, emit: raw
     tuple val("${task.process}"), val('colabfold'), eval("python3 -c 'import importlib.metadata; print(importlib.metadata.version(\"colabfold\"))' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold, topic: versions
+    tuple val("${task.process}"), val('colabfold_commit'), val('e9e8bd0b8b6c26f9865808070342d0d785dada2e'), emit: versions_colabfold_commit, topic: versions
+    tuple val("${task.process}"), val('alphafold3_colabfold'), eval("python3 -c 'import importlib.metadata; print(importlib.metadata.version(\"alphafold3-colabfold\"))' 2>/dev/null || echo \"unknown\""), emit: versions_alphafold3_colabfold, topic: versions
+    tuple val("${task.process}"), val('jax'), eval("python3 -c 'import jax; print(jax.__version__)' 2>/dev/null || echo \"unknown\""), emit: versions_jax, topic: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -269,9 +272,11 @@ process COLABFOLD2_INFERENCE_BATCH {
     if (metas.size() != files.size()) {
         error("COLABFOLD2_INFERENCE_BATCH received ${metas.size()} sample metadata entries but ${files.size()} input files")
     }
-    def sample_ids = metas.collect { it.id as String }
+    // colabfold_batch sanitises job names to [A-Za-z0-9_.-]; stage every
+    // query under the sanitised sample id so outputs stay addressable.
+    def sample_ids = metas.collect { (it.id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_') }
     if (sample_ids.toSet().size() != sample_ids.size()) {
-        error("COLABFOLD2_INFERENCE_BATCH received duplicate sample IDs: ${sample_ids}")
+        error("COLABFOLD2_INFERENCE_BATCH received sample IDs that collide after colabfold job-name sanitisation: ${sample_ids}")
     }
     sample_ids.each { id ->
         if (id =~ /[\t\n\r]/) {
@@ -282,7 +287,7 @@ process COLABFOLD2_INFERENCE_BATCH {
         def name = file.name
         def dot = name.lastIndexOf('.')
         def ext = dot >= 0 ? name.substring(dot) : ''
-        "cp -- ${shell_quote(name)} ${shell_quote("msa_in/${meta.id}${ext}")}"
+        "cp -- ${shell_quote(name)} ${shell_quote("msa_in/${(meta.id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_')}${ext}")}"
     }
     def ids_content = sample_ids.join('\n')
 

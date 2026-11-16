@@ -29,15 +29,23 @@ include { MSA_ALPHAFOLD3       } from '../subworkflows/local/msa_alphafold3'
 include { collectMultiqcMetrics; modeChannel } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
 
 
+// Mirrors colabfold's safe_filename: colabfold_batch sanitises query/job
+// names to [A-Za-z0-9_.-], so output files are prefixed with the sanitised
+// sample id rather than the raw one.
+def safeColabfoldName(name) {
+    (name as String).replaceAll(/[^A-Za-z0-9_.-]/, '_')
+}
+
 // Map a file produced by COLABFOLD2_INFERENCE_BATCH to its sample by matching
-// the longest sample-id prefix (sample ids may be prefixes of one another).
+// the longest sanitised sample-id prefix (sample ids may be prefixes of one
+// another).
 def matchBatchSample(batch_metas, filename) {
-    def ids = batch_metas.collect { it.id as String }.sort { -it.length() }
+    def ids = batch_metas.collect { safeColabfoldName(it.id) }.sort { -it.length() }
     def id = ids.find { filename.startsWith(it + '_') || filename.startsWith(it + '.') }
     if (id == null) {
         error("COLABFOLD2_INFERENCE_BATCH produced file '${filename}' that does not match any sample in the batch (${ids.join(', ')})")
     }
-    return batch_metas.find { (it.id as String) == id }
+    return batch_metas.find { safeColabfoldName(it.id) == id }
 }
 
 // One file per sample: emit [meta, file] tuples.
