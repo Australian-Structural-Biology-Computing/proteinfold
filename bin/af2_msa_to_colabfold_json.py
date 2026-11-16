@@ -41,7 +41,7 @@ import re
 import subprocess
 import sys
 
-# Same caps msa_manager.py applies to colabfold_search output.
+# Same caps the MMseqs search applies to colabfold_search output.
 MAX_MSA_SEQS = 16384
 MAX_PAIRED_SEQS = 8192
 
