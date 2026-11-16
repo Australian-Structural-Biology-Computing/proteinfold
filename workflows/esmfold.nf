@@ -9,6 +9,10 @@
 //
 include { RUN_ESMFOLD               } from '../modules/local/run_esmfold'
 include { MULTIFASTA_TO_SINGLEFASTA } from '../modules/local/multifasta_to_singlefasta'
+include { countMolecularEntitiesInFasta } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
+
+include { modeChannel               } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
+include { collectMultiqcMetrics     } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -26,74 +30,50 @@ workflow ESMFOLD {
 
     take:
     ch_samplesheet    // channel: samplesheet read in from --input
-    ch_versions       // channel: [ path(versions.yml) ]
     ch_esmfold_params // directory: /path/to/esmfold/params/
     ch_num_recycles   // int: Number of recycles for esmfold
-    ch_dummy_file     // channel: [ path(NO_FILE) ]
 
     main:
-    ch_multiqc_files = Channel.empty()
-
     //
     // MODULE: Run esmfold
     //
-    if (params.esmfold_model_preset != 'monomer') {
-        MULTIFASTA_TO_SINGLEFASTA(
-            ch_samplesheet
-        )
-        ch_versions = ch_versions.mix(MULTIFASTA_TO_SINGLEFASTA.out.versions)
-        RUN_ESMFOLD(
-            MULTIFASTA_TO_SINGLEFASTA.out.input_fasta,
-            ch_esmfold_params,
-            ch_num_recycles
-        )
-        ch_versions = ch_versions.mix(RUN_ESMFOLD.out.versions)
-    } else {
-        RUN_ESMFOLD(
-            ch_samplesheet,
-            ch_esmfold_params,
-            ch_num_recycles
-        )
-        ch_versions = ch_versions.mix(RUN_ESMFOLD.out.versions)
-    }
-
-    RUN_ESMFOLD
-        .out
-        .pdb
-        .combine(ch_dummy_file)
-        .map {
-            it[0]["model"] = "esmfold"
-            [ it[0]["id"], it[0], it[1], it[2] ]
+    ch_samplesheet
+        .map { meta, fasta ->
+            [ meta, fasta, countMolecularEntitiesInFasta(fasta) ]
         }
-        .set { ch_top_ranked_pdb }
-
-    RUN_ESMFOLD
-        .out
-        .multiqc
-        .map { it[1] }
-        .toSortedList()
-        .map { [ [ "model": "esmfold"], it.flatten() ] }
-        .set { ch_multiqc_report  }
-
-    RUN_ESMFOLD
-        .out
-        .pdb
-        .combine(ch_dummy_file)
-        .map {
-            it[0]["model"] = "esmfold"
-            it
+        .branch { it ->
+            multimer: it[2] > 1
+            monomer: it[2] <= 1
         }
-        .set { ch_pdb_msa }
+        .set { ch_input_by_entity_count }
 
-    ch_pdb_msa
-        .map { [ it[0]["id"], it[0], it[1], it[2] ] }
-        .set { ch_top_ranked_pdb }
+    MULTIFASTA_TO_SINGLEFASTA(
+        ch_input_by_entity_count.multimer.map { meta, fasta, _entity_count ->
+            [ meta, fasta ]
+        }
+    )
+    RUN_ESMFOLD(
+        ch_input_by_entity_count.monomer
+            .map { meta, fasta, _entity_count ->
+                [ meta, fasta ]
+            }
+            .mix(MULTIFASTA_TO_SINGLEFASTA.out.input_fasta),
+        ch_esmfold_params,
+        ch_num_recycles
+    )
+
+    ch_multiqc_metrics = collectMultiqcMetrics("esmfold", [
+        [ 'plddt', RUN_ESMFOLD.out.plddt ]
+    ])
+
+    modeChannel(RUN_ESMFOLD.out.pdb, "esmfold").set { ch_pdb_final }
 
     emit:
-    pdb_msa        = ch_pdb_msa          // channel: [ meta, /path/to/*.pdb, dummy_file ]
-    top_ranked_pdb = ch_top_ranked_pdb   // channel: [ id, /path/to/*.pdb ]
-    multiqc_report = ch_multiqc_report   // channel: /path/to/multiqc_report.html
-    versions       = ch_versions         // channel: [ path(versions.yml) ]
+    pdb             = ch_pdb_final      // channel: [ id, /path/to/*.pdb ]
+    multiqc_metrics = ch_multiqc_metrics // channel: [ [id:..., model:...], [metric tsvs] ]
+    plddt           = modeChannel(RUN_ESMFOLD.out.plddt, "esmfold")
+    pae             = modeChannel(RUN_ESMFOLD.out.pae, "esmfold")
+    ptm             = modeChannel(RUN_ESMFOLD.out.ptm, "esmfold")
 }
 
 /*

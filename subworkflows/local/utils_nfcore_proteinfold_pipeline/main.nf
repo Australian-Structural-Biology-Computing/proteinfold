@@ -11,11 +11,12 @@
 include { UTILS_NFSCHEMA_PLUGIN     } from '../../nf-core/utils_nfschema_plugin'
 include { paramsSummaryMap          } from 'plugin/nf-schema'
 include { samplesheetToList         } from 'plugin/nf-schema'
+include { paramsHelp                } from 'plugin/nf-schema'
 include { completionEmail           } from '../../nf-core/utils_nfcore_pipeline'
 include { completionSummary         } from '../../nf-core/utils_nfcore_pipeline'
-include { imNotification            } from '../../nf-core/utils_nfcore_pipeline'
 include { UTILS_NFCORE_PIPELINE     } from '../../nf-core/utils_nfcore_pipeline'
 include { UTILS_NEXTFLOW_PIPELINE   } from '../../nf-core/utils_nextflow_pipeline'
+include { logColours                } from '../../nf-core/utils_nfcore_pipeline'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -32,9 +33,11 @@ workflow PIPELINE_INITIALISATION {
     nextflow_cli_args //   array: List of positional nextflow CLI args
     outdir            //  string: The output directory where the results will be saved
     input             //  string: Path to input samplesheet
+    help              // boolean: Display help message and exit
+    help_full         // boolean: Show the full help message
+    show_hidden       // boolean: Show hidden parameters in the help message
 
     main:
-    ch_versions = Channel.empty()
 
     //
     // Print version and exit if required and dump pipeline parameters to JSON file
@@ -49,10 +52,44 @@ workflow PIPELINE_INITIALISATION {
     //
     // Validate parameters and generate parameter summary to stdout
     //
+    def colors = logColours(monochrome_logs)
+
+    def before_text = ""
+    def after_text = ""
+    before_text = """
+-${colors.dim}----------------------------------------------------${colors.reset}-
+                                        ${colors.green},--.${colors.black}/${colors.green},-.${colors.reset}
+${colors.blue}        ___     __   __   __   ___     ${colors.green}/,-._.--~\'${colors.reset}
+${colors.blue}  |\\ | |__  __ /  ` /  \\ |__) |__         ${colors.yellow}}  {${colors.reset}
+${colors.blue}  | \\| |       \\__, \\__/ |  \\ |___     ${colors.green}\\`-._,-`-,${colors.reset}
+                                        ${colors.green}`._,._,\'${colors.reset}
+${colors.purple}  nf-core/proteinfold ${workflow.manifest.version}${colors.reset}
+-${colors.dim}----------------------------------------------------${colors.reset}-
+"""
+    after_text = """${workflow.manifest.doi ? "\n* The pipeline\n" : ""}${workflow.manifest.doi.tokenize(",").collect { doi -> "    https://doi.org/${doi.trim().replace('https://doi.org/','')}"}.join("\n")}${workflow.manifest.doi ? "\n" : ""}
+* The nf-core framework
+    https://doi.org/10.1038/s41587-020-0439-x
+
+* Software dependencies
+    https://github.com/nf-core/proteinfold/blob/master/CITATIONS.md
+"""
+    if (monochrome_logs) {
+        before_text = before_text.replaceAll(/\033\[[0-9;]*m/, '')
+    }
+
+    command = "nextflow run ${workflow.manifest.name} -profile <docker/singularity/.../institute> --input samplesheet.csv --outdir <OUTDIR>"
+
     UTILS_NFSCHEMA_PLUGIN (
         workflow,
         validate_params,
-        null
+        null,
+        help,
+        help_full,
+        show_hidden,
+        before_text,
+        after_text,
+        command,
+        false
     )
 
     //
@@ -62,32 +99,54 @@ workflow PIPELINE_INITIALISATION {
         nextflow_cli_args
     )
 
-    //
-    // Create channel from input file provided through params.input
-    //
-    ch_samplesheet = Channel.fromList(samplesheetToList(params.input, "assets/schema_input.json"))
+    validateInputParameters()
 
-    ch_samplesheet
-        .map { meta, fasta ->
+    //
+    // Create channel from input file provided through input
+    //
+    def sample_entries = samplesheetToList(input, "assets/schema_input.json")
+    def sample_ids = sample_entries.collect { item ->
+        def meta = item[0]
+        meta.id ?: meta.sequence
+    }
+    if (sample_ids.size() != sample_ids.toSet().size()) {
+        error("Duplicate sample IDs are not allowed: ${sample_ids}")
+    }
+    ch_samplesheet = channel.fromList(sample_entries)
+
+    ch_samplesheet = ch_samplesheet
+        .map { item ->
+            def meta = item[0]
+            def fasta = item[1]
+            def msa = item.size() > 2 ? item[2] : null
             // This mapping supports legacy samplesheets that use 'sequence' as metadata.
             // If meta.id is missing or empty, meta.sequence is used as the identifier.
             def identifier = meta.id ? meta.id : meta.sequence
-            return [[id: identifier], fasta]
+            def normalized_meta = [id: identifier]
+            if (msa) {
+                if (!params.mode.toLowerCase().split(',').collect { it.trim() }.contains('colabfold')) {
+                    error("The 'msa' samplesheet column is currently supported only with --mode colabfold.")
+                }
+                if (params.split_fasta) {
+                    error("The 'msa' samplesheet column cannot be used with --split_fasta.")
+                }
+                normalized_meta.msa = msa
+            }
+            return [normalized_meta, fasta]
         }
 
     if (params.split_fasta) {
-        // TODO: here we have to validate that the ids are unique and valid as an extra step
-        // since it is not done with the samplesheet schema (they are all in the same file)
-        ch_samplesheet.map { meta, fasta ->
+        ch_samplesheet = ch_samplesheet.map { meta, fasta ->
             validateFasta(fasta)
+            [meta, fasta]
         }
 
         // Split the fasta file into individual files for each sequence
         ch_samplesheet
-            .map { meta,fasta -> fasta }
-            .splitFasta( record: [header: true, sequence: true] )
-            .collectFile { item ->
-                [ "${cleanHeader(item["header"])}.fa", ">" + cleanHeader(item["header"]) + '\n' +item["sequence"] ]
+            .map { meta, fasta -> [meta.id, fasta] }
+            .splitFasta( record: [header: true, sequence: true], elem: 1 )
+            .collectFile { sample_id, item ->
+                [ "${cleanHeader(sample_id.toString())}_${cleanHeader(item["header"])}.fa", ">" + cleanHeader(item["header"]) + '\n' +item["sequence"] ]
             }
             .map {
                 file -> [[id: file.baseName], file]
@@ -96,8 +155,7 @@ workflow PIPELINE_INITIALISATION {
     }
 
     emit:
-    samplesheet = ch_samplesheet
-    versions    = ch_versions
+    samplesheet  = ch_samplesheet
 }
 
 /*
@@ -114,7 +172,6 @@ workflow PIPELINE_COMPLETION {
     plaintext_email // boolean: Send plain-text email instead of HTML
     outdir          //    path: Path to output directory where results will be published
     monochrome_logs // boolean: Disable ANSI colour codes in log output
-    hook_url        //  string: hook URL for notifications
     multiqc_report  //  string: Path to MultiQC report
 
     main:
@@ -138,13 +195,11 @@ workflow PIPELINE_COMPLETION {
         }
 
         completionSummary(monochrome_logs)
-        if (hook_url) {
-            imNotification(summary_params, hook_url)
-        }
+
     }
 
     workflow.onError {
-        log.error "Pipeline failed. Please refer to troubleshooting docs: https://nf-co.re/docs/usage/troubleshooting"
+        log.error "Pipeline failed. Please refer to troubleshooting docs for common issues: https://nf-co.re/docs/running/troubleshooting"
     }
 }
 
@@ -155,30 +210,105 @@ workflow PIPELINE_COMPLETION {
 */
 
 //
-// Get link to Colabfold Alphafold2 parameters
+// Check and validate pipeline parameters
 //
-def getColabfoldAlphafold2Params() {
-    def link = null
-    if (params.colabfold_alphafold2_params_tags) {
-        if (params.colabfold_alphafold2_params_tags.containsKey(params.colabfold_model_preset.toString())) {
-            link = "https://storage.googleapis.com/alphafold/" + params.colabfold_alphafold2_params_tags[ params.colabfold_model_preset.toString() ] + '.tar'
-        }
+def validateInputParameters() {
+    def requestedModes = params.mode.toLowerCase().split(",")*.trim()
+
+    if (requestedModes.contains("alphafold3")) {
+        alphafold3Warn(log)
     }
-    return link
+
+    if (params.random_seed != null) {
+        randomSeedModeWarn(log, requestedModes)
+    }
+}
+
+def modeChannel(ch, mode) {
+    return ch.map { meta, value ->
+        def meta_clone = meta.clone()
+        meta_clone.model = mode
+        [ meta_clone, value ]
+    }
 }
 
 //
-// Get path to Colabfold Alphafold2 parameters
+// Collect the per-model metric TSVs that the MultiQC custom content consumes.
+// `metric_channels` is a List of [name, channel] pairs. Each channel yields a
+// tuple whose [1] and [2] fields are the meta map and the metric file; pinning
+// that position is what makes this safe for emits with extra trailing fields
+// (boltz emits 5, alphafold2 4). The first non-empty channel seeds the fold and
+// the rest are mixed in one at a time, because mix() is a channel operator -- it
+// does not exist on ArrayList.
 //
-def getColabfoldAlphafold2ParamsPath() {
-    def path = null
-    params.colabfold_model_preset.toString()
-    if (params.colabfold_alphafold2_params_tags) {
-        if (params.colabfold_alphafold2_params_tags.containsKey(params.colabfold_model_preset.toString())) {
-            path = "${params.colabfold_db}/params/" + params.colabfold_alphafold2_params_tags[ params.colabfold_model_preset.toString() ]
-        }
+def collectMultiqcMetrics(model, metric_channels) {
+    def acc = null
+    metric_channels.each { entry ->
+        def ch = entry[1].map { it -> [ [id: model, model: model], it[1] ] }
+        acc = acc == null ? ch : acc.mix(ch)
     }
-    return path
+    if (acc == null) {
+        return channel.empty()
+    }
+    return acc
+        .unique { entry -> entry[1] }
+        .groupTuple()
+        .map { _model, paths ->
+            [ [id: model, model: model], paths.flatten() ]
+        }
+}
+
+// Join predictor outputs and substitute placeholders for unavailable optional metrics.
+def modelcifInput(structs, msa, plddt, pae, ptm, iptm, versions, softwareDetails, msaTool, missingMetrics = [], modelParams = [:], plddtScale = null) {
+    def dummyMetrics = [
+        pae: file("$projectDir/assets/DUMMY_PAE.tsv", checkIfExists: true),
+        ptm: file("$projectDir/assets/DUMMY_PTM.tsv", checkIfExists: true),
+        iptm: file("$projectDir/assets/DUMMY_IPTM.tsv", checkIfExists: true)
+    ]
+    def input = structs.join(msa).join(plddt)
+    [pae: pae, ptm: ptm, iptm: iptm].each { name, metric ->
+        input = input.join(metric, remainder: true)
+            .filter { values -> values[1] != null }
+            .map { values ->
+                def missing = values[-1] == null
+                values[0..-2] + [missing ? dummyMetrics[name] : values[-1], missing]
+            }
+    }
+    input
+        .combine(versions)
+        .map { values ->
+            def meta = values[0]
+            def structureFiles = values[1]
+            def msaFile = values[2]
+            def plddtFile = values[3]
+            def paeFile = values[4]
+            def paeMissing = values[5]
+            def ptmFile = values[6]
+            def ptmMissing = values[7]
+            def iptmFile = values[8]
+            def iptmMissing = values[9]
+            def versionsFile = values[10]
+            def modelcifMeta = meta.clone()
+            modelcifMeta.msa_tool = msaTool
+            modelcifMeta.missing_metrics = (missingMetrics + [paeMissing ? 'pae' : null, ptmMissing ? 'ptm' : null, iptmMissing ? 'iptm' : null]).findAll().unique()
+            modelcifMeta.modelcif_params = modelParams
+            modelcifMeta.plddt_scale = plddtScale
+            [modelcifMeta, structureFiles, msaFile, plddtFile, paeFile, ptmFile, iptmFile, versionsFile, softwareDetails]
+        }
+}
+
+def modelcifDummyMetric(structs, dummyFile) {
+    structs.map { meta, _files -> [meta.clone(), dummyFile] }
+}
+
+def countMolecularEntitiesInFasta(fasta) {
+    return fasta.text
+        .readLines()
+        .count { line -> line.trim().startsWith('>') }
+}
+
+def resolveModelPresetByFastaEntities(fasta, monomerPreset, multimerPreset = 'multimer') {
+    return countMolecularEntitiesInFasta(fasta) > 1 ? multimerPreset : monomerPreset
 }
 
 //
@@ -244,21 +374,50 @@ def methodsDescriptionText(mqc_methods_yaml) {
 }
 
 def cleanHeader(header) {
-    return header.replaceAll(" ", "_").replaceAll(",", "").replaceAll(";","")
+    return header
+        .replaceAll(" ", "_")
+        .replaceAll("/","_")
+        .replaceAll(",", "")
+        .replaceAll(";","")
+        .replaceAll("\\|","_")
 }
 
 def validateFasta(fasta) {
+    def lines = fasta.text.readLines()
     // extract headers
-    def headers = fasta.findAll { it.startsWith('>') }
+    def headers = lines.findAll { it -> it.startsWith('>') }
     // if headers are not unique, throw an error
     if (headers.size() != headers.unique().size()) {
         throw new Exception("Invalid FASTA file. The headers are not unique.")
     }
     // check headers that are malformed
     headers.each { header ->
-        if (header =~ /[ \t;,]/) {
+        if (header =~ /[ \t;,\/]/) {
             // warn user that the header contains special characters
             log.warn "The header ${header} contains special characters. They have been automatically removed."
         }
+    }
+}
+
+//
+// Print a warning when using Alphafold3
+//
+def alphafold3Warn(log) {
+    log.warn "=============================================================================\n" +
+        "  You are using AlphaFold3 mode.\n" +
+        "  Be aware that the predicted structures can not be used for commercial purposes.\n" +
+        "  More information here: \"https://github.com/google-deepmind/alphafold3/blob/main/README.md#alphafold-3-source-code-and-model-parameters.\"\n" +
+        "==================================================================================="
+}
+
+def randomSeedModeWarn(log, requestedModes) {
+    def supportedModes = ['alphafold2', 'boltz', 'colabfold'] as Set
+    def unsupportedModes = requestedModes.findAll { !supportedModes.contains(it) }.unique().sort()
+
+    if (!unsupportedModes.isEmpty()) {
+        log.warn "=============================================================================\n" +
+            "  The global --random_seed parameter only applies to alphafold2, boltz, and colabfold.\n" +
+            "  It will be ignored for the following selected mode(s): ${unsupportedModes.join(', ')}.\n" +
+            "==================================================================================="
     }
 }

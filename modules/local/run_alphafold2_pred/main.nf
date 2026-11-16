@@ -4,32 +4,36 @@
 process RUN_ALPHAFOLD2_PRED {
     tag   "$meta.id"
     label 'process_medium'
+    label 'process_gpu'
 
-    container "nf-core/proteinfold_alphafold2_split:dev"
+    container "ghcr.io/jscgh/proteinfold_alphafold2_pred:2.1.0dev"
 
     input:
-    tuple val(meta), path(fasta)
-    val   alphafold2_model_preset
+    tuple val(meta), path(fasta), path(features), val(alphafold2_model_preset)
     path ('params/*')
-    path ('bfd/*')
-    path ('small_bfd/*')
-    path ('mgnify/*')
-    path ('pdb70/*')
-    path ('pdb_mmcif/mmcif_files')
-    path ('pdb_mmcif/*')
-    path ('uniref30/*')
-    path ('uniref90/*')
-    path ('pdb_seqres/*')
-    path ('uniprot/*')
-    tuple val(meta2), path(msa)
 
     output:
-    path ("${fasta.baseName}*")
-    tuple val(meta), path ("${meta.id}_alphafold2.pdb")   , emit: top_ranked_pdb
-    tuple val(meta), path ("${fasta.baseName}/ranked*pdb"), emit: pdb
-    tuple val(meta), path ("*_msa.tsv")                   , emit: msa
-    tuple val(meta), path ("*_mqc.tsv")                   , emit: multiqc
-    path "versions.yml"                                   , emit: versions
+    path ("raw/**")                                        , emit: raw
+    tuple val(meta), path ("${meta.id}_alphafold2.pdb")    , emit: top_ranked_pdb
+    tuple val(meta), path ("raw/ranked_0.cif")             , emit: top_ranked_mmcif
+    tuple val(meta), path ("raw/ranked*.pdb")              , emit: pdb
+    tuple val(meta), path ("raw/ranked*.cif")              , emit: mmcif
+    tuple val(meta), path ("${meta.id}_alphafold2_msa.tsv"), emit: msa
+    tuple val(meta), path ("${meta.id}_plddt.tsv")     , emit: plddt
+    //Note: alphafold2_model_preset == "monomer" the pae file won't exist.
+    tuple val(meta), path ("${meta.id}_*_pae.tsv")          , optional: true, emit: paes
+    tuple val(meta), path ("${meta.id}_0_pae.tsv")          , optional: true, emit: pae
+    tuple val(meta), path ("${meta.id}_ptm.tsv")            , optional: true, emit: ptms
+    tuple val(meta), path ("${meta.id}_iptm.tsv")           , optional: true, emit: iptms
+    tuple val(meta), path ("${meta.id}_ipsae.tsv")          , optional: true, emit: ipsaes
+    tuple val(meta), path ("${meta.id}_chainwise_iptm.tsv") , optional: true, emit: chainwise_iptms
+    tuple val(meta), path ("${meta.id}_chainwise_ipsae.tsv"), optional: true, emit: chainwise_ipsaes
+    tuple val("${task.process}"), val('python'), eval("python3 --version 2>/dev/null | sed 's/Python //g' || echo \"unknown\""), emit: versions_python, topic: versions
+    tuple val("${task.process}"), val('alphafold2'), eval("cd /app/alphafold && git rev-parse HEAD 2>/dev/null || echo \"unknown\""), emit: versions_alphafold2, topic: versions
+    tuple val("${task.process}"), val('jax'), eval("python3 -c \"import jax; print(jax.__version__)\" 2>/dev/null || echo \"unknown\""), emit: versions_jax, topic: versions
+    tuple val("${task.process}"), val('jaxlib'), eval("python3 -c \"import jaxlib; print(jaxlib.__version__)\" 2>/dev/null || echo \"unknown\""), emit: versions_jaxlib, topic: versions
+    tuple val("${task.process}"), val('numpy'), eval("python3 -c \"import numpy; print(numpy.__version__)\" 2>/dev/null || echo \"unknown\""), emit: versions_numpy, topic: versions
+    tuple val("${task.process}"), val('biopython'), eval("python3 -c \"import Bio; print(Bio.__version__)\" 2>/dev/null || echo \"unknown\""), emit: versions_biopython, topic: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -41,49 +45,48 @@ process RUN_ALPHAFOLD2_PRED {
     }
     def args = task.ext.args ?: ''
     """
-    if [ -d params/alphafold_params_* ]; then ln -r -s params/alphafold_params_*/* params/; fi
-    python3 /app/alphafold/run_predict.py \
-        --fasta_paths=${fasta} \
-        --model_preset=${alphafold2_model_preset} \
-        --output_dir=\$PWD \
-        --data_dir=\$PWD \
-        --msa_path=${msa} \
-        $args
+    python3 /app/alphafold/run_predict.py \\
+        --fasta_paths=${fasta} \\
+        --model_preset=${alphafold2_model_preset} \\
+        --output_dir=\$PWD \\
+        --data_dir=\$PWD \\
+        --msa_path=${features} $args
 
     cp "${fasta.baseName}"/ranked_0.pdb ./"${meta.id}"_alphafold2.pdb
-    cd "${fasta.baseName}"
-    awk '{print \$6"\\t"\$11}' ranked_0.pdb | uniq > ranked_0_plddt.tsv
-    for i in 1 2 3 4
-        do awk '{print \$6"\\t"\$11}' ranked_\$i.pdb | uniq | awk '{print \$2}' > ranked_"\$i"_plddt.tsv
-    done
-    paste ranked_0_plddt.tsv ranked_1_plddt.tsv ranked_2_plddt.tsv ranked_3_plddt.tsv ranked_4_plddt.tsv > plddt.tsv
-    echo -e Positions"\\t"rank_0"\\t"rank_1"\\t"rank_2"\\t"rank_3"\\t"rank_4 > header.tsv
-    cat header.tsv plddt.tsv > ../"${meta.id}"_plddt_mqc.tsv
 
-    cd ..
-    extract_output.py --name ${meta.id} \\
-        --pkls ${msa}
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        python: \$(python3 --version | sed 's/Python //g')
-    END_VERSIONS
+    extract_metrics.py --name ${meta.id} \\
+        --pkls ${features} ${fasta.baseName}/*.pkl \\
+        --structs ${fasta.baseName}/ranked*.pdb
+
+    touch "${meta.id}_iptm.tsv" "${meta.id}_ipsae.tsv" "${meta.id}_chainwise_iptm.tsv" "${meta.id}_chainwise_ipsae.tsv"
+
+    mv "${meta.id}_msa.tsv" "${meta.id}_alphafold2_msa.tsv"
+
+    # Can't use fasta.baseName to batch outputs in publishDir
+    mv "${fasta.baseName}" raw/
     """
 
     stub:
     """
-    touch ./"${meta.id}"_alphafold2.pdb
-    touch ./"${meta.id}"_mqc.tsv
-    mkdir "${fasta.baseName}"
-    touch "${fasta.baseName}/ranked_0.pdb"
-    touch "${fasta.baseName}/ranked_1.pdb"
-    touch "${fasta.baseName}/ranked_2.pdb"
-    touch "${fasta.baseName}/ranked_3.pdb"
-    touch "${fasta.baseName}/ranked_4.pdb"
-    touch ${meta.id}_msa.tsv
-
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        python: \$(python3 --version | sed 's/Python //g')
-    END_VERSIONS
+    touch "${meta.id}_alphafold2.pdb"
+    touch "${meta.id}_plddt.tsv"
+    touch "${meta.id}_alphafold2_msa.tsv"
+    touch "${meta.id}_0_pae.tsv"
+    touch "${meta.id}_ptm.tsv"
+    touch "${meta.id}_iptm.tsv"
+    touch "${meta.id}_ipsae.tsv"
+    touch "${meta.id}_chainwise_iptm.tsv"
+    touch "${meta.id}_chainwise_ipsae.tsv"
+    mkdir "raw/"
+    touch "raw/ranked_0.pdb"
+    touch "raw/ranked_1.pdb"
+    touch "raw/ranked_2.pdb"
+    touch "raw/ranked_3.pdb"
+    touch "raw/ranked_4.pdb"
+    touch "raw/ranked_0.cif"
+    touch "raw/ranked_1.cif"
+    touch "raw/ranked_2.cif"
+    touch "raw/ranked_3.cif"
+    touch "raw/ranked_4.cif"
     """
 }

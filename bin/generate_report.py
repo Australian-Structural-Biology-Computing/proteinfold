@@ -2,20 +2,71 @@
 
 import os
 import argparse
+import csv
+import json
 from matplotlib import pyplot as plt
+import numpy as np
 from collections import OrderedDict
 import base64
 import plotly.graph_objects as go
 import re
 from Bio import PDB
 
+def is_missing_input(path, placeholder_prefix="NO_FILE"):
+    return (
+        not path
+        or os.path.basename(path).startswith(placeholder_prefix)
+        or not os.path.exists(path)
+        or os.path.getsize(path) == 0
+    )
+
+def generate_pae_plot(pae_path, out_dir, name, save_image=False):
+    #save_image=False because plotly needs a local install of Google Chrome to save images.....
+    """
+    Generate a Plotly heatmap for Predicted Aligned Error (PAE) data.
+
+    Args:
+        pae (2D array): The PAE matrix.
+    Returns:
+        fig: A Plotly figure object of the PAE heatmap in green color scale
+    """
+    pae = np.genfromtxt(pae_path, delimiter="\t")
+    fig = go.Figure()
+
+    # Add heatmap
+    fig.add_trace(
+        go.Heatmap(
+            z=pae,
+            colorscale="Greens_r",
+            zmin=0,
+            zmax=30,
+        )
+    )
+    fig.update_layout(
+        xaxis=dict(title="Scored Residue", minallowed=0, maxallowed=pae.shape[0]-1),
+        yaxis=dict(title="Aligned Residue", minallowed=0, maxallowed=pae.shape[1]-1, autorange="reversed"),
+        width=600,
+        height=600,
+    )
+
+    if save_image:
+            image_path = f"{out_dir}/{name+('_' if name else '')}PAE.png"
+            fig.write_image(image_path, width=800, height=800)
+
+    return fig
 
 def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generate_tsv, pdb):
     msa = []
-    if in_type.lower() != "colabfold" and not msa_path.endswith("NO_FILE"):
+    if not is_missing_input(msa_path):
         with open(msa_path, "r") as in_file:
             for line in in_file:
                 msa.append([int(x) for x in line.strip().split()])
+
+        # Pad jagged MSAs to avoid shape errors in downstream plotting
+        if msa:
+            max_len = max(len(row) for row in msa)
+            if any(len(row) != max_len for row in msa):
+                msa = [row + [21] * (max_len - len(row)) for row in msa]
 
         seqid = []
         for sequence in msa:
@@ -44,8 +95,11 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
                 ]
             )
 
+        xaxis_size = len(final[0])
+        yaxis_size = len(final)
+
         # ##################################################################
-        plt.figure(figsize=(14, 14), dpi=100)
+        plt.figure(figsize=(16, 10), dpi=100)
         # ##################################################################
         plt.title("Sequence coverage", fontsize=30, pad=36)
         plt.imshow(
@@ -56,6 +110,7 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
             vmin=0,
             vmax=1,
             origin="lower",
+            extent=(0, xaxis_size, 0, yaxis_size)
         )
 
         column_counts = [0] * len(msa[0])
@@ -65,8 +120,8 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
                     column_counts[col] += 1
 
         plt.plot(column_counts, color="black")
-        plt.xlim(-0.5, len(msa[0]) - 0.5)
-        plt.ylim(-0.5, len(msa) - 0.5)
+        plt.xlim(0, len(msa[0]))
+        plt.ylim(0, len(msa))
 
         plt.tick_params(axis="both", which="both", labelsize=18)
 
@@ -75,7 +130,7 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
         cbar.ax.tick_params(labelsize=18)
         plt.xlabel("Positions", fontsize=24, labelpad=24)
         plt.ylabel("Sequences", fontsize=24, labelpad=36)
-        plt.savefig(f"{out_dir}/{name+('_' if name else '')}seq_coverage.png")
+        plt.savefig(f"{out_dir}/{name}_{in_type}_seq_coverage.png")
 
         # ##################################################################
 
@@ -109,13 +164,12 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
     fig.update_layout(
         title=dict(text="Predicted LDDT per position", x=0.5, xanchor="center"),
         xaxis=dict(
-            title="Positions", showline=True, linecolor="black", gridcolor="WhiteSmoke"
+            title="Positions", showline=True, linecolor="black", gridcolor="WhiteSmoke", minallowed=0, maxallowed=len(value_plddt)-1
         ),
         yaxis=dict(
             title="Predicted LDDT",
             range=[0, 100],
-            minallowed=0,
-            maxallowed=100,
+            fixedrange=True,
             showline=True,
             linecolor="black",
             gridcolor="WhiteSmoke",
@@ -137,6 +191,17 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
     ) as out_file:
         out_file.write(html_content)
 
+    if not is_missing_input(args.pae, "NO_FILE_PAE"):
+        pae_fig = generate_pae_plot(args.pae, out_dir, name)
+        pae_html_content = pae_fig.to_html(
+            full_html=False,
+            include_plotlyjs="cdn",
+            config={"displayModeBar": True, "displaylogo": False, "scrollZoom": True},
+        )
+        with open(
+            f"{out_dir}/{name+('_' if name else '')}PAE.html", "w"
+        ) as pae_out_file:
+            pae_out_file.write(pae_html_content)
 
 def generate_plots(msa_path, plddt_paths, name, out_dir):
     msa = []
@@ -211,46 +276,61 @@ def generate_plots(msa_path, plddt_paths, name, out_dir):
 
 
 
+def get_structure_parser(struct_file):
+    suffix = os.path.splitext(struct_file)[1].lower()
+    if suffix == ".pdb":
+        return PDB.PDBParser(QUIET=True)
+    if suffix in [".cif", ".mmcif"]:
+        return PDB.MMCIFParser(QUIET=True)
+    raise NotImplementedError("Reporting only supported for .pdb, .cif and .mmcif filetypes")
+
+
+def parse_structure(struct_file, structure_id):
+    parser = get_structure_parser(struct_file)
+    return parser.get_structure(structure_id, struct_file)
+
+
+def get_atom_id(atom):
+    residue = atom.get_parent()
+    chain = residue.get_parent()
+    return (chain.get_id(), residue.get_id(), atom.name)
+
+
+def get_non_hydrogen_atoms_by_id(structure):
+    return {
+        get_atom_id(atom): atom
+        for atom in structure.get_atoms()
+        if atom.element != "H"
+    }
+
+
 def align_structures(structures):
-    parser = PDB.PDBParser(QUIET=True)
-    structures = [
-        parser.get_structure(f"Structure_{i}", pdb) for i, pdb in enumerate(structures)
+    parsed_structures = [
+        parse_structure(structure, f"Structure_{i}")
+        for i, structure in enumerate(structures)
     ]
-    ref_structure = structures[0]
+    ref_structure = parsed_structures[0]
+    atom_maps = [get_non_hydrogen_atoms_by_id(structure) for structure in parsed_structures]
+    common_atom_ids = set(atom_maps[0])
 
-    common_atoms = set(
-        f"{atom.get_parent().get_id()[1]}-{atom.name}"
-        for atom in ref_structure.get_atoms()
-    )
-    for i, structure in enumerate(structures[1:], start=1):
-        common_atoms = common_atoms.intersection(
-            set(
-                f"{atom.get_parent().get_id()[1]}-{atom.name}"
-                for atom in structure.get_atoms()
-            )
-        )
+    for atom_map in atom_maps[1:]:
+        common_atom_ids.intersection_update(atom_map)
 
-    ref_atoms = [
-        atom
-        for atom in ref_structure.get_atoms()
-        if f"{atom.get_parent().get_id()[1]}-{atom.name}" in common_atoms
-    ]
-    # print(ref_atoms)
+    if not common_atom_ids:
+        raise ValueError("No common non-hydrogen atoms found between structures.")
+
+    ref_atom_ids = [atom_id for atom_id in atom_maps[0] if atom_id in common_atom_ids]
+    ref_atoms = [atom_maps[0][atom_id] for atom_id in ref_atom_ids]
     super_imposer = PDB.Superimposer()
-    aligned_structures = [structures[0]]  # Include the reference structure in the list
+    aligned_structures = [ref_structure]
 
-    for i, structure in enumerate(structures[1:], start=1):
-        target_atoms = [
-            atom
-            for atom in structure.get_atoms()
-            if f"{atom.get_parent().get_id()[1]}-{atom.name}" in common_atoms
-        ]
-
+    for i, structure in enumerate(parsed_structures[1:], start=1):
+        target_atoms = [atom_maps[i][atom_id] for atom_id in ref_atom_ids]
         super_imposer.set_atoms(ref_atoms, target_atoms)
         super_imposer.apply(structure.get_atoms())
 
-        aligned_structure = f"aligned_structure_{i}.pdb"
-        io = PDB.PDBIO()
+        aligned_structure = f"aligned_structure_{i}.cif"
+        io = PDB.MMCIFIO()
         io.set_structure(structure)
         io.save(aligned_structure)
         aligned_structures.append(aligned_structure)
@@ -258,9 +338,12 @@ def align_structures(structures):
     return aligned_structures
 
 
+def natural_path_sort_key(path):
+    return [int(part) if part.isdigit() else part.lower() for part in re.split(r"(\d+)", str(path))]
+
+
 def pdb_to_lddt(struct_files, generate_tsv):
-    struct_files_sorted = struct_files
-    struct_files_sorted.sort()
+    struct_files_sorted = sorted(struct_files, key=natural_path_sort_key)
 
     output_lddt = []
     averages = []
@@ -268,15 +351,7 @@ def pdb_to_lddt(struct_files, generate_tsv):
     for struct_file in struct_files_sorted:
         plddt_values = []
 
-        if struct_file.endswith('.pdb'):
-            parser = PDB.PDBParser(QUIET=True)
-            suffix = ".pdb"
-        elif struct_file.endswith('.cif'):
-            parser = PDB.MMCIFParser(QUIET=True)
-            suffix = ".cif"
-        else:
-            raise NotImplementedError("Reporting only supported for .pdb and .cif filetypes")
-        structure = parser.get_structure("", struct_file)
+        structure = parse_structure(struct_file, "")
 
         for residue in structure.get_residues():
             res_pLDDT_tot = 0
@@ -286,8 +361,12 @@ def pdb_to_lddt(struct_files, generate_tsv):
                 res_atom_count +=1
                 res_pLDDT_tot += atom.get_bfactor()
 
-            plddt_values.append(res_pLDDT_tot/res_atom_count) #residue-level mean for ESMfold atom-level pLDDT
+            # Residue-level mean for ESMfold atom-level pLDDT
+            res_pLDDT_ave = res_pLDDT_tot/res_atom_count
 
+            if res_pLDDT_ave < 1.0:
+                res_pLDDT_ave *= 100
+            plddt_values.append(res_pLDDT_ave)
 
         # Calculate the average PLDDT value for the current file
         if plddt_values:
@@ -297,7 +376,7 @@ def pdb_to_lddt(struct_files, generate_tsv):
             averages.append(0.0)
 
         if generate_tsv == "y":
-            output_file = f"{struct_file.replace(suffix, '')}_plddt.tsv"
+            output_file = f"{os.path.splitext(struct_file)[0]}_plddt.tsv"
             with open(output_file, "w") as outfile:
                 outfile.write(" ".join(map(str, plddt_values)) + "\n")
             output_lddt.append(output_file)
@@ -308,15 +387,114 @@ def pdb_to_lddt(struct_files, generate_tsv):
     return output_lddt, averages
 
 
+def read_ranked_score_tsv(tsv_path, model_count):
+    scores = ["n/a"] * model_count
+    if is_missing_input(tsv_path):
+        return scores
+
+    rows = []
+    with open(tsv_path, "r") as handle:
+        reader = csv.reader(handle, delimiter="\t")
+        for row in reader:
+            if len(row) < 2:
+                continue
+            try:
+                rank = int(row[0])
+                score = float(row[1])
+            except ValueError:
+                continue
+            rows.append((rank, f"{score:.3f}"))
+
+    parsed_ranks = [rank for rank, _ in rows]
+    rank_offset = 1 if parsed_ranks and 0 not in parsed_ranks and 1 in parsed_ranks else 0
+    for rank, score in sorted(rows, key=lambda item: item[0]):
+        rank -= rank_offset
+        if 0 <= rank < model_count:
+            scores[rank] = score
+
+    return scores
+
+
+def read_pair_score_tsv(tsv_path, model_count):
+    scores = [{} for _ in range(model_count)]
+    if is_missing_input(tsv_path):
+        return scores
+
+    with open(tsv_path, "r") as handle:
+        reader = list(csv.reader(handle, delimiter="\t"))
+
+    if not reader or len(reader[0]) < 2:
+        return scores
+
+    parsed_headers = []
+    rank_headers = []
+    for header in reader[0][1:]:
+        try:
+            parsed_rank = int(header)
+            parsed_headers.append(parsed_rank)
+            rank_headers.append(parsed_rank)
+        except ValueError:
+            rank_headers.append(None)
+
+    rank_offset = 1 if parsed_headers and 0 not in parsed_headers and 1 in parsed_headers else 0
+
+    for row in reader[1:]:
+        if len(row) < 2:
+            continue
+        pair_label = row[0]
+        for col_idx, value in enumerate(row[1:]):
+            rank = rank_headers[col_idx] if col_idx < len(rank_headers) else None
+            if rank is None:
+                continue
+            rank -= rank_offset
+            if not (0 <= rank < model_count):
+                continue
+            try:
+                scores[rank][pair_label] = f"{float(value):.4f}"
+            except ValueError:
+                continue
+
+    return scores
+
+
+def build_pair_score_matrices(score_maps):
+    matrices = []
+
+    for score_map in score_maps:
+        if not score_map:
+            matrices.append({"chains": [], "rows": []})
+            continue
+
+        chain_ids = sorted(
+            {
+                chain_id
+                for pair_label in score_map.keys()
+                for chain_id in pair_label.split(":")
+                if ":" in pair_label
+            }
+        )
+        rows = []
+        for row_chain in chain_ids:
+            row = []
+            for col_chain in chain_ids:
+                row.append(score_map.get(f"{row_chain}:{col_chain}", ""))
+            rows.append(row)
+
+        matrices.append({"chains": chain_ids, "rows": rows})
+
+    return matrices
+
+
 print("Starting...")
 
 version = "1.0.0"
 model_name = {
     "esmfold": "ESMFold",
     "alphafold2": "AlphaFold2",
+    "alphafold3": "Alphafold3",
     "colabfold": "ColabFold",
-    "rosettafold_all_atom": "Rosettafold_All_Atom",
-    "helixfold3": "HelixFold3"
+    "colabfold2": "ColabFold2",
+    "boltz": "Boltz"
 }
 
 parser = argparse.ArgumentParser()
@@ -326,6 +504,11 @@ parser.add_argument(
 )
 parser.add_argument("--msa", dest="msa", default="NO_FILE")
 parser.add_argument("--pdb", dest="pdb", required=True, nargs="+")
+parser.add_argument("--pae", dest="pae", default="NO_FILE")
+parser.add_argument("--iptm", dest="iptm", default="NO_FILE")
+parser.add_argument("--ipsae", dest="ipsae", default="NO_FILE")
+parser.add_argument("--chainwise_iptm", dest="chainwise_iptm", default="NO_FILE")
+parser.add_argument("--chainwise_ipsae", dest="chainwise_ipsae", default="NO_FILE")
 parser.add_argument("--name", dest="name")
 parser.add_argument("--output_dir", dest="output_dir")
 parser.add_argument("--html_template", dest="html_template")
@@ -340,58 +523,74 @@ lddt_data, lddt_averages = pdb_to_lddt(args.pdb, args.generate_tsv)
 generate_output_images(
     args.msa, lddt_data, args.name, args.output_dir, args.in_type, args.generate_tsv, args.pdb
 )
-# generate_plots(args.msa, args.plddt, args.name, args.output_dir)
 
 print("generating html report...")
-structures = args.pdb
-structures.sort()
+structures = sorted(args.pdb, key=natural_path_sort_key)
+iptm_scores = read_ranked_score_tsv(args.iptm, len(structures))
+ipsae_scores = read_ranked_score_tsv(args.ipsae, len(structures))
+chainwise_iptm_scores = read_pair_score_tsv(args.chainwise_iptm, len(structures))
+chainwise_ipsae_scores = read_pair_score_tsv(args.chainwise_ipsae, len(structures))
+chainwise_iptm_matrices = build_pair_score_matrices(chainwise_iptm_scores)
+chainwise_ipsae_matrices = build_pair_score_matrices(chainwise_ipsae_scores)
 aligned_structures = align_structures(structures)
 
-io = PDB.PDBIO()
-ref_structure_path = "aligned_structure_0.pdb"
+io = PDB.MMCIFIO()
+ref_structure_path = "aligned_structure_0.cif"
 io.set_structure(aligned_structures[0])
 io.save(ref_structure_path)
 aligned_structures[0] = ref_structure_path
 
 proteinfold_template = open(args.html_template, "r").read()
-proteinfold_template = proteinfold_template.replace("*sample_name*", args.name)
-proteinfold_template = proteinfold_template.replace(
-    "*prog_name*", model_name[args.in_type.lower()]
-)
 
-args_pdb_array_js = ",\n".join([f'"{model}"' for model in structures])
-proteinfold_template = re.sub(
-    r"const MODELS = \[.*?\];",  # Match the existing MODELS array in HTML template
-    f"const MODELS = [\n  {args_pdb_array_js}\n];",  # Replace with the new array
-    proteinfold_template,
-    flags=re.DOTALL,
-)
+model_names = [
+    f"{os.path.splitext(os.path.basename(model))[0]}.cif" for model in structures
+]
+models_data = [open(s, "r").read() for s in aligned_structures]
 
-averages_js_array = f"const LDDT_AVERAGES = {lddt_averages};"
-proteinfold_template = proteinfold_template.replace(
-    "const LDDT_AVERAGES = [];", averages_js_array
-)
 
-i = 0
-for structure in aligned_structures:
-    proteinfold_template = proteinfold_template.replace(
-        f"*_data_ranked_{i}.pdb*", open(structure, "r").read().replace("\n", "\\n")
+def script_safe_json_dumps(obj):
+    """json.dumps with <, > and & escaped, so a payload containing "</script>"
+    cannot terminate the enclosing <script type="application/json"> element early."""
+    return (
+        json.dumps(obj)
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
     )
-    i += 1
 
-if not args.msa.endswith("NO_FILE"):
-    image_path = (
-        f"{args.output_dir}/{args.msa}"
-        if args.in_type.lower() == "colabfold"
-        else f"{args.output_dir}/{args.name + ('_' if args.name else '')}seq_coverage.png"
-    )
+
+report_config = {
+    "reportType": "standard",
+    "sampleName": args.name,
+    "programName": model_name[args.in_type.lower()],
+    "structFormat": "cif",
+    "models": model_names,
+    "models_data": models_data,
+    "lddt_averages": lddt_averages,
+    "iptm_scores": iptm_scores,
+    "ipsae_scores": ipsae_scores,
+    "chainwise_iptm": chainwise_iptm_matrices,
+    "chainwise_ipsae": chainwise_ipsae_matrices,
+}
+config_blob = (
+    '<script type="application/json" id="report-config">'
+    f"{script_safe_json_dumps(report_config)}</script>"
+)
+proteinfold_template = proteinfold_template.replace(
+    "</head>", f"{config_blob}\n  </head>", 1
+)
+
+if not is_missing_input(args.msa):
+    image_path = f"{args.output_dir}/{args.name}_{args.in_type}_seq_coverage.png"
     with open(image_path, "rb") as in_file:
+        data_uri = f"data:image/png;base64,{base64.b64encode(in_file.read()).decode('utf-8')}"
         proteinfold_template = proteinfold_template.replace(
-            "seq_coverage.png",
-            f"data:image/png;base64,{base64.b64encode(in_file.read()).decode('utf-8')}",
+            '<div id="seq_cov_placeholder"></div>',
+            f'<img src="{data_uri}" alt="Sequence coverage (MSA)" '
+            'class="w-full h-auto rounded" />',
         )
 else:
-    pattern = r'<div id="seq_coverage_container".*?>.*?(<!--.*?-->.*?)*?</div>\s*</div>'
+    pattern = r'<div id="seq_coverage_container".*?>.*?(<!--.*?-->.*?)*?</div>\s*</div>\s*</div>\s*</div>'
     proteinfold_template = re.sub(pattern, "", proteinfold_template, flags=re.DOTALL)
 
 with open(
@@ -402,6 +601,19 @@ with open(
     proteinfold_template = proteinfold_template.replace(
         '<div id="lddt_placeholder"></div>', lddt_html
     )
+
+if not is_missing_input(args.pae, "NO_FILE_PAE"):
+    with open(
+        f"{args.output_dir}/{args.name + ('_' if args.name else '')}PAE.html",
+        "r",
+    ) as pae_in_file:
+        pae_html = pae_in_file.read()
+        proteinfold_template = proteinfold_template.replace(
+            '<div id="pae_placeholder"></div>', pae_html
+        )
+else:
+    pattern = r'<div id="pae_container".*?>.*?(<!--.*?-->.*?)*?</div>\s*</div>'
+    proteinfold_template = re.sub(pattern, "", proteinfold_template, flags=re.DOTALL)
 
 with open(
     f"{args.output_dir}/{args.name}_{args.in_type.lower()}_report.html", "w"

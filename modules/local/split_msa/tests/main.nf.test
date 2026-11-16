@@ -1,0 +1,62 @@
+nextflow_process {
+
+    name "Test Process SPLIT_MSA"
+    script "../main.nf"
+    process "SPLIT_MSA"
+
+    tag "modules"
+    tag "ci_img_misc"
+    tag "modules_local"
+    tag "split_msa"
+    profile "test_nostub"
+
+    test("splits msa from af3 json using yaml template") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: 'mixed_sample' ],
+                    file(params.pipelines_testdata_base_path + 'testdata/sequences/boltz/mixed.json', checkIfExists: true),
+                    file(params.pipelines_testdata_base_path + 'testdata/sequences/boltz/mixed.yaml', checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out.boltz_data).match() },
+                { assert process.out.versions_python.size() == 1 },
+                { assert process.out.versions_python[0][0..1] == ['SPLIT_MSA', 'python'] },
+                { assert process.out.versions_python[0][2] ==~ /3\.14\.\d+/ }
+            )
+        }
+    }
+
+    test("splits msa from af3 json with renamed chains using yaml template") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: 'renamed_sample' ],
+                    file(params.pipelines_testdata_base_path + 'testdata/sequences/boltz/renamed.json', checkIfExists: true),
+                    file(params.pipelines_testdata_base_path + 'testdata/sequences/boltz/original.yaml', checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out.boltz_data).match() },
+                { assert process.out.versions_python.size() == 1 },
+                { assert process.out.versions_python[0][0..1] == ['SPLIT_MSA', 'python'] },
+                { assert process.out.versions_python[0][2] ==~ /3\.14\.\d+/ }
+            )
+        }
+    }
+}

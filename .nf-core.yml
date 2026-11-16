@@ -1,10 +1,11 @@
 lint:
-  actions_ci: false
+  actions_schema_validation: false
   files_unchanged:
+    - .github/workflows/branch.yml
     - .github/workflows/linting.yml
-    - .github/CONTRIBUTING.md
+    - .gitignore
   multiqc_config: false
-nf_core_version: 3.2.1
+nf_core_version: 4.1.0
 repository_type: pipeline
 template:
   author: Athanasios Baltzis, Jose Espinosa-Carrasco, Harshil Patel
@@ -17,4 +18,4 @@ template:
   skip_features:
     - fastqc
     - igenomes
-  version: 1.2.0dev
+  version: 2.1.0dev

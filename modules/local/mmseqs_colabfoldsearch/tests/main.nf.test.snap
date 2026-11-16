@@ -1,0 +1,73 @@
+{
+    "runs mmseqs colabfoldsearch": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "mixed"
+                        },
+                        "ubq.a3m:md5,48af8d06679fa8d083df615c1bbdafb4"
+                    ]
+                ],
+                "1": [
+                    [
+                        {
+                            "id": "mixed"
+                        },
+                        "ubq.json:md5,1d038ed924926e239647485dc3219dae"
+                    ]
+                ],
+                "2": [
+                    [
+                        "MMSEQS_COLABFOLDSEARCH",
+                        "colabfold_search",
+                        "1.6.3"
+                    ]
+                ],
+                "3": [
+                    [
+                        "MMSEQS_COLABFOLDSEARCH",
+                        "mmseqs",
+                        "48f2a22d5f68f595afdfb5e601ca11721cf17449"
+                    ]
+                ],
+                "a3m": [
+                    [
+                        {
+                            "id": "mixed"
+                        },
+                        "ubq.a3m:md5,48af8d06679fa8d083df615c1bbdafb4"
+                    ]
+                ],
+                "json": [
+                    [
+                        {
+                            "id": "mixed"
+                        },
+                        "ubq.json:md5,1d038ed924926e239647485dc3219dae"
+                    ]
+                ],
+                "versions_colabfold_search": [
+                    [
+                        "MMSEQS_COLABFOLDSEARCH",
+                        "colabfold_search",
+                        "1.6.3"
+                    ]
+                ],
+                "versions_mmseqs": [
+                    [
+                        "MMSEQS_COLABFOLDSEARCH",
+                        "mmseqs",
+                        "48f2a22d5f68f595afdfb5e601ca11721cf17449"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-10-26T16:04:27.149862699",
+        "meta": {
+            "nf-test": "0.9.4",
+            "nextflow": "26.04.6"
+        }
+    }
+}

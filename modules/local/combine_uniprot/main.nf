@@ -12,32 +12,21 @@ process COMBINE_UNIPROT {
 
     output:
     path ('uniprot.fasta'), emit: ch_db
-    path "versions.yml"   , emit: versions
+    tuple val("${task.process}"), val('sed'), eval('sed --version 2>&1 | sed -n "s/^.*GNU sed) //p"'), emit: versions_sed, topic: versions
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
-    def args = task.ext.args ?: ''
-
     """
     set -e
 
     cat ${uniprot_sprot} >> ${uniprot_trembl}
     mv ${uniprot_trembl} uniprot.fasta
-
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        sed: \$(echo \$(sed --version 2>&1) | sed 's/^.*GNU sed) //; s/ .*\$//')
-    END_VERSIONS
     """
 
     stub:
     """
     touch uniprot.fasta
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        awk: \$(gawk --version| head -1 | sed 's/GNU Awk //; s/, API:.*//')
-    END_VERSIONS
     """
 }

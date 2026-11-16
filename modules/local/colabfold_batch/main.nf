@@ -1,23 +1,31 @@
 process COLABFOLD_BATCH {
     tag "$meta.id"
     label 'process_medium'
+    label 'process_gpu'
 
-    container "nf-core/proteinfold_colabfold:dev"
+    container "ghcr.io/jscgh/proteinfold_colabfold_batch:2.1.0dev"
 
     input:
-    tuple val(meta), path(fasta)
-    val   colabfold_model_preset
-    path  ('params/*')
-    path  ('colabfold_db/*')
-    path  ('uniref30/*')
+    tuple val(meta), path(input), path('params/*')
     val   numRec
 
     output:
-    tuple val(meta), path ("${meta.id}_colabfold.pdb"), emit: top_ranked_pdb
-    tuple val(meta), path ("*_relaxed_rank_*.pdb")    , emit: pdb
-    tuple val(meta), path ("*_coverage.png")          , emit: msa
-    tuple val(meta), path ("*_mqc.png")               , emit: multiqc
-    path "versions.yml"                               , emit: versions
+    path ("raw/**")                                         , emit: raw
+    tuple val(meta), path ("${meta.id}_colabfold.pdb")      , emit: top_ranked_pdb
+    tuple val(meta), path ("raw/*relaxed_rank_*.pdb")       , emit: pdb
+    tuple val(meta), path ("${meta.id}_colabfold_msa.tsv")  , emit: msa
+    tuple val(meta), path ("${meta.id}_plddt.tsv")            , emit: plddt
+    tuple val(meta), path ("${meta.id}_*_pae.tsv")          , optional: true, emit: paes
+    tuple val(meta), path ("${meta.id}_1_pae.tsv")          , optional: true, emit: pae
+    tuple val(meta), path ("${meta.id}_ptm.tsv")            , optional: true, emit: ptms
+    tuple val(meta), path ("${meta.id}_iptm.tsv")           , optional: true, emit: iptms
+    tuple val(meta), path ("${meta.id}_ipsae.tsv")          , optional: true, emit: ipsaes
+    tuple val(meta), path ("${meta.id}_chainwise_iptm.tsv") , optional: true, emit: chainwise_iptms
+    tuple val(meta), path ("${meta.id}_chainwise_ipsae.tsv"), optional: true, emit: chainwise_ipsaes
+    tuple val("${task.process}"), val('alphafold_colabfold'), eval("pip list | grep \"^alphafold-colabfold \" | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_alphafold_colabfold, topic: versions
+    tuple val("${task.process}"), val('colabfold_batch'), eval("pip list | grep \"^colabfold \" | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold_batch, topic: versions
+    tuple val("${task.process}"), val('colabfold_binaries'), eval("pip list | grep \"^colabfold-binaries \" | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold_binaries, topic: versions
+    tuple val("${task.process}"), val('colabfold_legacy_kernels'), eval("pip list | grep \"^colabfold-legacy-kernels \" | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold_legacy_kernels, topic: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -28,41 +36,76 @@ process COLABFOLD_BATCH {
         error("Local COLABFOLD_BATCH module does not support Conda. Please use Docker / Singularity / Podman instead.")
     }
     def args = task.ext.args ?: ''
-    def VERSION = '1.5.2' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
+    def input_file = input instanceof List ? input[0] : input
+    def input_is_a3m = input_file.name.toString().toLowerCase().endsWith('.a3m')
+    def colabfold_input = input_is_a3m ? "${meta.id}.a3m" : input_file
 
     """
-    ln -r -s params/alphafold_params_*/* params/
+    if compgen -G "params/alphafold_params_*" >/dev/null; then
+        ln -s \$(realpath params/alphafold_params_*/*) params/
+    fi
+
+    touch params/download_finished.txt
+    touch params/download_complexes_multimer_v3_finished.txt
+    touch params/download_complexes_multimer_v2_finished.txt
+    touch params/download_complexes_multimer_v1_finished.txt
+
+    if [ "${input_is_a3m}" = "true" ] && [ "${input_file}" != "${colabfold_input}" ]; then
+        cp ${input_file} ${colabfold_input}
+    fi
+
     colabfold_batch \\
         $args \\
         --num-recycle ${numRec} \\
         --data \$PWD \\
-        --model-type ${colabfold_model_preset} \\
-        ${fasta} \\
-        \$PWD
-    for i in `find *_relaxed_rank_001*.pdb`; do cp \$i `echo \$i | sed "s|_relaxed_rank_|\t|g" | cut -f1`"_colabfold.pdb"; done
-    for i in `find *.png -maxdepth 0`; do cp \$i \${i%'.png'}_mqc.png; done
-    cp *_relaxed_rank_001*.pdb ${meta.id}_colabfold.pdb
+        ${colabfold_input} \\
+        raw/
 
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        colabfold_batch: $VERSION
-    END_VERSIONS
+    if [ ! -e `find raw/*_relaxed_rank_001_*.pdb` ]; then
+        prefix=relaxed
+        cp raw/*_relaxed_rank_001*.pdb ${meta.id}_colabfold.pdb
+    else
+        prefix=unrelaxed
+        cp raw/*_unrelaxed_rank_001*.pdb ${meta.id}_colabfold.pdb
+    fi
+
+    extract_metrics.py --name ${meta.id} \\
+        --colabfold_metrics_files raw/*scores_rank*.json \\
+        --structs raw/*_\${prefix}_rank*.pdb \\
+        --paired_a3m raw/${meta.id}.a3m
+
+    touch "${meta.id}_iptm.tsv" "${meta.id}_ipsae.tsv" "${meta.id}_chainwise_iptm.tsv" "${meta.id}_chainwise_ipsae.tsv"
+
+    cp raw/*_coverage.png ${meta.id}_seq_coverage.png
+    mv "${meta.id}_msa.tsv" "${meta.id}_colabfold_msa.tsv"
     """
 
     stub:
-    def VERSION = '1.5.2' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     """
+    mkdir raw
     touch ./"${meta.id}"_colabfold.pdb
-    touch ./"${meta.id}"_mqc.png
-    touch ./${meta.id}_relaxed_rank_01.pdb
-    touch ./${meta.id}_relaxed_rank_02.pdb
-    touch ./${meta.id}_relaxed_rank_03.pdb
-    touch ./${meta.id}_coverage.png
-    touch ./${meta.id}_scores_rank.json
-
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        colabfold_batch: $VERSION
-    END_VERSIONS
+    touch ./raw/${meta.id}_relaxed_rank_001_model_1_seed_000.pdb
+    touch ./raw/${meta.id}_relaxed_rank_002_model_2_seed_000.pdb
+    touch ./raw/${meta.id}_relaxed_rank_003_model_3_seed_000.pdb
+    touch ./raw/${meta.id}_relaxed_rank_004_model_4_seed_000.pdb
+    touch ./raw/${meta.id}_relaxed_rank_005_model_5_seed_000.pdb
+    touch ./${meta.id}_seq_coverage.png
+    touch ./raw/${meta.id}_scores_rank_001_model_1_seed_000.json
+    touch ./raw/${meta.id}_scores_rank_002_model_2_seed_000.json
+    touch ./raw/${meta.id}_scores_rank_003_model_3_seed_000.json
+    touch ./raw/${meta.id}_scores_rank_004_model_4_seed_000.json
+    touch ./raw/${meta.id}_scores_rank_005_model_5_seed_000.json
+    touch ./${meta.id}_1_pae.tsv
+    touch ./${meta.id}_2_pae.tsv
+    touch ./${meta.id}_3_pae.tsv
+    touch ./${meta.id}_4_pae.tsv
+    touch ./${meta.id}_5_pae.tsv
+    touch ./${meta.id}_ptm.tsv
+    touch ./${meta.id}_iptm.tsv
+    touch ./${meta.id}_ipsae.tsv
+    touch ./${meta.id}_chainwise_iptm.tsv
+    touch ./${meta.id}_chainwise_ipsae.tsv
+    touch ./${meta.id}_plddt.tsv
+    touch ./${meta.id}_colabfold_msa.tsv
     """
 }
