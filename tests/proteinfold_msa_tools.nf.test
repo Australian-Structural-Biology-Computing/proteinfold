@@ -50,6 +50,13 @@ nextflow_pipeline {
                 // The MSA module output must reach the colabfold2 inference backend.
                 assert names.any { it.contains('COLABFOLD2_INFERENCE') || it.contains('ALPHAFOLD3') }
                 assert file("${params.outdir}/multiqc/multiqc_report.html").exists()
+                def stable_name = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
+                def stable_path = getAllFilesFromDir(params.outdir, ignoreFile: 'tests/.nftignore')
+                assert snapshot(
+                    workflow.trace.succeeded().size(),
+                    stable_name,
+                    stable_path
+                ).match()
             }
         }
     }
@@ -78,6 +85,13 @@ nextflow_pipeline {
                 "expected the original AlphaFold3 JSON to be repopulated with the generated MSAs"
             assert names.any { it.contains('COLABFOLD2_INFERENCE') || it.contains('ALPHAFOLD3') }
             assert file("${params.outdir}/multiqc/multiqc_report.html").exists()
+            def stable_name = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
+            def stable_path = getAllFilesFromDir(params.outdir, ignoreFile: 'tests/.nftignore')
+            assert snapshot(
+                workflow.trace.succeeded().size(),
+                stable_name,
+                stable_path
+            ).match()
         }
     }
 
@@ -100,6 +114,13 @@ nextflow_pipeline {
             assert !names.any { it.contains('RUN_ALPHAFOLD3_DATAPIPELINE') }
             assert names.any { it.contains('COLABFOLD2_INFERENCE') || it.contains('ALPHAFOLD3') }
             assert file("${params.outdir}/multiqc/multiqc_report.html").exists()
+            def stable_name = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
+            def stable_path = getAllFilesFromDir(params.outdir, ignoreFile: 'tests/.nftignore')
+            assert snapshot(
+                workflow.trace.succeeded().size(),
+                stable_name,
+                stable_path
+            ).match()
         }
     }
 }
