@@ -293,10 +293,6 @@ def modelcifInput(structs, msa, plddt, pae, ptm, iptm, versions, softwareDetails
         }
 }
 
-def modelcifDummyMetric(structs, dummyFile) {
-    structs.map { meta, _files -> [meta.clone(), dummyFile] }
-}
-
 def countMolecularEntitiesInFasta(fasta) {
     return fasta.text
         .readLines()

@@ -23,6 +23,7 @@ include { PREPARE_COLABFOLD2_DBS           } from './subworkflows/local/prepare_
 include { PROTEINFOLD                      } from './workflows/proteinfold'
 
 include { PIPELINE_INITIALISATION          } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
+include { modelcifInput                    } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { PIPELINE_COMPLETION              } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { POST_PROCESSING                  } from './subworkflows/local/post_processing'
 
@@ -46,7 +47,6 @@ workflow NFCORE_PROTEINFOLD {
     ch_multiqc           = channel.empty()
     ch_report_input      = channel.empty()
     ch_top_ranked_model  = channel.empty()
-    ch_modelcif          = channel.empty()
     modelcif_software_details = file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
     def ch_software_versions = channel.topic('versions')
         .unique()
@@ -323,19 +323,33 @@ workflow NFCORE_PROTEINFOLD {
     ch_multiqc_methods_description = params.multiqc_methods_description ? file(params.multiqc_methods_description, checkIfExists: true) : file("$projectDir/assets/methods_description_template.yml", checkIfExists: true)
     ch_report_template     = channel.value(file("$projectDir/assets/report_template.html", checkIfExists: true))
 
-    // Inject msa_tool into meta based on selected MSA module for report provenance.
+    // Inject msa_tool into meta based on selected MSA module for provenance
+    // (report and ModelCIF assembly).
     def msaToolMap = [
         colabfold_search: 'mmseqs2',
         alphafold2_msa:   'jackhmmer',
         alphafold3_msa:   'jackhmmer',
         msa_server:       'mmseqs2-server',
     ]
+    def selected_msa_tool = msaToolMap.get(msa_tool, 'None')
     ch_report_input = ch_report_input.map { tupleData ->
         def meta = tupleData[0]
         def m = meta.clone()
-        m.msa_tool = msaToolMap.get(msa_tool, 'None')
+        m.msa_tool = selected_msa_tool
         [m] + tupleData.drop(1)
     }
+
+    ch_modelcif = modelcifInput(
+        PROTEINFOLD.out.pdb,
+        PROTEINFOLD.out.msa,
+        PROTEINFOLD.out.plddt,
+        PROTEINFOLD.out.pae,
+        PROTEINFOLD.out.ptm,
+        PROTEINFOLD.out.iptm,
+        ch_software_versions,
+        modelcif_software_details,
+        selected_msa_tool
+    )
 
     POST_PROCESSING(
         params.skip_visualisation,
