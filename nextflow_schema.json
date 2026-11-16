@@ -170,13 +170,6 @@
                     "description": "If true uses the full version of the BFD database otherwise, otherwise it uses its reduced version, small bfd",
                     "fa_icon": "fas fa-battery-full"
                 },
-                "alphafold2_model_preset": {
-                    "type": "string",
-                    "default": "monomer_ptm",
-                    "description": "Model preset used only for single-entry FASTA inputs in 'AlphaFold2' mode",
-                    "enum": ["monomer", "monomer_casp14", "monomer_ptm"],
-                    "fa_icon": "fas fa-stream"
-                },
                 "alphafold2_params_prefix": {
                     "type": "string",
                     "default": "alphafold_params_2022-12-06",
@@ -220,29 +213,12 @@
                     "description": "Number of inputs processed together during MSA search; -1 runs all inputs in one batch",
                     "errorMessage": "MSA batch size must be -1 or a positive integer"
                 },
-                "colabfold_use_amber": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Use Amber minimization to refine the predicted structures",
-                    "fa_icon": "fas fa-compress-alt"
-                },
-                "colabfold_use_gpu_relax": {
-                    "type": "boolean",
-                    "description": "Use GPU for Amber relaxation in ColabFold",
-                    "fa_icon": "fas fa-microchip"
-                },
                 "colabfold_db_load_mode": {
                     "type": "integer",
                     "description": "Specify the way that MMSeqs2 will load the required databases in memory",
                     "fa_icon": "fas fa-download",
                     "enum": [0, 1, 2, 3],
                     "errorMessage": "DB load mode must be 0, 1, 2, or 3"
-                },
-                "colabfold_use_templates": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "Use PDB templates",
-                    "fa_icon": "fas fa-paste"
                 },
                 "colabfold_create_index": {
                     "type": "boolean",
@@ -737,12 +713,6 @@
                     "default": "https://opendata.mmseqs.org/colabfold/uniref30_2302.db.tar.gz",
                     "description": "Link to the UniRef30 database",
                     "fa_icon": "fas fa-link"
-                },
-                "colabfold_alphafold2_params_link": {
-                    "type": "string",
-                    "description": "Link to the Alphafold2 monomer parameters for ColabFold",
-                    "fa_icon": "fas fa-link",
-                    "default": "https://storage.googleapis.com/alphafold/alphafold_params_2022-12-06.tar"
                 }
             }
         },
@@ -771,12 +741,6 @@
                     "description": "Link to the UniRef30 database",
                     "fa_icon": "fas fa-folder-open",
                     "default": "null/colabfold_uniref30/*"
-                },
-                "colabfold_alphafold2_params_path": {
-                    "type": "string",
-                    "description": "Path to the AlphaFold2 parameters for Colabfold",
-                    "fa_icon": "fas fa-folder-open",
-                    "default": "null/params/alphafold_params_2022-12-06"
                 }
             }
         },

@@ -122,7 +122,7 @@ For more details about the output files and reports, please refer to the
 
 ## Adding new modes to the pipeline
 
-For details on how to contribute new modes to the pipeline please refer to the [Howto contribute new modes](https://nf-co.re/proteinfold/usage/HOWTO_CONTRIBUTE_NEW_MODES).
+New prediction backends are added as ColabFold2 modes: register the backend in `main.nf` (`colabfold2_bare_models` / `COLABFOLD2_BACKENDS`), alias the `COLABFOLD2_INFERENCE` module in `workflows/proteinfold.nf`, and extend `colabfold2_mode_tokens` in `main.nf` and `nextflow.config`.
 
 ## Credits
 
