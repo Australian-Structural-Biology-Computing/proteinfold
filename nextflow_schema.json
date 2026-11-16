@@ -33,12 +33,12 @@
                 },
                 "mode": {
                     "type": "string",
-                    "default": "colabfold2-alphafold3",
-                    "description": "Specifies the prediction backend mode. ColabFold2 backends are named after the tool they run; alphafold3 and boltz2 carry a colabfold2- prefix because those names are taken by the AlphaFold3 mode token family. alphafold2 runs the AlphaFold2 models through the ColabFold2 module; colabfold_batch picks alphafold2_ptm for monomers and alphafold2_multimer_v3 for complexes. Use --esmfold2_model to select the ESMFold2 variant.",
+                    "default": "alphafold3",
+                    "description": "Specifies the prediction backend mode. ColabFold2 backends are named after the tool they run. alphafold2 runs the AlphaFold2 models through the ColabFold2 module; colabfold_batch picks alphafold2_ptm for monomers and alphafold2_multimer_v3 for complexes. Use --esmfold2_model to select the ESMFold2 variant.",
                     "fa_icon": "fas fa-cogs",
                     "enum": [
-                        "colabfold2-alphafold3",
-                        "colabfold2-boltz2",
+                        "alphafold3",
+                        "boltz2",
                         "esmfold2",
                         "protenix2",
                         "chai1",

@@ -52,7 +52,7 @@ nextflow run nf-core/proteinfold \
    --db <DBDIR>
 ```
 
-Structure prediction runs through the ColabFold2 backends; select one with `--mode` (e.g. `--mode colabfold2-alphafold3`). The MSA generation module is selected with `--msa_tool`:
+Structure prediction runs through the ColabFold2 backends; select one with `--mode` (e.g. `--mode alphafold3`). The MSA generation module is selected with `--msa_tool`:
 
 | `--msa_tool`       | Description                                                                    |
 | ------------------ | ------------------------------------------------------------------------------ |
@@ -201,7 +201,7 @@ nextflow run nf-core/proteinfold \
    -profile <docker/singularity/.../institute> \
    --input samplesheet.csv \
    --outdir <OUTDIR> \
-   --mode colabfold2-alphafold3 \
+   --mode alphafold3 \
    --skip_foldseek false \
    --foldseek_db pdb100 \
    --foldseek_db_path /data/foldseek_db

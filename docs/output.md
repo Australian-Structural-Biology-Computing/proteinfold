@@ -16,7 +16,7 @@ See main [README.md](https://github.com/nf-core/proteinfold/blob/master/README.m
 
 The directories listed below will be created in the output directory after the pipeline has finished. All paths are relative to the top-level results directory.
 
-Exact subdirectories depend on the selected mode. A run will typically contain top-level directories such as `<MODE>/` (the selected `--mode` token, e.g. `colabfold2-alphafold3/`), `multiqc/`, `reports/`, and `pipeline_info/`.
+Exact subdirectories depend on the selected mode. A run will typically contain top-level directories such as `<MODE>/` (the selected `--mode` token, e.g. `alphafold3/`), `multiqc/`, `reports/`, and `pipeline_info/`.
 
 ### Prediction outputs (all modes)
 
@@ -35,7 +35,7 @@ User-facing outputs are largely consistent across modes.
 
 ### ColabFold2
 
-ColabFold2 outputs are published directly under the selected public mode token, for example `colabfold2-alphafold3/<SEQUENCE NAME>/`, `colabfold2-boltz2/<SEQUENCE NAME>/`, or `opendde/<SEQUENCE NAME>/`. All three ESMFold2 model selections publish under `esmfold2/<SEQUENCE NAME>/`.
+ColabFold2 outputs are published directly under the selected public mode token, for example `alphafold3/<SEQUENCE NAME>/`, `boltz2/<SEQUENCE NAME>/`, or `opendde/<SEQUENCE NAME>/`. All three ESMFold2 model selections publish under `esmfold2/<SEQUENCE NAME>/`.
 
 <details markdown="1">
 <summary>Output files</summary>
@@ -233,7 +233,7 @@ If `--save_intermediates` is enabled, extra raw intermediate files are published
 
 Examples include:
 
-- `<MODE>/<SEQUENCE NAME>/raw/` for the selected ColabFold2 mode (e.g. `colabfold2-alphafold3/<SEQUENCE NAME>/raw/` or `alphafold2/<SEQUENCE NAME>/raw/`)
+- `<MODE>/<SEQUENCE NAME>/raw/` for the selected ColabFold2 mode (e.g. `alphafold3/<SEQUENCE NAME>/raw/` or `alphafold2/<SEQUENCE NAME>/raw/`)
 
 These raw outputs are intended for advanced debugging, reproducibility and method-specific downstream analyses. For detailed, canonical tool-specific native output specifications, see:
 

@@ -19,13 +19,13 @@ nextflow_pipeline {
     // backend = the explicit upstream --model-type value it resolves to
     // alias  = the COLABFOLD2_INFERENCE process alias it must dispatch to
     def submodes = [
-        [mode: 'colabfold2-alphafold3', backend: 'alphafold3',       alias: 'ALPHAFOLD3'],
+        [mode: 'alphafold3', backend: 'alphafold3', alias: 'ALPHAFOLD3'],
         [mode: 'alphafold2',            backend: 'auto',             alias: 'ALPHAFOLD2', ext: 'pdb'],
         [mode: 'esmfold2',              backend: 'esmfold2',         esmfold2_model: 'msa',    alias: 'ESMFOLD2'],
         [mode: 'esmfold2',              backend: 'esmfold2_lm300m',  esmfold2_model: 'lm300m', alias: 'ESMFOLD2'],
         [mode: 'esmfold2',              backend: 'esmfold2_lm600m',  esmfold2_model: 'lm600m', alias: 'ESMFOLD2'],
         [mode: 'protenix2',             backend: 'protenix2',        alias: 'PROTEINX2'],
-        [mode: 'colabfold2-boltz2',     backend: 'boltz2',           alias: 'BOLTZ2'],
+        [mode: 'boltz2', backend: 'boltz2', alias: 'BOLTZ2'],
         [mode: 'chai1',                 backend: 'chai1',            alias: 'CHAI1'],
         [mode: 'intellifold2',          backend: 'intellifold2',     alias: 'INTELLIFOLD2'],
         [mode: 'opendde',               backend: 'opendde',          alias: 'OPENDDE'],
@@ -99,7 +99,7 @@ nextflow_pipeline {
         when {
             params {
                 outdir = "$outputDir"
-                mode   = 'colabfold2-alphafold3'
+                mode   = 'alphafold3'
                 input  = richSamplesheet
             }
         }
@@ -107,7 +107,7 @@ nextflow_pipeline {
         then {
             def stableName = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
             assert workflow.success
-            assert stableName.contains('colabfold2-alphafold3/top_ranked_structures/rich_sample.cif')
+            assert stableName.contains('alphafold3/top_ranked_structures/rich_sample.cif')
             assert stableName.contains('reports/rich_sample_colabfold2_report.html')
         }
     }

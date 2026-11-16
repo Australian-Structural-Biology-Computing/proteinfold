@@ -32,19 +32,19 @@ All structure prediction runs through the [ColabFold2](https://github.com/sokryp
 
 \* `alphafold2` runs the classic AlphaFold2 models (monomer vs multimer is selected automatically per query); it emits PDB structures and only supports protein chains.
 
-| Backend (`--mode`)      | Protein | RNA | Small-molecule | PTM | pLM |
-| :---------------------- | :-----: | :-: | :------------: | :-: | :-: |
-| `colabfold2-alphafold3` |   ✅    | ✅  |       ✅       | ✅  | ❌  |
-| `colabfold2-boltz2`     |   ✅    | ✅  |       ✅       | ✅  | ❌  |
-| `openfold3`             |   ✅    | ✅  |       ✅       | ✅  | ❌  |
-| `protenix2`             |   ✅    | ✅  |       ✅       | ✅  | ❌  |
-| `chai1`                 |   ✅    | ✅  |       ✅       | ✅  | ❌  |
-| `intellifold2`          |   ✅    | ✅  |       ✅       | ✅  | ❌  |
-| `opendde`               |   ✅    | ✅  |       ✅       | ✅  | ❌  |
-| `openbind0`             |   ✅    | ✅  |       ✅       | ✅  | ❌  |
-| `rosettafold3`          |   ✅    | ✅  |       ✅       | ✅  | ❌  |
-| `esmfold2`              |   ✅    | ❌  |       ❌       | ❌  | ✅  |
-| `alphafold2`*           |   ✅    | ❌  |       ❌       | ❌  | ❌  |
+| Backend (`--mode`) | Protein | RNA | Small-molecule | PTM | pLM |
+| :----------------- | :-----: | :-: | :------------: | :-: | :-: |
+| `alphafold3`       |   ✅    | ✅  |       ✅       | ✅  | ❌  |
+| `boltz2`           |   ✅    | ✅  |       ✅       | ✅  | ❌  |
+| `openfold3`        |   ✅    | ✅  |       ✅       | ✅  | ❌  |
+| `protenix2`        |   ✅    | ✅  |       ✅       | ✅  | ❌  |
+| `chai1`            |   ✅    | ✅  |       ✅       | ✅  | ❌  |
+| `intellifold2`     |   ✅    | ✅  |       ✅       | ✅  | ❌  |
+| `opendde`          |   ✅    | ✅  |       ✅       | ✅  | ❌  |
+| `openbind0`        |   ✅    | ✅  |       ✅       | ✅  | ❌  |
+| `rosettafold3`     |   ✅    | ✅  |       ✅       | ✅  | ❌  |
+| `esmfold2`         |   ✅    | ❌  |       ❌       | ❌  | ✅  |
+| `alphafold2`*      |   ✅    | ❌  |       ❌       | ❌  | ❌  |
 
 MSA generation modules (select one with `--msa_tool`, or use `--use_msa_server` for the ColabFold webserver):
 
