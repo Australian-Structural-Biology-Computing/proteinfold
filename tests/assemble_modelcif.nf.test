@@ -101,6 +101,7 @@ nextflow_process {
             }
         }
         then {
+            assert snapshot(process.out).match()
             assert process.success
             def outputFile = path(process.out.modelcif[0][1])
             assert outputFile.text.contains('_ma_qa_metric')
@@ -149,6 +150,7 @@ nextflow_process {
             }
         }
         then {
+            assert snapshot(process.out).match()
             assert process.success
             def outputFile = path(process.out.modelcif[0][1])
             assert outputFile.text.contains('_ma_qa_metric_local_pairwise')
@@ -209,6 +211,7 @@ nextflow_process {
         }
 
         then {
+            assert snapshot(process.out).match()
             def modelcifPath = path(process.out.modelcif[0][1])
             assertModelcifOutput(process, modelcifPath, false, true)
         }
@@ -250,6 +253,7 @@ nextflow_process {
         }
 
         then {
+            assert snapshot(process.out).match()
             def modelcifPath = path(process.out.modelcif[0][1])
             assertModelcifOutput(process, modelcifPath, false, false)
 
@@ -303,6 +307,7 @@ nextflow_process {
         }
 
         then {
+            assert snapshot(process.out).match()
             def modelcifPath = path(process.out.modelcif[0][1])
             assertModelcifOutput(process, modelcifPath, false, false)
 
@@ -353,6 +358,7 @@ nextflow_process {
         }
 
         then {
+            assert snapshot(process.out).match()
             def mmcif = path(process.out.modelcif[0][1]).text
             assertAll(
                 { assert mmcif.contains("'pLDDT in [0,1]' local") },
@@ -397,6 +403,7 @@ nextflow_process {
         }
 
         then {
+            assert snapshot(process.out).match()
             def mmcif = path(process.out.modelcif[0][1]).text
             assertAll(
                 { assert mmcif.contains("_ma_software_parameter") },
@@ -441,6 +448,7 @@ nextflow_process {
         }
 
         then {
+            assert snapshot(process.out).match()
             def mmcif = path(process.out.modelcif[0][1]).text
             assertAll(
                 { assert !mmcif.contains("_ma_qa_metric_feature") },
@@ -483,6 +491,7 @@ nextflow_process {
         }
 
         then {
+            assert snapshot(process.out).match()
             def mmcif = path(process.out.modelcif[0][1]).text
             assertAll(
                 { assert mmcif.contains("'template search'") },

@@ -1,0 +1,107 @@
+{
+    "valid PDBx with PDBx dictionary": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "pdbx",
+                            "model": "entry"
+                        },
+                        "DUMMY_PDBX.mmcif:md5,2a334b77c450ff85bbc5c7c3b618e80c"
+                    ]
+                ],
+                "1": [
+                    "versions.yml:md5,0514e0ceb048f071d5a295bf735efd38"
+                ],
+                "modelcif": [
+                    [
+                        {
+                            "id": "pdbx",
+                            "model": "entry"
+                        },
+                        "DUMMY_PDBX.mmcif:md5,2a334b77c450ff85bbc5c7c3b618e80c"
+                    ]
+                ],
+                "versions": [
+                    "versions.yml:md5,0514e0ceb048f071d5a295bf735efd38"
+                ]
+            }
+        ],
+        "timestamp": "2026-11-17T08:56:25.231968253",
+        "meta": {
+            "nf-test": "0.9.4",
+            "nextflow": "25.10.4"
+        }
+    },
+    "valid text ModelCIF": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "text",
+                            "model": "rank_1"
+                        },
+                        "DUMMY_MODELCIF_CIFCHECK.mmcif:md5,c799b3ee01efdb80b8379b5bbe708ae2"
+                    ]
+                ],
+                "1": [
+                    "versions.yml:md5,0514e0ceb048f071d5a295bf735efd38"
+                ],
+                "modelcif": [
+                    [
+                        {
+                            "id": "text",
+                            "model": "rank_1"
+                        },
+                        "DUMMY_MODELCIF_CIFCHECK.mmcif:md5,c799b3ee01efdb80b8379b5bbe708ae2"
+                    ]
+                ],
+                "versions": [
+                    "versions.yml:md5,0514e0ceb048f071d5a295bf735efd38"
+                ]
+            }
+        ],
+        "timestamp": "2026-11-17T08:56:05.159971264",
+        "meta": {
+            "nf-test": "0.9.4",
+            "nextflow": "25.10.4"
+        }
+    },
+    "valid BinaryCIF": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "binary",
+                            "model": "rank_1"
+                        },
+                        "DUMMY_MODELCIF_CIFCHECK.bcif:md5,f0d09c45786942fb0f48c1ad574690c3"
+                    ]
+                ],
+                "1": [
+                    "versions.yml:md5,0514e0ceb048f071d5a295bf735efd38"
+                ],
+                "modelcif": [
+                    [
+                        {
+                            "id": "binary",
+                            "model": "rank_1"
+                        },
+                        "DUMMY_MODELCIF_CIFCHECK.bcif:md5,f0d09c45786942fb0f48c1ad574690c3"
+                    ]
+                ],
+                "versions": [
+                    "versions.yml:md5,0514e0ceb048f071d5a295bf735efd38"
+                ]
+            }
+        ],
+        "timestamp": "2026-11-17T08:56:12.042535531",
+        "meta": {
+            "nf-test": "0.9.4",
+            "nextflow": "25.10.4"
+        }
+    }
+}

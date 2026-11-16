@@ -1,0 +1,35 @@
+{
+    "dummy modelcif": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "test"
+                        },
+                        "DUMMY_MODELCIF.mmcif:md5,44ef684b7b46f249e59b66530c608027"
+                    ]
+                ],
+                "1": [
+                    "versions.yml:md5,00adc36dfde562c5eeb83278e13bb0c8"
+                ],
+                "modelcif": [
+                    [
+                        {
+                            "id": "test"
+                        },
+                        "DUMMY_MODELCIF.mmcif:md5,44ef684b7b46f249e59b66530c608027"
+                    ]
+                ],
+                "versions": [
+                    "versions.yml:md5,00adc36dfde562c5eeb83278e13bb0c8"
+                ]
+            }
+        ],
+        "timestamp": "2026-11-17T08:56:45.832241875",
+        "meta": {
+            "nf-test": "0.9.4",
+            "nextflow": "25.10.4"
+        }
+    }
+}
