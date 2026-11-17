@@ -28,10 +28,10 @@ process COLABFOLD2_INFERENCE {
     tuple val(meta), path("${meta.id}_plddt.tsv")             , optional: true, emit: plddt
     tuple val(meta), path("${meta.id}_confidence.tsv")        , optional: true, emit: confidence
     tuple val(meta), path("raw/*_scores_rank_*.json")         , optional: true, emit: scores
-    tuple val("${task.process}"), val('colabfold'), eval(workflow.stubRun ? 'echo unknown' : ("python3 -c 'import importlib.metadata; print(importlib.metadata.version(\"colabfold\"))' 2>/dev/null || echo \"unknown\"")), emit: versions_colabfold, topic: versions
+    tuple val("${task.process}"), val('colabfold'), eval("python3 -c 'import importlib.metadata; print(importlib.metadata.version(\"colabfold\"))' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold, topic: versions
     tuple val("${task.process}"), val('colabfold_commit'), val('e9e8bd0b8b6c26f9865808070342d0d785dada2e'), emit: versions_colabfold_commit, topic: versions
-    tuple val("${task.process}"), val('alphafold3_colabfold'), eval(workflow.stubRun ? 'echo unknown' : ("python3 -c 'import importlib.metadata; print(importlib.metadata.version(\"alphafold3-colabfold\"))' 2>/dev/null || echo \"unknown\"")), emit: versions_alphafold3_colabfold, topic: versions
-    tuple val("${task.process}"), val('jax'), eval(workflow.stubRun ? 'echo unknown' : ("python3 -c 'import jax; print(jax.__version__)' 2>/dev/null || echo \"unknown\"")), emit: versions_jax, topic: versions
+    tuple val("${task.process}"), val('alphafold3_colabfold'), eval("python3 -c 'import importlib.metadata; print(importlib.metadata.version(\"alphafold3-colabfold\"))' 2>/dev/null || echo \"unknown\""), emit: versions_alphafold3_colabfold, topic: versions
+    tuple val("${task.process}"), val('jax'), eval("python3 -c 'import jax; print(jax.__version__)' 2>/dev/null || echo \"unknown\""), emit: versions_jax, topic: versions
 
     when:
     task.ext.when == null || task.ext.when
