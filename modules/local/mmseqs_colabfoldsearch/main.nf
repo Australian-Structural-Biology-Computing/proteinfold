@@ -98,7 +98,7 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
     container "ghcr.io/jscgh/proteinfold_mmseqs_colabfoldsearch:2.1.0dev"
 
     input:
-    tuple val(batch_meta), path(csvs)
+    tuple val(batch_meta), path(fastas)
     path ('db/*')
     path ('uniref30/*')
 
@@ -127,15 +127,13 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
     for f in uniref30/*; do
         [ -e "db/\$(basename \$f)" ] || ln -sf \$(realpath \$f) db/\$(basename \$f)
     done
-    first=1
-    for f in ${csvs}; do
-        if [ \$first -eq 1 ]; then cat "\$f" > input.csv; first=0
-        else tail -n +2 "\$f" >> input.csv; fi
-    done
-    colabfold_search $args --threads $task.cpus input.csv ./db --af3-json results/
-    for f in ${csvs}; do
-        # Strip the last extension whatever it is: every input is an
-        # id,sequence query CSV (multifasta_to_csv or the AF3 JSON extractor).
+    # Every input is a colon-delimited FASTA holding exactly one record whose
+    # header is the sample id (multifasta_to_colabfold_fasta or the AF3 JSON
+    # extractor), so batching is a plain concatenation and colabfold_search
+    # names each result after the record header.
+    cat ${fastas} > query.fasta
+    colabfold_search $args --threads $task.cpus query.fasta ./db --af3-json results/
+    for f in ${fastas}; do
         id=\$(basename "\$f")
         id="\${id%.*}"
         test -s "results/\${id}.a3m" || { echo "Missing A3M output for \$id" >&2; exit 1; }
@@ -149,6 +147,6 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
     stub:
     """
     mkdir results
-    for f in ${csvs}; do id=\$(basename "\$f"); id="\${id%.*}"; printf '>stub\n' > results/\${id}.a3m; printf '{"stub":true}\n' > results/\${id}.json; done
+    for f in ${fastas}; do id=\$(basename "\$f"); id="\${id%.*}"; printf '>stub\n' > results/\${id}.a3m; printf '{"stub":true}\n' > results/\${id}.json; done
     """
 }

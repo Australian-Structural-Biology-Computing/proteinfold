@@ -13,7 +13,7 @@ include { ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA } from '../../../modules/local/alph
 include { MERGE_ALPHAFOLD3_MSA               } from '../../../modules/local/merge_alphafold3_msa'
 include { MMSEQS_COLABFOLDSEARCH             } from '../../../modules/local/mmseqs_colabfoldsearch'
 include { MMSEQS_COLABFOLDSEARCH_BATCH       } from '../../../modules/local/mmseqs_colabfoldsearch'
-include { MULTIFASTA_TO_CSV                  } from '../../../modules/local/multifasta_to_csv'
+include { MULTIFASTA_TO_COLABFOLD_FASTA      } from '../../../modules/local/multifasta_to_colabfold_fasta'
 include { MSA_CACHE_LOOKUP                   } from '../../../modules/local/msa_cache_lookup'
 
 workflow MSA_COLABFOLD_SEARCH {
@@ -44,10 +44,10 @@ workflow MSA_COLABFOLD_SEARCH {
 
     // Colon-join multi-chain FASTAs so complexes are searched (and
     // paired) as a single query, matching the JSON extraction.
-    MULTIFASTA_TO_CSV(ch_fasta)
+    MULTIFASTA_TO_COLABFOLD_FASTA(ch_fasta)
 
-    ch_search_input = MULTIFASTA_TO_CSV.out.input_csv
-        .mix(ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA.out.query_csv)
+    ch_search_input = MULTIFASTA_TO_COLABFOLD_FASTA.out.query_fasta
+        .mix(ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA.out.query_fasta)
 
     def batch_size = msa_batch_size instanceof Number ? msa_batch_size : msa_batch_size.toString().toInteger()
     if (batch_size == 0 || batch_size < -1) {

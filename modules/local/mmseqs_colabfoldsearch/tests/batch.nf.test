@@ -25,14 +25,14 @@ nextflow_process {
                 unirefDir.mkdirs()
                 file('uniref30/dummy.db').text = 'x'
 
-                def csv1 = file('T1024.csv')
-                csv1.text = 'id,sequence\\nT1024,MKTAYIAKQRQISFVKSHFSRQDILD\\n'
-                def csv2 = file('T1026.csv')
-                csv2.text = 'id,sequence\\nT1026,GIVLDSGDGVTHVVPI\\n'
+                def fasta1 = file('T1024.fasta')
+                fasta1.text = '>T1024\\nMKTAYIAKQRQISFVKSHFSRQDILD\\n'
+                def fasta2 = file('T1026.fasta')
+                fasta2.text = '>T1026\\nGIVLDSGDGVTHVVPI\\n'
 
                 input[0] = [
                     [[id: 'T1024'], [id: 'T1026']],
-                    [csv1, csv2]
+                    [fasta1, fasta2]
                 ]
                 input[1] = file('db/*')
                 input[2] = file('uniref30/*')
