@@ -5,6 +5,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## v2.1.0dev - [unreleased<!-- TODO nf-core: replace with date on release -->]
 
+### Fixed
+
+- AlphaFold3 JSON inputs could not run the ColabFold (MMseqs2) MSA search: the batch search task concatenated its inputs into an `id,sequence` query CSV while JSON-origin samples supplied a FASTA, so `colabfold_search` aborted on its column assertion. All MSA search inputs are now colon-delimited FASTA — `multifasta_to_csv` is replaced by `multifasta_to_colabfold_fasta` (one `>sample_id` record with colon-joined chains, matching the JSON extraction), the AF3 JSON extractor keeps emitting that FASTA, and the batch search concatenates plain FASTA.
+
 ### Unified pipeline restructuring
 
 - Replaced the per-mode workflow dispatch (`alphafold2`, `alphafold3`, `colabfold`, `esmfold`, `boltz` and the ColabFold2 submodes) with a single unified workflow (`workflows/proteinfold.nf`). All structure prediction now runs through the ColabFold2 backends selected with `--mode`.
