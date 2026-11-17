@@ -21,7 +21,7 @@ nextflow_process {
                 dummyParams.mkdirs()
                 file('dummy_params/unused').text = 'not used by the MSA-only process'
 
-                input[0] = [[id: 'T1026'], file(params.pipelines_testdata_base_path + 'testdata/sequences/T1026.fasta', checkIfExists: true), 'monomer_ptm']
+                input[0] = [[id: 'T1026'], file(params.pipelines_testdata_base_path + 'testdata/sequences/T1026.fasta', checkIfExists: true)]
                 input[1] = false
                 input[2] = 'uniref30_2302_db'
                 input[3] = files('dummy_params/*', checkIfExists: true)

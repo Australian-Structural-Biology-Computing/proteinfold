@@ -258,6 +258,7 @@ workflow NFCORE_PROTEINFOLD {
         ch_colabfold2_db,
         ch_colabfold2_uniref30,
         params.alphafold2_full_dbs != null ? params.alphafold2_full_dbs : false,
+        params.alphafold2_max_template_date,
         params.uniref30_prefix ?: 'UniRef30_2023_02',
         ch_af2_params,
         ch_af2_bfd,
