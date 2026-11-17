@@ -15,6 +15,15 @@ input:
   - - use_small_bfd:
         type: boolean
         description: True when the AlphaFold2 MSA run used the reduced_dbs preset.
+  - template_mmcif_dir:
+      type: directory
+      description: Directory of template mmCIF files (<pdb_id>.cif)
+  - obsolete_dat:
+      type: file
+      description: PDB obsolete.dat entry mapping
+  - max_template_date:
+      type: string
+      description: Latest template release date to keep (YYYY-MM-DD)
 output:
   json:
     - - meta:

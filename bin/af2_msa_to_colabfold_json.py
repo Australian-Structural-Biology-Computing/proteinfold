@@ -30,11 +30,26 @@ pairedMsa: alphafold's pipeline_multimer species pairing (msa_pairing.py
   identical chains necessarily corresponds to the same species.
   For monomers pairedMsa is left empty.
 
+templates: when --template_mmcif_dir is given, the chain's template search
+  hits (multimer pipeline: <chain>/pdb_hits.sto from hmmsearch against
+  pdb_seqres; monomer pipeline: pdb_hits.hhr from hhsearch against pdb70)
+  are turned into alphafold3 folding_input.Template entries - a single-chain
+  mmCIF plus a query->template residue map - reusing colabfold's
+  build_templates, the same code path the colabfold AF3 backend applies to
+  its own template results. Hits are filtered like alphafold's template
+  featurizer: obsolete PDB entries are remapped through --obsolete
+  (dropped when fully removed), the align ratio must exceed 0.1, templates
+  shorter than 10 residues and near-duplicate subsequences of the query are
+  dropped, structures released after --max-template-date are dropped, and at
+  most --max-templates hits per chain are kept (best first, in search
+  order). Chains without usable hits keep "templates": [].
+
 Stockholm inputs compressed with zstd (*.sto.zst) are transparently
 decompressed via the `zstd` binary.
 """
 
 import argparse
+import datetime
 import json
 import os
 import re
@@ -80,6 +95,152 @@ def parse_fasta(fasta_string):
             raise ValueError(f"Sequence data before FASTA header: {line}")
         sequences[index] += line
     return sequences, descriptions
+
+
+MIN_ALIGN_RATIO = 0.1
+MIN_TEMPLATE_LENGTH = 10
+MAX_SUBSEQUENCE_RATIO = 0.95
+MAX_TEMPLATES = 20
+
+
+def parse_obsolete(path):
+    """Port of alphafold.data.templates._parse_obsolete."""
+    obsolete = {}
+    with open(path, encoding="utf-8") as handle:
+        for line in handle:
+            if not line.startswith("OBSLTE"):
+                continue
+            fields = line.split()
+            if len(fields) < 3:
+                continue
+            # OBSLTE date replaced_by ... replaced pdb_id
+            obsolete[fields[-1]] = fields[2]
+    return obsolete
+
+
+def template_hits(path, query_sequence):
+    """Parse a template search output into alphafold TemplateHit objects.
+
+    The multimer data pipeline writes pdb_hits.sto (hmmsearch against
+    pdb_seqres); the monomer pipeline writes pdb_hits.hhr (hhsearch against
+    pdb70).
+    """
+    from alphafold.data import parsers
+
+    if path.endswith(".sto"):
+        a3m_string = parsers.convert_stockholm_to_a3m(
+            read_text(path), remove_first_row_gaps=False
+        )
+        return parsers.parse_hmmsearch_a3m(
+            query_sequence=query_sequence, a3m_string=a3m_string,
+            skip_first=False,
+        )
+    return parsers.parse_hhr(read_text(path))
+
+
+def passes_prefilter(hit, query_sequence):
+    """Port of alphafold's _assess_hhsearch_hit checks that need no mmCIF."""
+    align_ratio = hit.aligned_cols / len(query_sequence)
+    if align_ratio <= MIN_ALIGN_RATIO:
+        return "align ratio %.2f" % align_ratio
+    template_sequence = hit.hit_sequence.replace("-", "")
+    length_ratio = len(template_sequence) / len(query_sequence)
+    if (
+        template_sequence in query_sequence
+        and length_ratio > MAX_SUBSEQUENCE_RATIO
+    ):
+        return "duplicate subsequence of query"
+    if len(template_sequence) < MIN_TEMPLATE_LENGTH:
+        return "template too short (%d)" % len(template_sequence)
+    return None
+
+
+def release_date_after_cutoff(cif_path, cutoff):
+    """True when the structure was released after the cutoff date."""
+    from alphafold.data import mmcif_parsing
+
+    pdb_id = os.path.basename(cif_path).split(".")[0]
+    parsing_result = mmcif_parsing.parse(
+        file_id=pdb_id, mmcif_string=read_text(cif_path)
+    )
+    if parsing_result.mmcif_object is None:
+        return "unparsable mmCIF"
+    release_date = parsing_result.mmcif_object.header.get("release_date")
+    if not release_date:
+        return None  # no date known; keep the template
+    try:
+        released = datetime.datetime.strptime(release_date, "%Y-%m-%d")
+    except (ValueError, TypeError):
+        return None
+    if released > cutoff:
+        return "released %s after cutoff %s" % (release_date, cutoff)
+    return None
+
+
+def select_hits(hits, query_sequence, obsolete, mmcif_dir, cutoff,
+                max_templates):
+    """Pick the best valid hits: obsolete/date/prefilter filtered, search order."""
+    selected = []
+    seen = set()
+    for hit in hits:
+        if len(selected) >= max_templates:
+            break
+        pdb_id, _, chain_id = hit.name.partition("_")
+        chain_id = (chain_id or "A").split()[0]
+        key = (pdb_id.lower(), chain_id)
+        if key in seen:
+            continue
+        reason = passes_prefilter(hit, query_sequence)
+        if reason:
+            continue
+        if pdb_id in obsolete:
+            if obsolete[pdb_id] is None:
+                continue
+            pdb_id = obsolete[pdb_id]
+            key = (pdb_id.lower(), chain_id)
+            if key in seen:
+                continue
+        cif_path = os.path.join(mmcif_dir, f"{pdb_id.lower()}.cif")
+        if not os.path.isfile(cif_path):
+            continue
+        reason = release_date_after_cutoff(cif_path, cutoff)
+        if reason:
+            continue
+        seen.add(key)
+        selected.append(hit)
+    return selected
+
+
+def templates_for_chain(chain_msa_dir, sequence, obsolete, mmcif_dir, cutoff,
+                        max_templates):
+    """Build the alphafold3 template entries for one chain."""
+    from colabfold.alphafold3.templates import build_templates
+
+    hits = None
+    for name in ("pdb_hits.sto", "pdb_hits.hhr"):
+        candidate = os.path.join(chain_msa_dir, name)
+        if os.path.isfile(candidate):
+            hits = template_hits(candidate, sequence)
+            break
+    if hits is None:
+        return []
+    selected = select_hits(
+        hits, sequence, obsolete, mmcif_dir, cutoff, max_templates
+    )
+    if not selected:
+        return []
+    templates = build_templates(
+        selected, sequence, mmcif_dir, max_templates=max_templates
+    )
+    entries = []
+    for template in templates:
+        mapping = sorted(template.query_to_template_map.items())
+        entries.append({
+            "mmcif": template.mmcif,
+            "queryIndices": [query for query, _ in mapping],
+            "templateIndices": [target for _, target in mapping],
+        })
+    return entries
 
 
 def read_text(path):
@@ -358,17 +519,18 @@ def paired_blocks_from_indices(paired_indices, chain_paired_rows):
     return blocks
 
 
-def build_job(name, chains, chain_ids, unpaired, paired):
+def build_job(name, chains, chain_ids, unpaired, paired, templates=None):
     """Assemble the AlphaFold3-format job JSON (colabfold AF3Utils layout)."""
+    templates = templates or [""] * len(chain_ids)
     sequences = []
-    for chain_id, sequence, unpaired_msa, paired_msa in zip(
-        chain_ids, chains, unpaired, paired
+    for chain_id, sequence, unpaired_msa, paired_msa, chain_templates in zip(
+        chain_ids, chains, unpaired, paired, templates
     ):
         protein = {
             "id": [chain_id],
             "sequence": sequence,
             "modifications": [],
-            "templates": [],
+            "templates": chain_templates if chain_templates else [],
         }
         protein["unpairedMsa"] = unpaired_msa if unpaired_msa else ""
         protein["pairedMsa"] = paired_msa if paired_msa else ""
@@ -450,6 +612,23 @@ def main():
         "--small-bfd", action="store_true",
         help="RUN_ALPHAFOLD2_MSA ran with the reduced_dbs preset.",
     )
+    parser.add_argument(
+        "--template_mmcif_dir",
+        help="Directory of template mmCIF files (<pdb_id>.cif); when given, "
+        "the chain template hits are converted into alphafold3 template "
+        "entries.",
+    )
+    parser.add_argument(
+        "--obsolete",
+        help="PDB obsolete.dat mapping used to remap template hits.",
+    )
+    parser.add_argument(
+        "--max-template-date",
+        help="Latest template release date to keep (YYYY-MM-DD).",
+    )
+    parser.add_argument(
+        "--max-templates", type=int, default=MAX_TEMPLATES
+    )
     args = parser.parse_args()
 
     sequences, _ = parse_fasta(open(args.fasta, encoding="utf-8").read())
@@ -494,12 +673,14 @@ def main():
 
     unpaired_rows_by_chain = {}
     paired_rows_by_chain = {}
+    msa_dir_by_chain = {}
     for chain_id in chain_ids:
         sequence = chain_sequences[chain_id]
         shared_chain = chain_dirs[sequence]
         chain_msa_dir = (
             os.path.join(msa_dir, shared_chain) if multimer_layout else msa_dir
         )
+        msa_dir_by_chain[chain_id] = chain_msa_dir
         if chain_id not in unpaired_rows_by_chain:
             unpaired_rows_by_chain[chain_id] = build_unpaired_rows(
                 chain_msa_dir, args.small_bfd
@@ -552,12 +733,25 @@ def main():
             for chain_id in chain_ids
         ]
 
+    templates_by_chain = None
+    if args.template_mmcif_dir:
+        obsolete = parse_obsolete(args.obsolete)
+        cutoff = datetime.datetime.strptime(args.max_template_date, "%Y-%m-%d")
+        templates_by_chain = [
+            templates_for_chain(
+                msa_dir_by_chain[chain_id], chain_sequences[chain_id],
+                obsolete, args.template_mmcif_dir, cutoff, args.max_templates,
+            )
+            for chain_id in chain_ids
+        ]
+
     job = build_job(
         args.name,
         [chain_sequences[chain_id] for chain_id in chain_ids],
         [int_id_to_str_id(index + 1) for index in range(len(chain_ids))],
         unpaired_blocks,
         paired_blocks or [""] * len(chain_ids),
+        templates_by_chain,
     )
 
     with open(args.output, "w", encoding="utf-8") as handle:
