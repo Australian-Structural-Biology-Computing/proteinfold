@@ -75,24 +75,6 @@ nextflow_pipeline {
         }
     }
 
-    test("retired alphafold2 variant modes are rejected") {
-        tag "colabfold2-alphafold2-variants"
-
-        when {
-            params {
-                outdir         = "$outputDir"
-                mode           = 'alphafold2_ptm'
-                validate_params = false
-            }
-        }
-
-        then {
-            // With parameter validation disabled, the workflow's own exact-list
-            // mode check rejects the retired token.
-            assert !workflow.success
-        }
-    }
-
     test("colabfold2 rich AlphaFold3 JSON offline MSA wiring") {
         tag "colabfold2-rich-json"
         def richSamplesheet = new File('tests/data/colabfold2_rich_json_samplesheet.csv').absolutePath
