@@ -55,7 +55,8 @@ nextflow_pipeline {
                 assert snapshot(
                     workflow.trace.succeeded().size(),
                     stable_name,
-                    stable_path
+                    stable_path,
+                    removeNextflowVersion("$outputDir/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml")
                 ).match()
             }
         }
@@ -90,7 +91,8 @@ nextflow_pipeline {
             assert snapshot(
                 workflow.trace.succeeded().size(),
                 stable_name,
-                stable_path
+                stable_path,
+                removeNextflowVersion("$outputDir/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml")
             ).match()
         }
     }
