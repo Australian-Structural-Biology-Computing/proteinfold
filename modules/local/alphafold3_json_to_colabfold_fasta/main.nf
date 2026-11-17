@@ -11,7 +11,7 @@ process ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA {
     tuple val(meta), path(input_json)
 
     output:
-    tuple val(meta), path("${meta.id}.fasta"), emit: query_fasta
+    tuple val(meta), path("${meta.id}.csv"), emit: query_csv
     path "versions.yml"                         , emit: versions
 
     when:
@@ -32,7 +32,7 @@ process ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA {
 
     stub:
     """
-    touch ${meta.id}.fasta
+    touch ${meta.id}.csv
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         python: \$(python3 --version | sed 's/Python //g')

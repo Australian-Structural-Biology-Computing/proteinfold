@@ -47,7 +47,7 @@ workflow MSA_COLABFOLD_SEARCH {
     MULTIFASTA_TO_CSV(ch_fasta)
 
     ch_search_input = MULTIFASTA_TO_CSV.out.input_csv
-        .mix(ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA.out.query_fasta)
+        .mix(ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA.out.query_csv)
 
     def batch_size = msa_batch_size instanceof Number ? msa_batch_size : msa_batch_size.toString().toInteger()
     if (batch_size == 0 || batch_size < -1) {

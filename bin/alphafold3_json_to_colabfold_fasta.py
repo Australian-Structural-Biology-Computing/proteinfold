@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import csv
 import json
 from pathlib import Path
 
@@ -40,7 +41,7 @@ def protein_queries(document):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Convert the protein entities in AlphaFold3 JSON to a ColabFold query FASTA"
+        description="Convert the protein entities in AlphaFold3 JSON to a ColabFold query CSV"
     )
     parser.add_argument("json_in")
     parser.add_argument("--id", required=True)
@@ -50,7 +51,12 @@ def main():
     with open(args.json_in, encoding="utf-8") as handle:
         document = _single_job(json.load(handle))
     sequence = ":".join(protein_queries(document))
-    Path(args.output).write_text(f">{args.id}\n{sequence}\n", encoding="utf-8")
+    # The MMseqs search (and the MSA cache) consume id,sequence query CSVs;
+    # colon-joined chains keep complexes searched (and paired) as one query.
+    with open(args.output, "w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["id", "sequence"])
+        writer.writerow([args.id, sequence])
 
 
 if __name__ == "__main__":

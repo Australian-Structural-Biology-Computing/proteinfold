@@ -134,8 +134,8 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
     done
     colabfold_search $args --threads $task.cpus input.csv ./db --af3-json results/
     for f in ${csvs}; do
-        # Strip the last extension whatever it is: inputs are query CSVs
-        # (multifasta_to_csv) or extracted FASTAs (json-origin samples).
+        # Strip the last extension whatever it is: every input is an
+        # id,sequence query CSV (multifasta_to_csv or the AF3 JSON extractor).
         id=\$(basename "\$f")
         id="\${id%.*}"
         test -s "results/\${id}.a3m" || { echo "Missing A3M output for \$id" >&2; exit 1; }
