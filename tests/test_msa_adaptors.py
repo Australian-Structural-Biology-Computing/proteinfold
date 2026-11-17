@@ -129,6 +129,42 @@ class Af2AdaptorTests(unittest.TestCase):
 
     # --- tests ----------------------------------------------------------
 
+    def test_monomer_layout_without_chain_map(self):
+        """The monomer data pipeline writes alignments at the msa dir root."""
+        write(
+            os.path.join(self.msas, "uniref90_hits.sto"),
+            "# STOCKHOLM 1.0\n\n"
+            "A0/1-10              MKTAY-IAKQR\n"
+            "tr|Q3CCCC|Q3CCCC_ECOLI/1-9  MKTAYiIAKQ-\n"
+            "//\n",
+        )
+        write(
+            os.path.join(self.msas, "bfd_uniref_hits.a3m"),
+            ">101 BFD query\nMKTAY-IAKQR\n",
+        )
+        write(
+            os.path.join(self.msas, "mgnify_hits.sto"),
+            "# STOCKHOLM 1.0\n\n"
+            "A0/1-10              MKTAY-IAKQR\n"
+            "MGNNNNNN/1-8         MKTAYiIAK-\n"
+            "//\n",
+        )
+        fasta = write(
+            os.path.join(self.tmp, "sample.fasta"),
+            ">SAMPLE one chain\nMKTAYIAKQR\n",
+        )
+        out = os.path.join(self.tmp, "out.json")
+        result = self._run(fasta, self.msas, out, "SAMPLE")
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+
+        job = json.load(open(out))
+        prot = job["sequences"][0]["protein"]
+        self.assertEqual(prot["id"], ["A"])
+        self.assertEqual(prot["sequence"], "MKTAYIAKQR")
+        self.assertTrue(prot["unpairedMsa"].startswith(">A0/1-10\nMKTAYIAKQR\n"))
+        self.assertIn("Q3CCCC_ECOLI", prot["unpairedMsa"])
+        self.assertEqual(prot["pairedMsa"], "")
+
     def test_heteromer_pairing_and_unpaired_blocks(self):
         fasta = self._heteromer_fixture()
         out = os.path.join(self.tmp, "out.json")
@@ -431,6 +467,249 @@ class JsonToA3mTests(unittest.TestCase):
         result, dst = self._run(job)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn(b"no protein entity", result.stderr)
+
+
+STUB_TREE = """alphafold/__init__.py:
+    pass
+alphafold/data/__init__.py:
+    pass
+alphafold/data/parsers.py:
+    class TemplateHit:
+        def __init__(self, name, aligned_cols, hit_sequence, indices_query,
+                     indices_hit, query):
+            self.name = name
+            self.aligned_cols = aligned_cols
+            self.hit_sequence = hit_sequence
+            self.indices_query = indices_query
+            self.indices_hit = indices_hit
+            self.query = query
+
+    def convert_stockholm_to_a3m(sto, remove_first_row_gaps=False):
+        return sto
+
+    def parse_hhr(hhr_string):
+        hits = []
+        records = [r for r in hhr_string.split(">") if r.strip()]
+        for index, record in enumerate(records, start=1):
+            lines = record.splitlines()
+            name, sequence = lines[0], "".join(lines[1:])
+            name = name.split("/")[0]
+            ungapped = sequence.replace("-", "")
+            hits.append(TemplateHit(
+                name=name,
+                aligned_cols=len(ungapped),
+                hit_sequence=sequence,
+                indices_query=list(range(len(ungapped))),
+                indices_hit=list(range(len(ungapped))),
+                query="",
+            ))
+        return hits
+
+    def parse_hmmsearch_a3m(query_sequence, a3m_string, skip_first=False):
+        hits = []
+        records = [r for r in a3m_string.split(">") if r.strip()]
+        for index, record in enumerate(records, start=1):
+            lines = record.lstrip(">").splitlines()
+            name, sequence = lines[0], "".join(lines[1:])
+            # like alphafold's _parse_hmmsearch_description: pdb0_A/1-4 -> pdb0_A
+            name = name.split("/")[0]
+            ungapped = sequence.replace("-", "")
+            hits.append(TemplateHit(
+                name=name,
+                aligned_cols=len(ungapped),
+                hit_sequence=sequence,
+                indices_query=list(range(len(ungapped))),
+                indices_hit=list(range(len(ungapped))),
+                query=query_sequence,
+            ))
+        return hits
+alphafold/data/mmcif_parsing.py:
+    class _Result:
+        def __init__(self, header):
+            self.mmcif_object = type("Obj", (), {"header": header})()
+
+    def parse(file_id, mmcif_string):
+        # Test fixtures carry their release date on a "# release_date:" line.
+        header = {"release_date": None}
+        for line in mmcif_string.splitlines():
+            if line.startswith("# release_date:"):
+                header["release_date"] = line.split(":", 1)[1].strip()
+        return _Result(header)
+colabfold/__init__.py:
+    pass
+colabfold/alphafold3/__init__.py:
+    pass
+colabfold/alphafold3/templates.py:
+    class _Template:
+        def __init__(self, mmcif, mapping):
+            self.mmcif = mmcif
+            self.query_to_template_map = mapping
+
+    def build_templates(hits, query_sequence, cif_dir, max_templates=20):
+        return [_Template("cif-" + hit.name, {0: 0, 1: 1}) for hit in hits]
+"""
+
+
+def _make_stub_tree(root):
+    """Materialise stub alphafold/colabfold packages for the subprocess."""
+    import re
+
+    for match in re.finditer(r"^(\S+\.py):\n((?:    .*\n|\n)*)", STUB_TREE, re.M):
+        path, body = match.group(1), match.group(2)
+        path = os.path.join(root, path)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        body = "\n".join(line[4:] if line.startswith("    ") else line
+                          for line in body.splitlines())
+        with open(path, "w") as handle:
+            handle.write(body + "\n")
+
+
+class Af2TemplatesToJsonTests(unittest.TestCase):
+    """Tests for bin/af2_templates_to_af3_json.py."""
+
+    SCRIPT = os.path.join(PROJECT, "bin", "af2_templates_to_af3_json.py")
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        _make_stub_tree(os.path.join(self.tmp.name, "stubs"))
+        with open(os.path.join(self.tmp.name, "obsolete.dat"), "w") as handle:
+            handle.write("")
+
+    def run_script(self, max_date="2100-01-01"):
+        env = dict(os.environ)
+        env["PYTHONPATH"] = os.path.join(self.tmp.name, "stubs")
+        return subprocess.run(
+            [
+                sys.executable, self.SCRIPT,
+                os.path.join(self.tmp.name, "sample.json"),
+                "--raw_dir", os.path.join(self.tmp.name, "raw"),
+                "--template_mmcif_dir", os.path.join(self.tmp.name, "cifs"),
+                "--obsolete", os.path.join(self.tmp.name, "obsolete.dat"),
+                "--output", os.path.join(self.tmp.name, "out.json"),
+                "--max-template-date", max_date,
+            ],
+            capture_output=True, text=True, env=env,
+        )
+
+    def _write_fixture(self, release_dates=("2020-01-01", "2020-01-01")):
+        msa_dir = os.path.join(self.tmp.name, "raw", "T1026", "msas")
+        os.makedirs(os.path.join(msa_dir, "A"))
+        os.makedirs(os.path.join(msa_dir, "B"))
+        chain_map = {
+            "A": {"sequence": "MKVLAAAEEEKK", "description": "chainA"},
+            "B": {"sequence": "GGWCCCFFFHHH", "description": "chainB"},
+        }
+        with open(os.path.join(msa_dir, "chain_id_map.json"), "w") as handle:
+            json.dump(chain_map, handle)
+        with open(os.path.join(msa_dir, "A", "pdb_hits.sto"), "w") as handle:
+            handle.write(">pdb0_A/1-4\nMKVLAAAEEEKK\n")
+        with open(os.path.join(msa_dir, "B", "pdb_hits.sto"), "w") as handle:
+            handle.write(">pdb0_B/1-3\nGGWCCCFFFHHH\n")
+        os.makedirs(os.path.join(self.tmp.name, "cifs"), exist_ok=True)
+        for index, date in enumerate(release_dates):
+            with open(os.path.join(
+                    self.tmp.name, "cifs", f"pdb{index}.cif"), "w") as handle:
+                handle.write(f"# release_date: {date}\ndata_x")
+        sample = {
+            "dialect": "alphafold3", "version": 2, "name": "T1026",
+            "sequences": [
+                {"protein": {"id": ["A"], "sequence": "MKVLAAAEEEKK",
+                             "templates": [], "unpairedMsa": ">101\nMKVLAAAEEEKK\n"}},
+                {"protein": {"id": ["B"], "sequence": "GGWCCCFFFHHH",
+                             "templates": [], "unpairedMsa": ">101\nGGWCCCFFFHHH\n"}},
+            ],
+        }
+        with open(os.path.join(self.tmp.name, "sample.json"), "w") as handle:
+            json.dump(sample, handle)
+
+    def test_templates_populated_and_dated(self):
+        self._write_fixture(release_dates=("2020-01-01", "2099-01-01"))
+        with open(os.path.join(
+                self.tmp.name, "raw", "T1026", "msas", "A",
+                "pdb_hits.sto"), "w") as handle:
+            # Second hit is a near-duplicate subsequence of the query.
+            handle.write(">pdb0_A/1-4\nMKIAAAAEEEKK\n>pdb1_A/1-4\nMKVLAAAEEEKK\n")
+        result = self.run_script()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        document = json.load(open(os.path.join(self.tmp.name, "out.json")))
+        templates_a = document["sequences"][0]["protein"]["templates"]
+        templates_b = document["sequences"][1]["protein"]["templates"]
+        # pdb1 is dropped as a duplicate; chain B's hit is after the cutoff.
+        self.assertEqual(len(templates_a), 1)
+        self.assertEqual(templates_a[0]["mmcif"], "cif-pdb0_A")
+        self.assertEqual(templates_a[0]["queryIndices"], [0, 1])
+        self.assertEqual(templates_a[0]["templateIndices"], [0, 1])
+        self.assertEqual(templates_b, [])
+
+    def test_obsolete_remap_and_removal(self):
+        self._write_fixture()
+        with open(os.path.join(
+                self.tmp.name, "raw", "T1026", "msas", "A",
+                "pdb_hits.sto"), "w") as handle:
+            handle.write(
+                ">pdbold_A/1-4\nMKIAAAAEEEKK\n>pdbgone_A/1-4\nMKIAAAAEEEKK\n>pdb0_A/1-4\nMKIEAAAEEEKK\n")
+        with open(os.path.join(self.tmp.name, "obsolete.dat"), "w") as handle:
+            handle.write(
+                "OBSLTE 31-Jul-2020 pdb0_A pdbold_A\n"
+                "OBSLTE 31-Jul-2020 pdbgone_A\n"
+            )
+        result = self.run_script()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        document = json.load(open(os.path.join(self.tmp.name, "out.json")))
+        templates = document["sequences"][0]["protein"]["templates"]
+        # pdbold remaps onto pdb0 (deduplicated), pdbgone is fully removed.
+        self.assertEqual(len(templates), 1)
+        self.assertEqual(templates[0]["mmcif"], "cif-pdb0_A")
+
+    def test_short_template_dropped(self):
+        self._write_fixture()
+        with open(os.path.join(
+                self.tmp.name, "raw", "T1026", "msas", "A",
+                "pdb_hits.sto"), "w") as handle:
+            handle.write(">pdb0_A/1-4\nMKIAAAAEEEKK\n>pdb9_A/1-2\nMKIAA\n")
+        result = self.run_script()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        document = json.load(open(os.path.join(self.tmp.name, "out.json")))
+        templates = document["sequences"][0]["protein"]["templates"]
+        self.assertEqual(len(templates), 1)
+        self.assertEqual(templates[0]["mmcif"], "cif-pdb0_A")
+
+    def test_monomer_layout_with_hhr(self):
+        """Monomer presets write pdb_hits.hhr at the msa dir root."""
+        msa_dir = os.path.join(self.tmp.name, "raw", "T1026", "msas")
+        os.makedirs(msa_dir)
+        os.makedirs(os.path.join(self.tmp.name, "cifs"))
+        with open(os.path.join(self.tmp.name, "cifs", "pdb0.cif"), "w") as handle:
+            handle.write("# release_date: 2020-01-01\ndata_x")
+        with open(os.path.join(msa_dir, "uniref90_hits.sto"), "w") as handle:
+            handle.write("# STOCKHOLM 1.0\n\nA0/1-12  MKVLAAAEEEKK\n//\n")
+        with open(os.path.join(msa_dir, "pdb_hits.hhr"), "w") as handle:
+            handle.write(">pdb0_A/1-12\nMKIAAAAEEEKK\n")
+        sample = {
+            "dialect": "alphafold3", "version": 2, "name": "T1026",
+            "sequences": [
+                {"protein": {"id": ["protA"], "sequence": "MKVLAAAEEEKK",
+                             "templates": []}},
+            ],
+        }
+        with open(os.path.join(self.tmp.name, "sample.json"), "w") as handle:
+            json.dump(sample, handle)
+        result = self.run_script()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        document = json.load(open(os.path.join(self.tmp.name, "out.json")))
+        templates = document["sequences"][0]["protein"]["templates"]
+        self.assertEqual(len(templates), 1)
+        self.assertEqual(templates[0]["mmcif"], "cif-pdb0_A")
+
+    def test_missing_sto_leaves_empty(self):
+        self._write_fixture()
+        os.remove(os.path.join(
+            self.tmp.name, "raw", "T1026", "msas", "B", "pdb_hits.sto"))
+        result = self.run_script()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        document = json.load(open(os.path.join(self.tmp.name, "out.json")))
+        self.assertEqual(document["sequences"][1]["protein"]["templates"], [])
 
 
 if __name__ == "__main__":

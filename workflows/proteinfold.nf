@@ -28,6 +28,7 @@ include { MMSEQS_COLABFOLDSEARCH             } from '../modules/local/mmseqs_col
 include { MMSEQS_COLABFOLDSEARCH_BATCH       } from '../modules/local/mmseqs_colabfoldsearch'
 include { RUN_ALPHAFOLD2_MSA                 } from '../modules/local/run_alphafold2_msa'
 include { AF2_MSA_TO_COLABFOLD_JSON          } from '../modules/local/af2_msa_to_colabfold_json'
+include { AF2_TEMPLATES_TO_AF3_JSON         } from '../modules/local/af2_templates_to_af3_json'
 include { FASTA_TO_ALPHAFOLD3_JSON           } from '../modules/local/fasta_to_alphafold3_json'
 include { RUN_ALPHAFOLD3_DATAPIPELINE        } from '../modules/local/run_alphafold3_datapipeline'
 include { VALIDATE_ALPHAFOLD3_MSA_JSON       } from '../modules/local/validate_af3_msa_json'
@@ -50,6 +51,7 @@ workflow PROTEINFOLD {
     ch_uniref30     // channel: path(uniref30)
     // alphafold2_msa tool inputs
     alphafold2_full_dbs // boolean: full AF2 databases (otherwise reduced)
+    alphafold2_max_template_date // string: latest template release date to keep
     uniref30_prefix     // string: prefix for uniref30 database files
     ch_af2_params       // channel: path(alphafold2 params)
     ch_af2_bfd          // channel: path(bfd)
@@ -236,13 +238,11 @@ workflow PROTEINFOLD {
 
             ch_af2_input = ch_input_by_ext.fasta.mix(ALPHAFOLD3_JSON_TO_AF2_FASTA.out.query_fasta)
 
-            // Pairing requires the alphafold2 multimer data pipeline (uniprot
-            // jackhmmer), so the multimer preset is forced for every input.
-            ch_af2_samplesheet = ch_af2_input
-                .map { meta, fasta -> [meta, fasta, 'multimer'] }
-
+            // The multimer data pipeline runs for every entry: monomers and
+            // homomers skip the uniprot pairing search inside the pipeline
+            // itself, heteromers get it for MSA pairing.
             RUN_ALPHAFOLD2_MSA (
-                ch_af2_samplesheet,
+                ch_af2_input,
                 alphafold2_full_dbs,
                 uniref30_prefix,
                 ch_af2_params,
@@ -258,9 +258,8 @@ workflow PROTEINFOLD {
                 ch_af2_uniprot
             )
 
-            ch_af2_samplesheet
+            ch_af2_input
                 .join(RUN_ALPHAFOLD2_MSA.out.raw_dir)
-                .map { meta, fasta, preset, raw_dir -> [meta, fasta, raw_dir] }
                 .set { ch_af2_adaptor_input }
             AF2_MSA_TO_COLABFOLD_JSON(
                 ch_af2_adaptor_input,
@@ -287,7 +286,21 @@ workflow PROTEINFOLD {
                 .set { ch_af2_json_merge_input }
 
             MERGE_ALPHAFOLD3_MSA(ch_af2_json_merge_input)
-            ch_msa_input = ch_af2_adaptor_result.fasta.mix(MERGE_ALPHAFOLD3_MSA.out.json)
+            ch_af2_msa_json = ch_af2_adaptor_result.fasta.mix(MERGE_ALPHAFOLD3_MSA.out.json)
+
+            // Provide the alphafold2 template hits to the colabfold2 backends
+            // through the alphafold3 JSON when hits are available.
+            AF2_TEMPLATES_TO_AF3_JSON(
+                ch_af2_msa_json
+                    .map { meta, json -> [meta.id, meta, json] }
+                    .join(RUN_ALPHAFOLD2_MSA.out.raw_dir
+                        .map { meta, raw_dir -> [meta.id, raw_dir] })
+                    .map { id, meta, json, raw_dir -> [meta, json, raw_dir] },
+                ch_af2_pdb_mmcif,
+                ch_af2_pdb_obsolete,
+                alphafold2_max_template_date
+            )
+            ch_msa_input = AF2_TEMPLATES_TO_AF3_JSON.out.json
         } else if (msa_tool == 'alphafold3_msa') {
             FASTA_TO_ALPHAFOLD3_JSON(ch_input_by_ext.fasta)
             ch_af3_job_json = ch_input_by_ext.json.mix(FASTA_TO_ALPHAFOLD3_JSON.out.json)

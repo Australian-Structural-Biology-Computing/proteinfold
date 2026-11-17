@@ -19,7 +19,9 @@ ARG ALPHAFOLD_COMMIT=c77e5d2a8961d1a353632c462914ff0a32a950f6
 RUN git clone https://github.com/google-deepmind/alphafold.git /app/alphafold && \
     git -C /app/alphafold checkout --detach ${ALPHAFOLD_COMMIT}
 
-COPY run_msa.py /app/alphafold/run_msa.py
+# Built from the repository root so the staged bin/run_msa.py is picked up:
+#   docker build -f modules/local/run_alphafold2_msa/Dockerfile .
+COPY bin/run_msa.py /app/alphafold/run_msa.py
 
 ADD --checksum=sha256:24510899eeb49167cffedec8fa45363a4d08279c0c637a403b452f7d0ac09451 https://raw.githubusercontent.com/metalcycling/openstructure/7102c63615b64735c4941278d92b554ec94415f8/modules/mol/alg/src/stereo_chemical_props.txt /app/alphafold/alphafold/common/stereo_chemical_props.txt
 

@@ -397,25 +397,33 @@ def int_id_to_str_id(number):
 
 
 def discover_msa_dir(path):
-    """Locate the directory holding chain_id_map.json under a staged dir.
+    """Locate the MSA output directory under a staged dir.
 
     RUN_ALPHAFOLD2_MSA writes <output>/<fasta_basename>/msas/, but staging may
     flatten or rename levels, so accept the dir itself, msas/, or any unique
-    chain_id_map.json up to three levels deep.
+    match up to three levels deep. The multimer data pipeline writes a
+    chain_id_map.json; the monomer pipeline writes the alignments at the MSA
+    directory root instead. Returns (msa_dir, is_multimer_layout).
     """
-    candidates = []
+    map_candidates = []
+    root_candidates = []
     for root, dirs, files in os.walk(path):
         if root.count(os.sep) - path.rstrip(os.sep).count(os.sep) > 3:
             dirs[:] = []
             continue
         if "chain_id_map.json" in files:
-            candidates.append(root)
-    if len(candidates) != 1:
-        raise ValueError(
-            f"Expected exactly one chain_id_map.json under {path}, found "
-            f"{len(candidates)}: {candidates}"
-        )
-    return candidates[0]
+            map_candidates.append(root)
+        elif "uniref90_hits.sto" in files or "uniref90_hits.sto.zst" in files:
+            root_candidates.append(root)
+    if len(map_candidates) == 1:
+        return map_candidates[0], True
+    if not map_candidates and len(root_candidates) == 1:
+        return root_candidates[0], False
+    raise ValueError(
+        f"Expected exactly one MSA output directory under {path} "
+        f"(chain_id_map.json or uniref90_hits.sto), found "
+        f"chain_id_map.json: {map_candidates}, uniref90: {root_candidates}"
+    )
 
 
 def main():
@@ -446,28 +454,40 @@ def main():
 
     sequences, _ = parse_fasta(open(args.fasta, encoding="utf-8").read())
 
-    msa_dir = discover_msa_dir(args.msa_dir)
+    msa_dir, multimer_layout = discover_msa_dir(args.msa_dir)
 
-    with open(os.path.join(msa_dir, "chain_id_map.json"), encoding="utf-8") as handle:
-        chain_id_map = json.load(handle)
-
-    chain_ids = sorted(chain_id_map)
-    if len(chain_ids) != len(sequences):
-        raise ValueError(
-            f"FASTA has {len(sequences)} chain(s) but chain_id_map.json has "
-            f"{len(chain_ids)}: {chain_ids}"
-        )
-
-    # Chains with an identical sequence share one MSA directory.
-    chain_dirs = {}
-    for chain_id, fasta_chain in chain_id_map.items():
-        chain_dirs.setdefault(fasta_chain["sequence"], chain_id)
+    if multimer_layout:
+        with open(os.path.join(msa_dir, "chain_id_map.json"), encoding="utf-8") as handle:
+            chain_id_map = json.load(handle)
+        chain_ids = sorted(chain_id_map)
+        if len(chain_ids) != len(sequences):
+            raise ValueError(
+                f"FASTA has {len(sequences)} chain(s) but chain_id_map.json has "
+                f"{len(chain_ids)}: {chain_ids}"
+            )
+        # Chains with an identical sequence share one MSA directory.
+        chain_dirs = {}
+        for chain_id, fasta_chain in chain_id_map.items():
+            chain_dirs.setdefault(fasta_chain["sequence"], chain_id)
+        chain_sequences = {
+            chain_id: chain_id_map[chain_id]["sequence"] for chain_id in chain_ids
+        }
+    else:
+        # Monomer data pipeline: single chain, alignments at the MSA dir root.
+        if len(sequences) != 1:
+            raise ValueError(
+                "The monomer data pipeline ran for a multi-chain entry; "
+                f"{len(sequences)} chains cannot be mapped"
+            )
+        chain_ids = ["A"]
+        chain_dirs = {sequences[0]: "A"}
+        chain_sequences = {"A": sequences[0]}
 
     is_homomer_or_monomer = len(set(sequences)) == 1
     unique_chain_dirs = {
         chain_id_map[chain_id]["sequence"]: chain_id_map[chain_id]
         for chain_id in chain_ids
-    }
+    } if multimer_layout else {}
     has_pairing_input = (
         not is_homomer_or_monomer and len(unique_chain_dirs) > 1
     )
@@ -475,9 +495,11 @@ def main():
     unpaired_rows_by_chain = {}
     paired_rows_by_chain = {}
     for chain_id in chain_ids:
-        sequence = chain_id_map[chain_id]["sequence"]
+        sequence = chain_sequences[chain_id]
         shared_chain = chain_dirs[sequence]
-        chain_msa_dir = os.path.join(msa_dir, shared_chain)
+        chain_msa_dir = (
+            os.path.join(msa_dir, shared_chain) if multimer_layout else msa_dir
+        )
         if chain_id not in unpaired_rows_by_chain:
             unpaired_rows_by_chain[chain_id] = build_unpaired_rows(
                 chain_msa_dir, args.small_bfd
@@ -532,7 +554,7 @@ def main():
 
     job = build_job(
         args.name,
-        [chain_id_map[chain_id]["sequence"] for chain_id in chain_ids],
+        [chain_sequences[chain_id] for chain_id in chain_ids],
         [int_id_to_str_id(index + 1) for index in range(len(chain_ids))],
         unpaired_blocks,
         paired_blocks or [""] * len(chain_ids),

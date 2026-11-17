@@ -1,5 +1,11 @@
 /*
  * Run Alphafold2 MSA
+ *
+ * Always runs the alphafold2 multimer data pipeline: the unpaired
+ * uniref90/bfd/mgnify searches for every chain, the uniprot jackhmmer search
+ * for heteromers (MSA pairing) and the pdb_seqres/hmmsearch template search.
+ * Monomer and homomer entries skip the uniprot search inside the pipeline
+ * itself.
  */
 process RUN_ALPHAFOLD2_MSA {
     tag   "$meta.id"
@@ -8,7 +14,7 @@ process RUN_ALPHAFOLD2_MSA {
     container "ghcr.io/jscgh/proteinfold_alphafold2_msa:2.1.0dev"
 
     input:
-    tuple val(meta), path(fasta), val(alphafold2_model_preset)
+    tuple val(meta), path(fasta)
     val   db_preset
     val   uniref30_prefix
     path ('params/*')
@@ -43,21 +49,28 @@ process RUN_ALPHAFOLD2_MSA {
     def args = task.ext.args ?: ''
     def db_preset_cmd = db_preset ? "full_dbs --bfd_database_path=./bfd/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt --uniref30_database_path=./uniref30/${uniref30_prefix}" :
         "reduced_dbs --small_bfd_database_path=./small_bfd/bfd-first_non_consensus_sequences.fasta"
-    def extra_dbs = ""
-    if (alphafold2_model_preset == 'multimer') {
-        extra_dbs = " --pdb_seqres_database_path=./pdb_seqres/pdb_seqres.txt --uniprot_database_path=./uniprot/uniprot.fasta "
-    } else {
-        extra_dbs = " --pdb70_database_path=./pdb70/pdb70 "
-    }
     """
     fix_obsolete.py pdb_mmcif/obsolete.dat > clean_obsolete.dat
 
     ## Handles multiple versions of mgnify database and selects the latest version
     mgnify_db_path=\$(ls -v ./mgnify/mgy_clusters*.fa | tail -n 1)
 
-    python3 /app/alphafold/run_msa.py \
+    ## The alphafold2 model preset is inferred per sample: entries with more
+    ## than one protein chain run the multimer data pipeline (uniprot pairing
+    ## search and pdb_seqres/hmmsearch templates), single-chain entries run the
+    ## monomer pipeline (pdb70/hhsearch templates).
+    n_chains=\$(grep -c '^>' "${fasta}")
+    if [ "\$n_chains" -gt 1 ]; then
+        model_preset=multimer
+        extra_dbs="--pdb_seqres_database_path=./pdb_seqres/pdb_seqres.txt --uniprot_database_path=./uniprot/uniprot.fasta"
+    else
+        model_preset=monomer
+        extra_dbs="--pdb70_database_path=./pdb70/pdb70"
+    fi
+
+    PYTHONPATH=/app/alphafold python3 run_msa.py \
         --fasta_paths=${fasta} \
-        --model_preset=${alphafold2_model_preset}${extra_dbs} \
+        --model_preset=\$model_preset \$extra_dbs \
         --db_preset=${db_preset_cmd} \
         --output_dir=\$PWD \
         --data_dir=\$PWD \

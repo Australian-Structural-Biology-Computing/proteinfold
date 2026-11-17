@@ -166,11 +166,8 @@
     },
     "--msa_tool alphafold2_msa": {
         "content": [
-            10,
+            12,
             [
-                "af2",
-                "af2/T1024.json",
-                "af2/T1026.json",
                 "alphafold3",
                 "alphafold3/T1024",
                 "alphafold3/T1024/T1024_chainwise_ipsae.tsv",
@@ -214,8 +211,6 @@
                 "reports/T1026_colabfold2_report.html"
             ],
             [
-                "T1024.json:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_chainwise_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_colabfold2_msa.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -242,7 +237,7 @@
                 "T1026_colabfold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-17T10:08:41.791330084",
+        "timestamp": "2026-11-17T12:17:18.952467525",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -250,10 +245,8 @@
     },
     "--msa_tool alphafold2_msa repopulates AlphaFold3 JSON input": {
         "content": [
-            8,
+            9,
             [
-                "af2",
-                "af2/rich_sample.json",
                 "alphafold3",
                 "alphafold3/rich_sample",
                 "alphafold3/rich_sample/paes",
@@ -283,7 +276,6 @@
                 "reports/rich_sample_colabfold2_report.html"
             ],
             [
-                "rich_sample.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "rich_sample_1_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "rich_sample_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "rich_sample_chainwise_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -299,7 +291,7 @@
                 "rich_sample_colabfold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-17T10:09:01.04953627",
+        "timestamp": "2026-11-17T12:17:37.472209035",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
