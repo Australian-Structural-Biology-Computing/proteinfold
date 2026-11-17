@@ -1,0 +1,57 @@
+nextflow_pipeline {
+    name "Test reference structure benchmarking"
+    script "../main.nf"
+    tag "pipeline"
+    tag "test_benchmark"
+    profile "test_esmfold"
+
+    test("benchmarks only samples with references") {
+        setup {
+            def first = file("$outputDir/first.fasta")
+            def second = file("$outputDir/second.fasta")
+            def reference = file("$outputDir/reference.pdb")
+            first.text = '>first\nACDEFGHIK\n'
+            second.text = '>second\nACDEFGHIK\n'
+            reference.text = 'END\n'
+            file("$outputDir/samples.csv").text =
+                "id,fasta,reference\nfirst,${first},${reference}\nsecond,${second},\n"
+        }
+        when {
+            params {
+                outdir = "$outputDir/results"
+                input = "$outputDir/samples.csv"
+                skip_multiqc = true
+                skip_visualisation = true
+            }
+        }
+        then {
+            assert workflow.success
+            assert workflow.trace.succeeded().count { it.name.contains('BENCHMARK_STRUCTURE') } == 1
+            assert file("${params.outdir}/benchmark/esmfold/first.json").exists()
+            assert !file("${params.outdir}/benchmark/esmfold/second.json").exists()
+        }
+    }
+
+    test("rejects references with split fasta") {
+        setup {
+            def fasta = file("$outputDir/input.fasta")
+            def reference = file("$outputDir/reference.pdb")
+            fasta.text = '>first\nACDEFGHIK\n'
+            reference.text = 'END\n'
+            file("$outputDir/samples.csv").text = "id,fasta,reference\nfirst,${fasta},${reference}\n"
+        }
+        when {
+            params {
+                outdir = "$outputDir/results"
+                input = "$outputDir/samples.csv"
+                split_fasta = true
+                skip_multiqc = true
+                skip_visualisation = true
+            }
+        }
+        then {
+            assert workflow.failed
+            assert workflow.errorMessage.contains("reference")
+        }
+    }
+}

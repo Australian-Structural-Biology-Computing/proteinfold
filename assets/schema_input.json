@@ -32,6 +32,14 @@
                 "exists": true,
                 "pattern": "^\\S+\\.a3m$",
                 "errorMessage": "MSA file must exist, cannot contain spaces and must have extension '.a3m'"
+            },
+            "reference": {
+                "type": "string",
+                "format": "file-path",
+                "exists": true,
+                "pattern": "^\\S+\\.(pdb|cif|mmcif)$",
+                "errorMessage": "Reference structure must exist, cannot contain spaces and must have extension '.pdb', '.cif' or '.mmcif'",
+                "meta": ["reference"]
             }
         },
         "required": ["fasta"],

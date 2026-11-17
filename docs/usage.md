@@ -31,12 +31,15 @@ The samplesheet can have as many columns as you desire, however, there is a stri
 | `id`    | Custom sequence name. Spaces in sequence names are automatically converted to underscores (`_`).                    |
 | `fasta` | Full path to fasta file for the provided sequence. File has to have the extension ".fasta" or ".fa".                |
 | `msa`   | Optional full path to an A3M MSA file for ColabFold. When provided, ColabFold uses it instead of generating an MSA. |
+| `reference` | Optional path to an experimental single-chain protein structure (`.pdb`, `.cif`, or `.mmcif`). |
 
 An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
 
 For ColabFold, add an `msa` column containing one A3M file per sample. Samples with an `msa` entry bypass both local MMseqs2 search and the MSA server; samples without one retain the selected default MSA path.
 
-To provide a FASTA file with multiple sequences for individual folding, use one or more FASTA files with the `--split_fasta` parameter. This will treat each sequence in the FASTA file as a separate entry, folding them individually and in parallel, as if each sequence were listed separately in the samplesheet. The `msa` column cannot be combined with `--split_fasta`.
+Add a `reference` column to benchmark a sample's top-ranked prediction from each selected method using OpenStructure lDDT and US-align TM-score. Leave the field blank for samples without an experimental structure. Both structures must contain exactly one protein chain and no nucleic acid chains. OpenStructure aligns sequences, checks residue consistency, and requires at least six residues for chain mapping. Predictions or references with incompatible chains fail the benchmarking step rather than producing a misleading score. Template-based predictions can be biased by prior knowledge of the experimental structure; control template dates and databases when comparing methods.
+
+To provide a FASTA file with multiple sequences for individual folding, use one or more FASTA files with the `--split_fasta` parameter. This will treat each sequence in the FASTA file as a separate entry, folding them individually and in parallel, as if each sequence were listed separately in the samplesheet. The `msa` and `reference` columns cannot be combined with `--split_fasta`.
 
 ## Running the pipeline
 

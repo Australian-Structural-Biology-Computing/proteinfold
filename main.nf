@@ -36,6 +36,7 @@ include { PIPELINE_COMPLETION              } from './subworkflows/local/utils_nf
 include { modelcifInput                    } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { modelcifDummyMetric              } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { POST_PROCESSING                  } from './subworkflows/local/post_processing'
+include { BENCHMARK_STRUCTURE              } from './modules/local/benchmark_structure'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -53,7 +54,14 @@ workflow NFCORE_PROTEINFOLD {
     samplesheet  // channel: samplesheet read in from --input
 
     main:
-    ch_samplesheet       = samplesheet
+    ch_references = samplesheet
+        .filter { meta, fasta -> meta.reference }
+        .map { meta, fasta -> [meta.id, meta.reference] }
+    ch_samplesheet = samplesheet.map { meta, fasta ->
+        def prediction_meta = meta.clone()
+        prediction_meta.remove('reference')
+        [prediction_meta, fasta]
+    }
     ch_multiqc           = channel.empty()
     ch_report_input      = channel.empty()
     ch_top_ranked_model  = channel.empty()
@@ -558,6 +566,23 @@ workflow NFCORE_PROTEINFOLD {
     //
     // POST PROCESSING: generate visualisation reports
     //
+    ch_benchmark_predictions = ch_top_ranked_model.map { meta, structure ->
+        [meta.id, meta, structure]
+    }
+    BENCHMARK_STRUCTURE(
+        ch_benchmark_predictions
+            .combine(ch_references, by: 0)
+            .map { id, meta, structures, reference ->
+                def files = structures instanceof List ? structures : [structures]
+                if (files.size() != 1) {
+                    error("Benchmarking requires one predicted structure per sample and method: ${id}, ${meta.model}")
+                }
+                def benchmark_meta = meta.clone()
+                if (benchmark_meta.model == 'colabfold2') benchmark_meta.model = colabfold2_public_mode
+                [benchmark_meta, files[0], reference]
+            }
+    )
+
     ch_multiqc_config        = channel.fromPath("$projectDir/assets/multiqc_config.yml", checkIfExists: true).first()
     ch_multiqc_custom_config = params.multiqc_config ? channel.fromPath( params.multiqc_config, checkIfExists: true ).first()  : channel.empty()
     ch_multiqc_logo          = params.multiqc_logo   ? channel.fromPath( params.multiqc_logo ).first()    : channel.empty()
