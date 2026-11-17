@@ -34,7 +34,11 @@ process RUN_ALPHAFOLD2_MSA {
     tuple val(meta), path ("raw")               , emit: raw_dir
     tuple val(meta), path ("raw/*/features.pkl"), emit: features
     tuple val("${task.process}"), val('python'), eval("python3 --version 2>/dev/null | sed 's/Python //g' || echo \"unknown\""), emit: versions_python, topic: versions
-    tuple val("${task.process}"), val('alphafold2'), eval("cd /app/alphafold && git rev-parse HEAD 2>/dev/null || echo \"unknown\""), emit: versions_alphafold2, topic: versions
+    // The alphafold git repo is owned by the uid the image was built with, so
+    // git's dubious-ownership check would fail when the container runs as any
+    // other non-root uid (e.g. docker's '-u $(id -u)'). Exempt it via a global
+    // config written under a throwaway HOME so no real HOME is touched.
+    tuple val("${task.process}"), val('alphafold2'), eval("(export HOME=\$(mktemp -d); git config --global --add safe.directory /app/alphafold && cd /app/alphafold && git rev-parse HEAD) 2>/dev/null || echo \"unknown\""), emit: versions_alphafold2, topic: versions
     tuple val("${task.process}"), val('numpy'), eval("python3 -c \"import numpy; print(numpy.__version__)\" 2>/dev/null || echo \"unknown\""), emit: versions_numpy, topic: versions
     tuple val("${task.process}"), val('biopython'), eval("python3 -c \"import Bio; print(Bio.__version__)\" 2>/dev/null || echo \"unknown\""), emit: versions_biopython, topic: versions
 
