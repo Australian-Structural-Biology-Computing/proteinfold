@@ -15,8 +15,8 @@ process GENERATE_REPORT {
     tuple val(meta), path ("*report.html")     , emit: report
     tuple val(meta), path ("*seq_coverage.png"), optional: true, emit: sequence_coverage
     tuple val(meta), path ("*_LDDT.html")      , emit: plddt
-    tuple val("${task.process}"), val('python'), eval("python3 --version | sed 's/Python //g'"), emit: versions_python, topic: versions
-    tuple val("${task.process}"), val('generate_report.py'), eval("python3 --version | sed 's/Python //g'"), emit: versions_generate_report, topic: versions
+    tuple val("${task.process}"), val('python'), eval(workflow.stubRun ? 'echo unknown' : ("python3 --version | sed 's/Python //g'")), emit: versions_python, topic: versions
+    tuple val("${task.process}"), val('generate_report.py'), eval(workflow.stubRun ? 'echo unknown' : ("python3 --version | sed 's/Python //g'")), emit: versions_generate_report, topic: versions
 
     when:
     task.ext.when == null || task.ext.when
