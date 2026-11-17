@@ -565,9 +565,9 @@ def _make_stub_tree(root):
 
 
 class Af2TemplatesToJsonTests(unittest.TestCase):
-    """Tests for bin/af2_templates_to_af3_json.py."""
+    """Template conversion in bin/af2_msa_to_colabfold_json.py."""
 
-    SCRIPT = os.path.join(PROJECT, "bin", "af2_templates_to_af3_json.py")
+    SCRIPT = AF2_SCRIPT
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -582,11 +582,12 @@ class Af2TemplatesToJsonTests(unittest.TestCase):
         return subprocess.run(
             [
                 sys.executable, self.SCRIPT,
-                os.path.join(self.tmp.name, "sample.json"),
-                "--raw_dir", os.path.join(self.tmp.name, "raw"),
+                "--fasta", os.path.join(self.tmp.name, "sample.fasta"),
+                "--msa_dir", os.path.join(self.tmp.name, "raw"),
+                "--output", os.path.join(self.tmp.name, "out.json"),
+                "--name", "T1026",
                 "--template_mmcif_dir", os.path.join(self.tmp.name, "cifs"),
                 "--obsolete", os.path.join(self.tmp.name, "obsolete.dat"),
-                "--output", os.path.join(self.tmp.name, "out.json"),
                 "--max-template-date", max_date,
             ],
             capture_output=True, text=True, env=env,
@@ -605,12 +606,30 @@ class Af2TemplatesToJsonTests(unittest.TestCase):
         with open(os.path.join(msa_dir, "A", "pdb_hits.sto"), "w") as handle:
             handle.write(">pdb0_A/1-4\nMKVLAAAEEEKK\n")
         with open(os.path.join(msa_dir, "B", "pdb_hits.sto"), "w") as handle:
-            handle.write(">pdb0_B/1-3\nGGWCCCFFFHHH\n")
+            handle.write(">pdb1_B/1-3\nGGACCCFFFHHH\n")
+        for chain_id, sequence in (("A", "MKVLAAAEEEKK"), ("B", "GGWCCCFFFHHH")):
+            with open(os.path.join(
+                    msa_dir, chain_id, "uniref90_hits.sto"), "w") as handle:
+                handle.write(
+                    f"# STOCKHOLM 1.0\n\n{chain_id}0/1-12  {sequence}\n//\n")
+            with open(os.path.join(
+                    msa_dir, chain_id, "bfd_uniref_hits.a3m"), "w") as handle:
+                handle.write(f">101 BFD query\n{sequence}\n")
+            with open(os.path.join(
+                    msa_dir, chain_id, "mgnify_hits.sto"), "w") as handle:
+                handle.write(
+                    f"# STOCKHOLM 1.0\n\n{chain_id}0/1-12  {sequence}\n//\n")
+            with open(os.path.join(
+                    msa_dir, chain_id, "uniprot_hits.sto"), "w") as handle:
+                handle.write(
+                    f"# STOCKHOLM 1.0\n\n{chain_id}0/1-12  {sequence}\n//\n")
         os.makedirs(os.path.join(self.tmp.name, "cifs"), exist_ok=True)
         for index, date in enumerate(release_dates):
             with open(os.path.join(
                     self.tmp.name, "cifs", f"pdb{index}.cif"), "w") as handle:
                 handle.write(f"# release_date: {date}\ndata_x")
+        with open(os.path.join(self.tmp.name, "sample.fasta"), "w") as handle:
+            handle.write(">A\nMKVLAAAEEEKK\n>B\nGGWCCCFFFHHH\n")
         sample = {
             "dialect": "alphafold3", "version": 2, "name": "T1026",
             "sequences": [
@@ -624,7 +643,7 @@ class Af2TemplatesToJsonTests(unittest.TestCase):
             json.dump(sample, handle)
 
     def test_templates_populated_and_dated(self):
-        self._write_fixture(release_dates=("2020-01-01", "2099-01-01"))
+        self._write_fixture(release_dates=("2020-01-01", "2500-01-01"))
         with open(os.path.join(
                 self.tmp.name, "raw", "T1026", "msas", "A",
                 "pdb_hits.sto"), "w") as handle:
@@ -684,8 +703,12 @@ class Af2TemplatesToJsonTests(unittest.TestCase):
             handle.write("# release_date: 2020-01-01\ndata_x")
         with open(os.path.join(msa_dir, "uniref90_hits.sto"), "w") as handle:
             handle.write("# STOCKHOLM 1.0\n\nA0/1-12  MKVLAAAEEEKK\n//\n")
+        with open(os.path.join(msa_dir, "mgnify_hits.sto"), "w") as handle:
+            handle.write("# STOCKHOLM 1.0\n\nA0/1-12  MKVLAAAEEEKK\n//\n")
         with open(os.path.join(msa_dir, "pdb_hits.hhr"), "w") as handle:
             handle.write(">pdb0_A/1-12\nMKIAAAAEEEKK\n")
+        with open(os.path.join(self.tmp.name, "sample.fasta"), "w") as handle:
+            handle.write(">A\nMKVLAAAEEEKK\n")
         sample = {
             "dialect": "alphafold3", "version": 2, "name": "T1026",
             "sequences": [

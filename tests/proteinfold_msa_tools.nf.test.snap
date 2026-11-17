@@ -166,7 +166,7 @@
     },
     "--msa_tool alphafold2_msa": {
         "content": [
-            12,
+            10,
             [
                 "alphafold3",
                 "alphafold3/T1024",
@@ -237,7 +237,7 @@
                 "T1026_colabfold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-17T12:17:18.952467525",
+        "timestamp": "2026-11-17T12:32:25.378602726",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -245,7 +245,7 @@
     },
     "--msa_tool alphafold2_msa repopulates AlphaFold3 JSON input": {
         "content": [
-            9,
+            8,
             [
                 "alphafold3",
                 "alphafold3/rich_sample",
@@ -291,7 +291,7 @@
                 "rich_sample_colabfold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-17T12:17:37.472209035",
+        "timestamp": "2026-11-17T12:32:43.979738884",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
