@@ -1,14 +1,14 @@
 nextflow_process {
-    name "Boltz MSA cache lookup stub"
+    name "MSA cache lookup"
     script "../main.nf"
     process "MSA_CACHE_LOOKUP"
 
     test("cache miss") {
         when {
             params {
-                boltz_msa_cache_dir = "$outputDir/cache"
-                boltz_msa_cache_id = "revision"
-                boltz_msa_cache_tool_id = "sha256:test-image"
+                msa_cache_dir = "$outputDir/cache"
+                msa_cache_id = "revision"
+                msa_cache_tool_id = "sha256:test-image"
             }
             process {
                 """
@@ -25,16 +25,15 @@ nextflow_process {
     test("cache hit") {
         when {
             params {
-                mode = 'boltz'
                 colabfold_db_load_mode = 1
-                boltz_msa_cache_dir = "$outputDir/cache"
-                boltz_msa_cache_id = "revision"
-                boltz_msa_cache_tool_id = "sha256:test-image"
+                msa_cache_dir = "$outputDir/cache"
+                msa_cache_id = "revision"
+                msa_cache_tool_id = "sha256:test-image"
             }
             process {
                 """
                 def fasta = file(projectDir + '/modules/local/msa_cache_lookup/tests/query.fasta', checkIfExists: true)
-                def cacheDir = file(params.boltz_msa_cache_dir)
+                def cacheDir = file(params.msa_cache_dir)
                 cacheDir.mkdirs()
                 def payload = file(projectDir + '/modules/local/msa_cache_lookup/tests/multimer.json', checkIfExists: true)
                 def a3mPayload = file("$outputDir/alignment.a3m")
@@ -50,7 +49,7 @@ nextflow_process {
             def hitJson = file("${process.out[0][0][2]}/hit.json")
             assert hitJson.exists()
             assert hitJson.bytes == file(projectDir + '/modules/local/msa_cache_lookup/tests/multimer.json').bytes
-            def bundles = file(params.boltz_msa_cache_dir).listFiles().findAll { it.name.endsWith('.zip') }
+            def bundles = file(params.msa_cache_dir).listFiles().findAll { it.name.endsWith('.zip') }
             assert bundles.size() == 1
             def archive = new java.util.zip.ZipFile(bundles[0])
             try {
@@ -60,7 +59,7 @@ nextflow_process {
             }
             def fasta = file(projectDir + '/modules/local/msa_cache_lookup/tests/query.fasta')
             def hitA3m = file("$outputDir/hit.a3m")
-            assert ['python3', file(projectDir + '/bin/msa_cache.py').toString(), 'lookup', fasta.toString(), 'revision', 'sha256:test-image', '--db-load-mode 1', params.boltz_msa_cache_dir.toString(), hitA3m.toString(), 'a3m'].execute().waitFor() == 0
+            assert ['python3', file(projectDir + '/bin/msa_cache.py').toString(), 'lookup', fasta.toString(), 'revision', 'sha256:test-image', '--db-load-mode 1', params.msa_cache_dir.toString(), hitA3m.toString(), 'a3m'].execute().waitFor() == 0
             assert hitA3m.bytes == file("$outputDir/alignment.a3m").bytes
         }
     }
@@ -68,14 +67,14 @@ nextflow_process {
     test("missing JSON member misses while A3M remains usable") {
         when {
             params {
-                boltz_msa_cache_dir = "$outputDir/cache"
-                boltz_msa_cache_id = "revision"
-                boltz_msa_cache_tool_id = "sha256:test-image"
+                msa_cache_dir = "$outputDir/cache"
+                msa_cache_id = "revision"
+                msa_cache_tool_id = "sha256:test-image"
             }
             process {
                 """
                 def fasta = file(projectDir + '/modules/local/msa_cache_lookup/tests/query.fasta', checkIfExists: true)
-                def cacheDir = file(params.boltz_msa_cache_dir)
+                def cacheDir = file(params.msa_cache_dir)
                 cacheDir.mkdirs()
                 def payload = file(projectDir + '/modules/local/msa_cache_lookup/tests/multimer.json', checkIfExists: true)
                 def a3mPayload = file("$outputDir/alignment.a3m")
@@ -97,7 +96,7 @@ nextflow_process {
             assert !file("${process.out[0][0][2]}/hit.json").exists()
             def fasta = file(projectDir + '/modules/local/msa_cache_lookup/tests/query.fasta')
             def hitA3m = file("$outputDir/hit.a3m")
-            assert ['python3', file(projectDir + '/bin/msa_cache.py').toString(), 'lookup', fasta.toString(), 'revision', 'sha256:test-image', '', params.boltz_msa_cache_dir.toString(), hitA3m.toString(), 'a3m'].execute().waitFor() == 0
+            assert ['python3', file(projectDir + '/bin/msa_cache.py').toString(), 'lookup', fasta.toString(), 'revision', 'sha256:test-image', '', params.msa_cache_dir.toString(), hitA3m.toString(), 'a3m'].execute().waitFor() == 0
             assert hitA3m.bytes == file("$outputDir/alignment.a3m").bytes
         }
     }
@@ -105,14 +104,14 @@ nextflow_process {
     test("corrupt cache misses") {
         when {
             params {
-                boltz_msa_cache_dir = "$outputDir/cache"
-                boltz_msa_cache_id = "revision"
-                boltz_msa_cache_tool_id = "sha256:test-image"
+                msa_cache_dir = "$outputDir/cache"
+                msa_cache_id = "revision"
+                msa_cache_tool_id = "sha256:test-image"
             }
             process {
                 """
                 def fasta = file(projectDir + '/modules/local/msa_cache_lookup/tests/query.fasta', checkIfExists: true)
-                def cacheDir = file(params.boltz_msa_cache_dir)
+                def cacheDir = file(params.msa_cache_dir)
                 cacheDir.mkdirs()
                 def payload = file(projectDir + '/modules/local/msa_cache_lookup/tests/multimer.json', checkIfExists: true)
                 def a3mPayload = file("$outputDir/alignment.a3m")
