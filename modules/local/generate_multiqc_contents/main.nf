@@ -13,8 +13,8 @@ process GENERATE_MULTIQC_CONTENTS {
 
     output:
     tuple val(meta), path("*_mqc.json"), emit: mqc_json
-    tuple val("${task.process}"), val('python'), eval("python3 --version | sed 's/Python //g'"), emit: versions_python, topic: versions
-    tuple val("${task.process}"), val('generate_multiqc_contents.py'), eval("python3 --version | sed 's/Python //g'"), emit: versions_generator, topic: versions
+    tuple val("${task.process}"), val('python'), eval(workflow.stubRun ? 'echo unknown' : ("python3 --version | sed 's/Python //g'")), emit: versions_python, topic: versions
+    tuple val("${task.process}"), val('generate_multiqc_contents.py'), eval(workflow.stubRun ? 'echo unknown' : ("python3 --version | sed 's/Python //g'")), emit: versions_generator, topic: versions
 
     when:
     task.ext.when == null || task.ext.when

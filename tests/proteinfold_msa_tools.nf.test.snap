@@ -158,20 +158,20 @@
                 "T1026_colabfold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ],
             {
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "3.14.3",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "3.14.3",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:generate_report.py": "3.12.7",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:python": "3.12.7",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:alphafold3_colabfold": "3.1.18",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:colabfold": "1.6.3",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "unknown",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "unknown",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:generate_report.py": "unknown",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:python": "unknown",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:alphafold3_colabfold": "unknown",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:colabfold": "unknown",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:colabfold_commit": "e9e8bd0b8b6c26f9865808070342d0d785dada2e",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:jax": "0.11.2",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_COLABFOLD_SEARCH:MMSEQS_COLABFOLDSEARCH_BATCH:colabfold_search": "1.6.3",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_COLABFOLD_SEARCH:MMSEQS_COLABFOLDSEARCH_BATCH:mmseqs": "48f2a22d5f68f595afdfb5e601ca11721cf17449",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_COLABFOLD_SEARCH:MULTIFASTA_TO_CSV:sed": 4.7
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:jax": "unknown",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_COLABFOLD_SEARCH:MMSEQS_COLABFOLDSEARCH_BATCH:colabfold_search": "unknown",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_COLABFOLD_SEARCH:MMSEQS_COLABFOLDSEARCH_BATCH:mmseqs": "unknown",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_COLABFOLD_SEARCH:MULTIFASTA_TO_CSV:sed": "unknown"
             }
         ],
-        "timestamp": "2026-11-17T14:07:08.727183734",
+        "timestamp": "2026-11-17T15:07:41.684284379",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -250,21 +250,21 @@
                 "T1026_colabfold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ],
             {
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "3.14.3",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "3.14.3",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:generate_report.py": "3.12.7",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:python": "3.12.7",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:alphafold3_colabfold": "3.1.18",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:colabfold": "1.6.3",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "unknown",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "unknown",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:generate_report.py": "unknown",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:python": "unknown",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:alphafold3_colabfold": "unknown",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:colabfold": "unknown",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:colabfold_commit": "e9e8bd0b8b6c26f9865808070342d0d785dada2e",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:jax": "0.11.2",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:alphafold2": "c77e5d2a8961d1a353632c462914ff0a32a950f6",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:biopython": 1.79,
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:numpy": "1.24.3",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:python": "3.11.17"
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:jax": "unknown",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:alphafold2": "unknown",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:biopython": "unknown",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:numpy": "unknown",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:python": "unknown"
             }
         ],
-        "timestamp": "2026-11-17T14:07:30.840764617",
+        "timestamp": "2026-11-17T15:07:56.742162252",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -318,21 +318,21 @@
                 "rich_sample_colabfold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ],
             {
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "3.14.3",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "3.14.3",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:generate_report.py": "3.12.7",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:python": "3.12.7",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:alphafold3_colabfold": "3.1.18",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:colabfold": "1.6.3",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "unknown",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "unknown",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:generate_report.py": "unknown",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:python": "unknown",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:alphafold3_colabfold": "unknown",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:colabfold": "unknown",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:colabfold_commit": "e9e8bd0b8b6c26f9865808070342d0d785dada2e",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:jax": "0.11.2",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:alphafold2": "c77e5d2a8961d1a353632c462914ff0a32a950f6",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:biopython": 1.79,
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:numpy": "1.24.3",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:python": "3.11.17"
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:jax": "unknown",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:alphafold2": "unknown",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:biopython": "unknown",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:numpy": "unknown",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:python": "unknown"
             }
         ],
-        "timestamp": "2026-11-17T14:08:09.779811751",
+        "timestamp": "2026-11-17T15:08:32.667748433",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -425,17 +425,17 @@
                 "T1026.json:md5,d41d8cd98f00b204e9800998ecf8427e"
             ],
             {
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "3.14.3",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "3.14.3",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:generate_report.py": "3.12.7",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:python": "3.12.7",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:alphafold3_colabfold": "3.1.18",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:colabfold": "1.6.3",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "unknown",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "unknown",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:generate_report.py": "unknown",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:python": "unknown",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:alphafold3_colabfold": "unknown",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:colabfold": "unknown",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:colabfold_commit": "e9e8bd0b8b6c26f9865808070342d0d785dada2e",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:jax": "0.11.2"
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:jax": "unknown"
             }
         ],
-        "timestamp": "2026-11-17T14:07:50.48990981",
+        "timestamp": "2026-11-17T15:08:17.19124376",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
