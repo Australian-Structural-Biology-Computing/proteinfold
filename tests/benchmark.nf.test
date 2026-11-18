@@ -51,7 +51,10 @@ nextflow_pipeline {
         }
         then {
             assert workflow.failed
-            assert workflow.errorMessage.contains("reference")
+            // Nextflow >= 26.10 leaves workflow.errorMessage empty for errors raised
+            // during pipeline initialisation, so assert against the captured stdout,
+            // which nf-test records for both successful and failed runs.
+            assert workflow.stdout.join('\n').contains("The 'reference' samplesheet column cannot be used with --split_fasta.")
         }
     }
 }
