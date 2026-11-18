@@ -313,117 +313,117 @@ process COLABFOLD2_INFERENCE_BATCH {
         def ext = dot >= 0 ? name.substring(dot) : ''
         "cp -- ${shell_quote(name)} ${shell_quote("msa_in/${(meta.id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_')}${ext}")}"
     }
-    def ids_content = sample_ids.join('\n')
+    // Quote once for the printf below; a heredoc here breaks under the
+    // template's uneven indentation (the indented terminator never closes).
+    def ids_content = sample_ids.collect { shell_quote(it) }.join(' ')
 
     """
-    if ! command -v colabfold_batch >/dev/null 2>&1; then
-        echo "COLABFOLD2_INFERENCE_BATCH: colabfold_batch is missing or not executable on the container PATH" >&2
+if ! command -v colabfold_batch >/dev/null 2>&1; then
+    echo "COLABFOLD2_INFERENCE_BATCH: colabfold_batch is missing or not executable on the container PATH" >&2
+    exit 1
+fi
+if ! python3 -c 'import colabfold, jax'; then
+    echo "COLABFOLD2_INFERENCE_BATCH: runtime import validation failed (colabfold/jax not importable, see traceback above)" >&2
+    exit 1
+fi
+mkdir -p msa_in
+${stage_cmds.join('\n')}
+printf '%s\\n' ${ids_content} > sample_ids.txt
+python3 - <<'PY'
+import glob, json, os, sys
+for path in sorted(glob.glob('msa_in/*.json')):
+    with open(path) as handle:
+        document = json.load(handle)
+    if isinstance(document, list):
+        if len(document) != 1:
+            sys.exit(f"{path} contains {len(document)} AlphaFold3 jobs; ColabFold2 requires one job per samplesheet row")
+        job = document[0]
+    else:
+        job = document
+    # Pin the colabfold job name to the sample id so the outputs of a
+    # batched run stay addressable per sample.
+    job['name'] = os.path.splitext(os.path.basename(path))[0]
+    with open(path, 'w') as handle:
+        json.dump(document, handle, indent=2)
+PY
+for f in msa_in/*.fa msa_in/*.faa msa_in/*.fasta; do
+    [ -e "\$f" ] || continue
+    nrecords=\$(grep -c '^>' "\$f" || true)
+    if [ "\$nrecords" != "1" ]; then
+        echo "COLABFOLD2_INFERENCE_BATCH: \$f contains \$nrecords FASTA records; use --split_fasta to run each record independently" >&2
         exit 1
     fi
-    if ! python3 -c 'import colabfold, jax'; then
-        echo "COLABFOLD2_INFERENCE_BATCH: runtime import validation failed (colabfold/jax not importable, see traceback above)" >&2
+done
+
+cat > sitecustomize.py <<'EOF'
+def _register_missing_gpu_kinds():
+    try:
+        from jax._src.pallas.triton import gpu_info as gi
+    except Exception:
+        return
+    def add(kind, arch, cc):
+        if kind not in gi.registry:
+            gi.registry[kind] = lambda: gi.GpuInfo(gpu_version=None, arch_name=arch, compute_capability=cc)
+    add("NVIDIA L40S", "8.9", 89)
+    add("NVIDIA A10G", "8.6", 86)
+    for kind in ("Tesla V100-SXM2-32GB", "Tesla V100-SXM2-16GB",
+                 "Tesla V100-PCIE-32GB", "Tesla V100-PCIE-16GB"):
+        add(kind, "7.0", 70)
+_register_missing_gpu_kinds()
+EOF
+export PYTHONPATH="\$PWD\${PYTHONPATH:+:\$PYTHONPATH}"
+
+mkdir raw
+colabfold_batch \\
+    --model-type ${model_type} \\
+    ${use_esm_arg} \\
+    --num-recycle ${num_recycles} \\
+    --weights-precision ${precision} \\
+    --data "${params_path}" \\
+    ${random_seed_arg} \\
+    $args \\
+    msa_in/ \\
+    raw/
+
+while IFS= read -r id; do
+    mapfile -t ranked_structures < <(find raw -maxdepth 1 -type f -name "\${id}_rank_*.${structure_ext}" | sort)
+    if (( \${#ranked_structures[@]} == 0 )); then
+        echo "COLABFOLD2_INFERENCE_BATCH produced no ranked structures for \${id}" >&2
         exit 1
     fi
-    mkdir -p msa_in
-    ${stage_cmds.join('\n')}
-    cat > sample_ids.txt <<'COLABFOLD2_BATCH_IDS'
-    ${ids_content}
-    COLABFOLD2_BATCH_IDS
-    python3 - <<'PY'
-    import glob, json, os, sys
-    for path in sorted(glob.glob('msa_in/*.json')):
-        with open(path) as handle:
-            document = json.load(handle)
-        if isinstance(document, list):
-            if len(document) != 1:
-                sys.exit(f"{path} contains {len(document)} AlphaFold3 jobs; ColabFold2 requires one job per samplesheet row")
-            job = document[0]
-        else:
-            job = document
-        # Pin the colabfold job name to the sample id so the outputs of a
-        # batched run stay addressable per sample.
-        job['name'] = os.path.splitext(os.path.basename(path))[0]
-        with open(path, 'w') as handle:
-            json.dump(document, handle, indent=2)
-    PY
-    for f in msa_in/*.fa msa_in/*.faa msa_in/*.fasta; do
-        [ -e "\$f" ] || continue
-        nrecords=\$(grep -c '^>' "\$f" || true)
-        if [ "\$nrecords" != "1" ]; then
-            echo "COLABFOLD2_INFERENCE_BATCH: \$f contains \$nrecords FASTA records; use --split_fasta to run each record independently" >&2
-            exit 1
-        fi
+    cp "\${ranked_structures[0]}" "\${id}_colabfold2.${structure_ext}"
+
+    mapfile -t score_files < <(find raw -maxdepth 1 -type f -name "\${id}_scores_rank_*.json" | sort)
+    if (( \${#score_files[@]} == 0 )); then
+        echo "COLABFOLD2_INFERENCE_BATCH produced no confidence JSON files for \${id}" >&2
+        exit 1
+    fi
+
+    extract_metrics.py --name "\$id" \\
+        --colabfold_metrics_files "\${score_files[@]}" \\
+        --structs "\${ranked_structures[@]}"
+
+    msa_file=\$(find raw -maxdepth 1 -type f -name "\${id}.a3m" -print -quit)
+    if [[ -n "\$msa_file" ]]; then
+        extract_metrics.py --name "\$id" --paired_a3m "\$msa_file"
+        mv "\${id}_msa.tsv" "\${id}_colabfold2_msa.tsv"
+    else
+        touch "\${id}_colabfold2_msa.tsv"
+    fi
+
+    for metric in 1_pae ptm iptm ipsae chainwise_iptm chainwise_ipsae plddt; do
+        [ -f "\${id}_\${metric}.tsv" ] || touch "\${id}_\${metric}.tsv"
     done
+    cp "\${id}_plddt.tsv" "\${id}_confidence.tsv"
+done < sample_ids.txt
 
-    cat > sitecustomize.py <<'EOF'
-    def _register_missing_gpu_kinds():
-        try:
-            from jax._src.pallas.triton import gpu_info as gi
-        except Exception:
-            return
-        def add(kind, arch, cc):
-            if kind not in gi.registry:
-                gi.registry[kind] = lambda: gi.GpuInfo(gpu_version=None, arch_name=arch, compute_capability=cc)
-        add("NVIDIA L40S", "8.9", 89)
-        add("NVIDIA A10G", "8.6", 86)
-        for kind in ("Tesla V100-SXM2-32GB", "Tesla V100-SXM2-16GB",
-                     "Tesla V100-PCIE-32GB", "Tesla V100-PCIE-16GB"):
-            add(kind, "7.0", 70)
-    _register_missing_gpu_kinds()
-    EOF
-    export PYTHONPATH="\$PWD\${PYTHONPATH:+:\$PYTHONPATH}"
-
-    mkdir raw
-    colabfold_batch \\
-        --model-type ${model_type} \\
-        ${use_esm_arg} \\
-        --num-recycle ${num_recycles} \\
-        --weights-precision ${precision} \\
-        --data "${params_path}" \\
-        ${random_seed_arg} \\
-        $args \\
-        msa_in/ \\
-        raw/
-
-    while IFS= read -r id; do
-        mapfile -t ranked_structures < <(find raw -maxdepth 1 -type f -name "\${id}_rank_*.${structure_ext}" | sort)
-        if (( \${#ranked_structures[@]} == 0 )); then
-            echo "COLABFOLD2_INFERENCE_BATCH produced no ranked structures for \${id}" >&2
-            exit 1
-        fi
-        cp "\${ranked_structures[0]}" "\${id}_colabfold2.${structure_ext}"
-
-        mapfile -t score_files < <(find raw -maxdepth 1 -type f -name "\${id}_scores_rank_*.json" | sort)
-        if (( \${#score_files[@]} == 0 )); then
-            echo "COLABFOLD2_INFERENCE_BATCH produced no confidence JSON files for \${id}" >&2
-            exit 1
-        fi
-
-        extract_metrics.py --name "\$id" \\
-            --colabfold_metrics_files "\${score_files[@]}" \\
-            --structs "\${ranked_structures[@]}"
-
-        msa_file=\$(find raw -maxdepth 1 -type f -name "\${id}.a3m" -print -quit)
-        if [[ -n "\$msa_file" ]]; then
-            extract_metrics.py --name "\$id" --paired_a3m "\$msa_file"
-            mv "\${id}_msa.tsv" "\${id}_colabfold2_msa.tsv"
-        else
-            touch "\${id}_colabfold2_msa.tsv"
-        fi
-
-        for metric in 1_pae ptm iptm ipsae chainwise_iptm chainwise_ipsae plddt; do
-            [ -f "\${id}_\${metric}.tsv" ] || touch "\${id}_\${metric}.tsv"
-        done
-        cp "\${id}_plddt.tsv" "\${id}_confidence.tsv"
-    done < sample_ids.txt
-
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        colabfold: \$(python3 -c 'import importlib.metadata; print(importlib.metadata.version("colabfold"))' 2>/dev/null || echo unknown)
-        colabfold_commit: e9e8bd0b8b6c26f9865808070342d0d785dada2e
-        alphafold3_colabfold: \$(python3 -c 'import importlib.metadata; print(importlib.metadata.version("alphafold3-colabfold"))' 2>/dev/null || echo unknown)
-        jax: \$(python3 -c 'import jax; print(jax.__version__)' 2>/dev/null || echo unknown)
-    END_VERSIONS
+cat <<-END_VERSIONS > versions.yml
+"${task.process}":
+    colabfold: \$(python3 -c 'import importlib.metadata; print(importlib.metadata.version("colabfold"))' 2>/dev/null || echo unknown)
+    colabfold_commit: e9e8bd0b8b6c26f9865808070342d0d785dada2e
+    alphafold3_colabfold: \$(python3 -c 'import importlib.metadata; print(importlib.metadata.version("alphafold3-colabfold"))' 2>/dev/null || echo unknown)
+    jax: \$(python3 -c 'import jax; print(jax.__version__)' 2>/dev/null || echo unknown)
+END_VERSIONS
     """
 
     stub:
