@@ -18,6 +18,11 @@ workflow BENCHMARK {
     BENCHMARK_STRUCTURE(
         ch_benchmark_predictions
             .combine(ch_references, by: 0)
+            // KNOWN LIMITATION: combine silently drops references that have no
+            // matching prediction (e.g. an optional top-ranked output that never
+            // emits, as in ColabFold2). Such samples get no benchmark and the
+            // pipeline still succeeds. TODO: reconcile expected (id, model) pairs
+            // against emitted scores and fail on any shortfall.
             .map { id, meta, structures, reference ->
                 def files = structures instanceof List ? structures : [structures]
                 if (files.size() != 1) {
