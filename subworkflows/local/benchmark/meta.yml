@@ -1,0 +1,35 @@
+name: "BENCHMARK"
+description: Benchmark the top-ranked predicted structure of each sample against its reference structure
+keywords:
+  - benchmarking
+  - reference
+  - structure
+components:
+  - benchmark_structure
+input:
+  - ch_predictions:
+      type: channel
+      description: |
+        Structure of: [path(meta), path(structure)]
+        The top-ranked predicted model for each sample.
+        Structure of the `meta` map:
+          - id: sample id
+          - model: name of the prediction mode that produced the model
+  - ch_references:
+      type: channel
+      description: |
+        Structure of: [path(id), path(reference)]
+        Reference structure for each sample that declares one in the samplesheet.
+  - colabfold2_public_mode:
+      type: string
+      description: Selected ColabFold2 backend mode (e.g. colabfold2-alphafold3), or null when ColabFold2 is not used
+output:
+  - scores:
+      type: channel
+      description: |
+        Structure of: [path(meta), path(benchmark.json)]
+        Benchmarking scores of each predicted structure against its reference
+authors:
+  - "@jscgh"
+maintainers:
+  - "@jscgh"

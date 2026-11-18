@@ -12,11 +12,12 @@ process BENCHMARK_STRUCTURE {
     tuple val("${task.process}"), val('openstructure'), eval("ost --version | sed 's/OpenStructure //'"), emit: versions, topic: versions
 
     script:
-    def quote = { value -> "'${value.toString().replace("'", "'\\''")}'" }
+    def quoted_model     = "'${model.toString().replace("'", "'\\''")}'"
+    def quoted_reference = "'${reference.toString().replace("'", "'\\''")}'"
     """
     benchmark_structure.py \\
-        --model ${quote(model)} \\
-        --reference ${quote(reference)} \\
+        --model ${quoted_model} \\
+        --reference ${quoted_reference} \\
         --output benchmark.json
     """
 

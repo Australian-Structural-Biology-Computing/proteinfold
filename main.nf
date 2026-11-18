@@ -36,7 +36,7 @@ include { PIPELINE_COMPLETION              } from './subworkflows/local/utils_nf
 include { modelcifInput                    } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { modelcifDummyMetric              } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { POST_PROCESSING                  } from './subworkflows/local/post_processing'
-include { BENCHMARK_STRUCTURE              } from './modules/local/benchmark_structure'
+include { BENCHMARK                        } from './subworkflows/local/benchmark'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -566,21 +566,10 @@ workflow NFCORE_PROTEINFOLD {
     //
     // POST PROCESSING: generate visualisation reports
     //
-    ch_benchmark_predictions = ch_top_ranked_model.map { meta, structure ->
-        [meta.id, meta, structure]
-    }
-    BENCHMARK_STRUCTURE(
-        ch_benchmark_predictions
-            .combine(ch_references, by: 0)
-            .map { id, meta, structures, reference ->
-                def files = structures instanceof List ? structures : [structures]
-                if (files.size() != 1) {
-                    error("Benchmarking requires one predicted structure per sample and method: ${id}, ${meta.model}")
-                }
-                def benchmark_meta = meta.clone()
-                if (benchmark_meta.model == 'colabfold2') benchmark_meta.model = colabfold2_public_mode
-                [benchmark_meta, files[0], reference]
-            }
+    BENCHMARK(
+        ch_top_ranked_model,
+        ch_references,
+        colabfold2_public_mode
     )
 
     ch_multiqc_config        = channel.fromPath("$projectDir/assets/multiqc_config.yml", checkIfExists: true).first()
