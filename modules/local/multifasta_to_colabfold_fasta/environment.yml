@@ -1,4 +1,4 @@
-name: multifasta_to_csv
+name: multifasta_to_colabfold_fasta
 channels:
   - conda-forge
   - bioconda
