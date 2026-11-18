@@ -33,8 +33,8 @@
                 "msa/colabfold_search/T1026.a3m",
                 "msa/colabfold_search/T1026.json",
                 "multifasta",
-                "multifasta/T1024.csv",
-                "multifasta/T1026.csv",
+                "multifasta/T1024.fasta",
+                "multifasta/T1026.fasta",
                 "multiqc",
                 "multiqc/multiqc_data",
                 "multiqc/multiqc_data/.stub",
@@ -72,8 +72,8 @@
                 "T1024.json:md5,80a667ed5ec1a1fbea22347c2e582780",
                 "T1026.a3m:md5,2d5bea1d28ffa33dc01f46541bedc592",
                 "T1026.json:md5,80a667ed5ec1a1fbea22347c2e582780",
-                "T1024.csv:md5,22afe170c0e30d4de850a0b24e490bfd",
-                "T1026.csv:md5,af7fbbd6d4e80843f7993b069dc1acf0",
+                "T1024.fasta:md5,a0f123964aa4daa9ac1b0f3192943035",
+                "T1026.fasta:md5,6bf7b57662d52f99945e082741b4123b",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_colabfold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -90,10 +90,10 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:COLABFOLD2_INFERENCE_BATCH:jax": "0.11.2",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_COLABFOLD_SEARCH:MMSEQS_COLABFOLDSEARCH_BATCH:colabfold_search": "1.6.3",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_COLABFOLD_SEARCH:MMSEQS_COLABFOLDSEARCH_BATCH:mmseqs": "48f2a22d5f68f595afdfb5e601ca11721cf17449",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_COLABFOLD_SEARCH:MULTIFASTA_TO_CSV:sed": 4.7
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_COLABFOLD_SEARCH:MULTIFASTA_TO_COLABFOLD_FASTA:sed": 4.7
             }
         ],
-        "timestamp": "2026-11-17T15:46:57.870374848",
+        "timestamp": "2026-11-18T18:20:27.643929671",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
