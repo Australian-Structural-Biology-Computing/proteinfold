@@ -23,12 +23,14 @@ process MULTIFASTA_TO_COLABFOLD_FASTA {
     # complexes are searched (and paired) as one entry, matching the
     # AlphaFold3 JSON extraction. colabfold_search treats a sequence
     # containing ':' as a complex.
-    printf '>${meta.id}\\\\n' > ${meta.id}.fasta
-    awk '/^>/ { if (records) printf ":"; records++; next } { printf "%s", \\\$0 } END { printf "\\\\n" }' ${fasta} >> ${meta.id}.fasta
+    printf '>${meta.id}\\n' > query_tmp.fasta
+    awk '/^>/ { if (records) printf ":"; records++; next } { printf "%s", \$0 } END { printf "\\n" }' ${fasta} >> query_tmp.fasta
+    mv -f query_tmp.fasta ${meta.id}.fasta
     """
 
     stub:
     """
-    printf '>${meta.id}\\\\nstub\\\\n' > ${meta.id}.fasta
+    printf '>${meta.id}\\nstub\\n' > query_tmp.fasta
+    mv -f query_tmp.fasta ${meta.id}.fasta
     """
 }
