@@ -30,6 +30,6 @@ output:
         Structure of: [path(meta), path(benchmark.json)]
         Benchmarking scores of each predicted structure against its reference
 authors:
-  - "@jscgh"
+  - "@keiran-rowell-unsw"
 maintainers:
-  - "@jscgh"
+  - "@keiran-rowell-unsw"
