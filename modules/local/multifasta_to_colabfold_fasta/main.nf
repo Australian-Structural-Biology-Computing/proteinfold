@@ -30,7 +30,8 @@ process MULTIFASTA_TO_COLABFOLD_FASTA {
 
     stub:
     """
-    printf '>${meta.id}\\nstub\\n' > query_tmp.fasta
+    printf '>${meta.id}\\n' > query_tmp.fasta
+    awk '/^>/ { if (records) printf ":"; records++; next } { printf "%s", \$0 } END { printf "\\n" }' ${fasta} >> query_tmp.fasta
     mv -f query_tmp.fasta ${meta.id}.fasta
     """
 }
