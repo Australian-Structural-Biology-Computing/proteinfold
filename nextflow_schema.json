@@ -210,6 +210,20 @@
                     "description": "Number of inputs processed together during structure prediction; -1 runs all inputs in one batch. Batching is not supported with --use_msa_server.",
                     "errorMessage": "Inference batch size must be -1 or a positive integer"
                 },
+                "report_batch_size": {
+                    "type": "integer",
+                    "default": -1,
+                    "anyOf": [
+                        {
+                            "const": -1
+                        },
+                        {
+                            "minimum": 1
+                        }
+                    ],
+                    "description": "Number of samples processed together per report/ModelCIF task ; -1 runs all samples in one task",
+                    "errorMessage": "Report batch size must be -1 or a positive integer"
+                },
                 "colabfold_db_load_mode": {
                     "type": "integer",
                     "description": "Specify the way that MMSeqs2 will load the required databases in memory",

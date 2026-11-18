@@ -6,11 +6,16 @@ and proteinfold_<mode>_plddt_lineplot_mqc.json for the stock MULTIQC module.
 """
 
 import argparse
+import array
+import ast
 import csv
+import gzip
 import json
 import math
 import re
+import struct
 import sys
+import zipfile
 from pathlib import Path
 
 MODE_LABELS = {
@@ -20,8 +25,6 @@ MODE_LABELS = {
     "esmfold": "ESMFold",
     "boltz": "Boltz",
 }
-
-ROUTED_SUFFIXES = ("_plddt", "_msa", "_iptm", "_ptm")
 
 RANK_COLUMN_RE = re.compile(r"^rank_(\d+)$")
 
@@ -48,44 +51,6 @@ def clean_float(value):
     return number if math.isfinite(number) else None
 
 
-def classify_metric(filename):
-    """Map a metric file name to a routed metric, or None if not summarised.
-
-    The combined ``*_chainwise.tsv`` store (per-chain pTM on the diagonal,
-    pairwise ipTM off it) matches no routed suffix and is ignored here.
-    """
-    if filename.endswith("_plddt.tsv"):
-        return "plddt"
-    if filename.endswith("_msa.tsv"):
-        return "msa"
-    if filename.endswith("_iptm.tsv"):
-        return "iptm"
-    if filename.endswith("_ptm.tsv"):
-        return "ptm"
-    return None
-
-
-def sample_id_from_fn(filename):
-    """Derive the sample id from a routed metric file name.
-
-    Strips the metric suffix from ``<id>_<metric>.tsv``. The MSA metrics keep
-    the extractor's ``_colabfold2`` marker (``<id>_colabfold2_msa.tsv``), so
-    that infix is stripped as well; the result is the sample id shared by
-    every metric of one prediction, keeping all of a prediction's values in
-    one MultiQC row per mode.
-    """
-    stem = filename[:-4] if filename.lower().endswith(".tsv") else filename
-    for suffix in ROUTED_SUFFIXES:
-        if stem.endswith(suffix):
-            stem = stem[: -len(suffix)]
-            break
-    else:
-        return None
-    if filename.endswith("_msa.tsv") and stem.endswith("_colabfold2"):
-        stem = stem[: -len("_colabfold2")]
-    return stem
-
-
 def set_metric(rows, sample_name, column, value, source):
     """Set a metric, warning on duplicate-id collapse (the samplesheet does not enforce unique ids)."""
     if column in rows.setdefault(sample_name, {}):
@@ -97,115 +62,130 @@ def set_metric(rows, sample_name, column, value, source):
     rows[sample_name][column] = value
 
 
-def parse_plddt(filepath, sample_name, rows, line_series):
-    """Per-rank mean pLDDT plus per-residue series; the parent row is the top-ranked model."""
-    with open(filepath, newline="") as handle:
-        table = [row for row in csv.reader(handle, delimiter="\t") if row]
-    if not table:
-        warn(f"pLDDT file {filepath.name} is empty; skipping")
-        return
-    header, data_rows = table[0], table[1:]
-    if len(header) < 2 or str(header[0]).strip().lower() != "positions":
-        warn(f"pLDDT file {filepath.name} has no 'Positions' header column; skipping")
-        return
+# ---------------------------------------------------------------------------
+# Packed metric stores (bin/pack_metrics.py output)
+# ---------------------------------------------------------------------------
 
-    rank_cols = []
-    seen_ranks = set()
-    for index, column in enumerate(header[1:]):
-        match = RANK_COLUMN_RE.match(str(column).strip())
-        if match and match.group(1) not in seen_ranks:
-            rank_cols.append((index + 1, match.group(1)))
-            seen_ranks.add(match.group(1))
-        elif match:
-            warn(f"pLDDT file {filepath.name}: ignoring duplicate column '{column}'")
-        else:
-            warn(f"pLDDT file {filepath.name}: ignoring unexpected column '{column}'")
-    if not rank_cols:
-        warn(f"pLDDT file {filepath.name} has no rank_ columns; skipping")
-        return
-
-    rank_means = {}
-    rank_points = {}
-    bad_positions = 0
-    for index, rank_num in rank_cols:
-        points = []
-        values = []
-        for row in data_rows:
-            if index >= len(row):
-                continue
-            try:
-                position = int(str(row[0]).strip())
-            except (TypeError, ValueError):
-                bad_positions += 1
-                continue
-            value = clean_float(row[index])
-            if value is None:
-                continue  # drop NaN/inf: they must not reach the JSON output
-            points.append([position, value])
-            values.append(value)
-        if points:
-            points.sort(key=lambda point: point[0])
-            rank_points[rank_num] = points
-        if values:
-            rank_means[rank_num] = sum(values) / len(values)
-    if bad_positions:
-        warn(f"pLDDT file {filepath.name}: ignored {bad_positions} row(s) with non-integer positions")
-
-    if not rank_means:
-        warn(f"pLDDT file {filepath.name} yielded no usable rank values; skipping")
-        return
-
-    top_rank = min(rank_means, key=int)
-    set_metric(rows, sample_name, "mean_plddt", rank_means[top_rank], filepath)
-    for rank_num, mean in rank_means.items():
-        if rank_num == top_rank:
-            continue
-        set_metric(rows, f"{sample_name}_rank_{rank_num}", "mean_plddt", mean, filepath)
-    if rank_points:
-        line_series.setdefault(sample_name, {})
-        for rank_num, points in rank_points.items():
-            line_series[sample_name][f"rank_{rank_num}"] = points
+SCALARS_MARKER = "_colabfold2_metrics.jsonl.gz"
+ARRAYS_MARKER = "_colabfold2_metrics.npz"
 
 
-def parse_ranked_score(filepath, sample_name, metric, rows):
-    """Header-less two-column (rank, value) score files such as ipTM / pTM.
+def is_packed_scalars(name):
+    return name.endswith(".jsonl.gz") and "colabfold2_metrics" in name
 
-    The parent row carries the top-ranked (numerically lowest) model's score;
-    every other rank becomes a ``<sample>_rank_N`` sub-sample row.
+
+def is_packed_arrays(name):
+    return name.endswith(".npz") and "colabfold2_metrics" in name
+
+
+def read_npz_float64(path):
+    """Minimal stdlib reader for the packed npz store (float64 members only).
+
+    The packed arrays are plain ``.npy`` v1.0 members inside a zip; this
+    avoids a numpy dependency in the MultiQC content generator container.
+    Returns ``{key: list}`` (1-D) or ``{key: list[list]}`` (2-D).
     """
-    scores = {}
-    with open(filepath, newline="") as handle:
-        for fields in csv.reader(handle, delimiter="\t"):
-            if len(fields) < 2:
+    unpacked = {}
+    with zipfile.ZipFile(path) as archive:
+        for name in archive.namelist():
+            if not name.endswith(".npy"):
                 continue
-            value = clean_float(fields[1])
-            if value is None:
-                continue
-            try:
-                rank = int(str(fields[0]).strip())
-            except (TypeError, ValueError):
-                continue  # non-integer rows are not rank rows
-            scores[rank] = value
-    if not scores:
-        warn(f"{metric} file {filepath.name} yielded no usable values; skipping")
-        return
+            raw = archive.read(name)
+            if raw[:6] != b"\x93NUMPY":
+                raise ValueError(f"{path.name}: member {name} is not an npy file")
+            major = raw[6]
+            if major != 1:
+                raise ValueError(f"{path.name}: member {name}: unsupported npy version {major}")
+            (header_len,) = struct.unpack("<H", raw[8:10])
+            header = ast.literal_eval(raw[10 : 10 + header_len].decode("latin1"))
+            if header["descr"] != "<f8":
+                raise ValueError(f"{path.name}: member {name}: unsupported dtype {header['descr']}")
+            shape = header["shape"]
+            payload = raw[10 + header_len :]
+            values = array.array("d")
+            values.frombytes(payload)
+            if sys.byteorder != "little":
+                values.byteswap()
+            flat = values.tolist()
+            if len(shape) == 1:
+                unpacked[name[: -len(".npy")]] = flat
+            elif len(shape) == 2:
+                rows_n, cols_n = shape
+                unpacked[name[: -len(".npy")]] = [flat[i * cols_n : (i + 1) * cols_n] for i in range(rows_n)]
+            else:
+                raise ValueError(f"{path.name}: member {name}: unsupported shape {shape}")
+    return unpacked
 
-    top_rank = min(scores)
-    set_metric(rows, sample_name, metric, scores[top_rank], filepath)
-    for rank, value in scores.items():
-        if rank == top_rank:
+
+def parse_packed_pair(scalars_path, arrays_path, rows, line_series, mode_label):
+    """Fold one batch's packed metric stores into the generalstats rows."""
+    parsed_records = 0
+    rank_scores = {}       # sample_id -> metric -> {rank: value}
+    structure_only = set()
+    with gzip.open(scalars_path, "rt") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            record = json.loads(line)
+            parsed_records += 1
+            metric = record["metric"]
+            sample_id = record["sample_id"]
+            sample_name = f"{sample_id}_{mode_label}"
+            if metric == "plddt_structure_only":
+                if record["value"]:
+                    structure_only.add(sample_id)
+            elif metric == "msa_depth":
+                if record["value"]:
+                    set_metric(rows, sample_name, "msa_depth", record["value"], scalars_path)
+            elif metric in ("ptm", "iptm"):
+                rank_scores.setdefault(sample_id, {}).setdefault(metric, {})[record["rank"]] = record["value"]
+
+    for sample_id, metrics in rank_scores.items():
+        sample_name = f"{sample_id}_{mode_label}"
+        for metric, scores in metrics.items():
+            cleaned = {rank: value for rank, value in scores.items() if clean_float(value) is not None}
+            if not cleaned:
+                warn(f"{scalars_path.name}: {metric} for {sample_id} yielded no usable values; skipping")
+                continue
+            top_rank = min(cleaned)
+            set_metric(rows, sample_name, metric, cleaned[top_rank], scalars_path)
+            for rank, value in cleaned.items():
+                if rank != top_rank:
+                    set_metric(rows, f"{sample_name}_rank_{rank}", metric, value, scalars_path)
+
+    arrays = read_npz_float64(arrays_path)
+    plddt_by_sample = {}   # sample_id -> {rank: values}
+    for key, values in arrays.items():
+        sample_id, rank_str, kind = key.rsplit("|", 2)
+        if kind != "plddt":
+            continue  # PAE matrices stay in the detailed report viewer, like legacy
+        if sample_id in structure_only:
             continue
-        set_metric(rows, f"{sample_name}_rank_{rank}", metric, value, filepath)
+        plddt_by_sample.setdefault(sample_id, {})[int(rank_str)] = values
 
+    for sample_id, rank_values in plddt_by_sample.items():
+        sample_name = f"{sample_id}_{mode_label}"
+        rank_means = {}
+        rank_points = {}
+        for rank, values in rank_values.items():
+            points = [[position, value] for position, value in enumerate(values) if math.isfinite(value)]
+            if points:
+                rank_points[rank] = points
+                rank_means[rank] = sum(value for _, value in points) / len(points)
+        if not rank_means:
+            continue
+        top_rank = min(rank_means)
+        set_metric(rows, sample_name, "mean_plddt", rank_means[top_rank], arrays_path)
+        for rank, mean in rank_means.items():
+            if rank != top_rank:
+                set_metric(rows, f"{sample_name}_rank_{rank}", "mean_plddt", mean, arrays_path)
+        if rank_points:
+            line_series.setdefault(sample_name, {})
+            for rank, points in rank_points.items():
+                line_series[sample_name][f"rank_{rank}"] = points
 
-def parse_msa(filepath, sample_name, rows):
-    """MSA depth: the number of sequence rows in ``<id>[_<mode>]_msa.tsv``."""
-    with open(filepath) as handle:
-        depth = sum(1 for line in handle if line.strip())
-    if depth == 0:
-        warn(f"MSA file {filepath.name} is empty; skipping")
-        return
-    set_metric(rows, sample_name, "msa_depth", depth, filepath)
+    return parsed_records
 
 
 GENERALSTATS_HEADERS = {
@@ -286,60 +266,35 @@ def main(argv=None):
         "sample names are qualified with this mode, never with 'UNKNOWN'.",
     )
     parser.add_argument("--output-dir", default=".", help="Directory to write the *_mqc.json files into")
-    parser.add_argument(
-        "--chunk-index",
-        dest="chunk_index",
-        type=int,
-        default=None,
-        help="When a mode's metrics are split across several tasks, the 0-based chunk "
-        "index; it qualifies the JSON ids and file names so MultiQC keeps the chunks apart",
-    )
-    parser.add_argument("metric_files", nargs="+", help="Routed metric TSVs (_plddt/_msa/_ptm/_iptm)")
+    parser.add_argument("metric_files", nargs="+", help="Packed metric stores (*_colabfold2_metrics.jsonl.gz / .npz)")
     args = parser.parse_args(argv)
 
     model_key = (args.model or "").strip()
     if not model_key:
         fail("No prediction mode given (--model); refusing to emit '_UNKNOWN' sample names")
     mode_label = MODE_LABELS.get(model_key, model_key)
-    # Chunks must not share MultiQC section ids: MultiQC keys custom content
-    # by id, and a second file with the same id would shadow the first.
-    chunk_suffix = f"_chunk{args.chunk_index}" if args.chunk_index is not None else ""
-    chunk_note = f" (part {args.chunk_index + 1})" if args.chunk_index is not None else ""
 
     rows = {}
     line_series = {}
     parsed_files = 0
-    for raw_path in args.metric_files:
-        filepath = Path(raw_path)
-        metric = classify_metric(filepath.name)
-        if metric is None:
-            warn(
-                f"{filepath.name}: not a summarised metric (PAE/ipSAE/chainwise or unknown); "
-                "it stays in the detailed GENERATE_REPORT viewer and produces no bulk rows"
-            )
-            continue
-        sample_id = sample_id_from_fn(filepath.name)
-        if not sample_id:
-            warn(f"Could not derive a sample id from {filepath.name}; skipping")
-            continue
-        sample_name = f"{sample_id}_{mode_label}"
-        if metric == "plddt":
-            parse_plddt(filepath, sample_name, rows, line_series)
-        elif metric == "msa":
-            parse_msa(filepath, sample_name, rows)
-        else:
-            parse_ranked_score(filepath, sample_name, metric, rows)
-        parsed_files += 1
 
-    if not args.metric_files:
-        fail("No metric files were passed; the MULTIQC input channel is miswired")
-    if parsed_files == 0:
-        fail("None of the input files matched a routed metric (_plddt/_msa/_ptm/_iptm); the MULTIQC input channel is miswired")
+    packed_scalars = [p for p in args.metric_files if is_packed_scalars(Path(p).name)]
+    packed_arrays = [p for p in args.metric_files if is_packed_arrays(Path(p).name)]
+    if not packed_scalars and not packed_arrays:
+        fail("No packed metric stores were passed; the MULTIQC input channel is miswired")
+    arrays_by_base = {Path(p).name[: -len(ARRAYS_MARKER)]: p for p in packed_arrays}
+    for raw_path in packed_scalars:
+        filepath = Path(raw_path)
+        base = filepath.name[: -len(SCALARS_MARKER)]
+        arrays_path = arrays_by_base.get(base)
+        if arrays_path is None:
+            fail(f"Packed scalar store {filepath.name} has no matching array store '{base}{ARRAYS_MARKER}'")
+        parsed_files += parse_packed_pair(filepath, Path(arrays_path), rows, line_series, mode_label)
 
     metrics_seen = {column for data in rows.values() for column in data}
     headers = {column: dict(GENERALSTATS_HEADERS[column]) for column in GENERALSTATS_HEADERS if column in metrics_seen}
     generalstats = {
-        "id": f"proteinfold{chunk_suffix}",
+        "id": "proteinfold",
         "section_name": "ProteinFold",
         "description": "Summary metrics for protein structure prediction "
         "(average pLDDT, MSA depth, pTM and ipTM per prediction)",
@@ -358,7 +313,7 @@ def main(argv=None):
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    generalstats_path = output_dir / f"proteinfold_{model_key}{chunk_suffix}_generalstats_mqc.json"
+    generalstats_path = output_dir / f"proteinfold_{model_key}_generalstats_mqc.json"
     dump_json(generalstats_path, generalstats)
 
     linegraph_path = None
@@ -366,15 +321,15 @@ def main(argv=None):
         pconfig = dict(LINEGRAPH_PCONFIG)
         pconfig["data_labels"] = data_labels
         linegraph = {
-            "id": f"proteinfold_plddt_lineplot{chunk_suffix}",
-            "section_name": f"ProteinFold: pLDDT by Position{chunk_note}",
+            "id": "proteinfold_plddt_lineplot",
+            "section_name": "ProteinFold: pLDDT by Position",
             "description": "Per-residue confidence scores across all predicted ranks "
             "(switch between predictions with the tabs above the plot)",
             "plot_type": "linegraph",
             "pconfig": pconfig,
             "data": datasets,
         }
-        linegraph_path = output_dir / f"proteinfold_{model_key}{chunk_suffix}_plddt_lineplot_mqc.json"
+        linegraph_path = output_dir / f"proteinfold_{model_key}_plddt_lineplot_mqc.json"
         dump_json(linegraph_path, linegraph)
 
     if linegraph_path is None:

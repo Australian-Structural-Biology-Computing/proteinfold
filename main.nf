@@ -23,7 +23,6 @@ include { PREPARE_COLABFOLD2_DBS           } from './subworkflows/local/prepare_
 include { PROTEINFOLD                      } from './workflows/proteinfold'
 
 include { PIPELINE_INITIALISATION          } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
-include { modelcifInput                    } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { PIPELINE_COMPLETION              } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { POST_PROCESSING                  } from './subworkflows/local/post_processing'
 
@@ -45,7 +44,6 @@ workflow NFCORE_PROTEINFOLD {
     main:
     ch_samplesheet       = samplesheet
     ch_multiqc           = channel.empty()
-    ch_report_input      = channel.empty()
     modelcif_software_details = params.modelcif_software_details \
         ? file(params.modelcif_software_details, checkIfExists: true) \
         : file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
@@ -288,16 +286,7 @@ workflow NFCORE_PROTEINFOLD {
         ch_af3_rnacentral
     )
 
-    ch_multiqc      = ch_multiqc.mix(PROTEINFOLD.out.multiqc_metrics)
-    ch_report_input = ch_report_input.mix(
-        PROTEINFOLD.out.pdb
-            .join(PROTEINFOLD.out.msa)
-            .join(PROTEINFOLD.out.pae)
-            .join(PROTEINFOLD.out.iptm)
-            .join(PROTEINFOLD.out.ipsae)
-            .join(PROTEINFOLD.out.chainwise)
-            .join(PROTEINFOLD.out.chainwise_ipsae)
-    )
+    ch_multiqc = ch_multiqc.mix(PROTEINFOLD.out.multiqc_metrics)
     //
     // POST PROCESSING: generate visualisation reports
     //
@@ -316,28 +305,47 @@ workflow NFCORE_PROTEINFOLD {
         msa_server:       'mmseqs2-server',
     ]
     def selected_msa_tool = msaToolMap.get(msa_tool, 'None')
-    ch_report_input = ch_report_input.map { tupleData ->
-        def meta = tupleData[0]
-        def m = meta.clone()
-        m.msa_tool = selected_msa_tool
-        [m] + tupleData.drop(1)
+
+    //
+    // Batch report / ModelCIF inputs: per-sample structures + a3m joined with
+    // the sample's packed metric stores, collated into --report_batch_size
+    // groups (consumers read the stores natively).
+    //
+    def report_batch = params.report_batch_size instanceof Number ?
+        params.report_batch_size : params.report_batch_size.toString().toInteger()
+    if (report_batch == 0 || report_batch < -1) {
+        error("Report batch size must be -1 or a positive integer, got ${report_batch}")
     }
 
-    ch_modelcif = modelcifInput(
-        PROTEINFOLD.out.pdb,
-        PROTEINFOLD.out.msa,
-        PROTEINFOLD.out.plddt,
-        PROTEINFOLD.out.pae,
-        PROTEINFOLD.out.ptm,
-        PROTEINFOLD.out.iptm,
-        ch_software_versions,
-        modelcif_software_details,
-        selected_msa_tool
-    )
+    ch_metrics_per_sample = PROTEINFOLD.out.metrics_packed
+        .flatMap { batch_metas, scalars, arrays ->
+            (batch_metas instanceof List ? batch_metas : [batch_metas]).collect { [it, scalars, arrays] }
+        }
+
+    ch_packed_batches = PROTEINFOLD.out.pdb
+        .join(PROTEINFOLD.out.msa)
+        .join(ch_metrics_per_sample)
+        .map { meta, structs, a3m, scalars, arrays -> [meta.id, [meta, structs, a3m, scalars, arrays]] }
+        .collect(flat: false)
+        .flatMap { rows ->
+            def sorted = rows.sort { a, b -> a[0] <=> b[0] }
+            def effective = report_batch == -1 ? Math.max(1, sorted.size()) : report_batch
+            sorted.collate(effective).collect { batch ->
+                def metas = batch.collect { it[1][0] }
+                def stores = (batch.collect { it[1][3] } + batch.collect { it[1][4] }).unique { it.name }
+                def manifest = batch.collect { b ->
+                    def m = b[1][0]
+                    "${m.id}\t${b[1][3].name}\t${b[1][4].name}\t${m.mode_short}_${m.msa_short}"
+                }.join('\n')
+                [metas, batch.collect { it[1][1] }.flatten(), batch.collect { it[1][2] }, stores, manifest]
+            }
+        }
+        .map { metas, structs, a3ms, stores, manifest ->
+            [metas.collect { m -> def c2 = m.clone(); c2.msa_tool = selected_msa_tool; c2 }, structs, a3ms, stores, manifest]
+        }
 
     POST_PROCESSING(
         params.skip_visualisation,
-        ch_report_input,
         ch_report_template,
         params.skip_multiqc,
         params.outdir,
@@ -347,11 +355,11 @@ workflow NFCORE_PROTEINFOLD {
         params.multiqc_logo,
         ch_multiqc_methods_description,
         ch_software_versions,
-        ch_modelcif,
         params.write_modelcif,
         params.modelcif_binary,
         params.modelcif_pae_embed,
-        params.analysis_batch_size as Integer
+        modelcif_software_details,
+        ch_packed_batches
     )
 
     emit:

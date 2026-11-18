@@ -5,8 +5,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## v2.1.0dev - [unreleased<!-- TODO nf-core: replace with date on release -->]
 
+### Changed
+
+- Per-sequence metrics are no longer written as one small TSV per metric per sequence. All metrics (pLDDT, PAE, pTM, ipTM, ipSAE, chain-wise scores, MSA depth/length) are packed into two files per inference batch: `*_colabfold2_metrics.jsonl.gz` (scalars, JSON Lines) and `*_colabfold2_metrics.npz` (pLDDT vectors and PAE matrices). Every consumer (MultiQC, HTML reports, ModelCIF assembly) reads the packed stores natively, so per-sample metric TSVs - and the integer-encoded `_msa.tsv` duplicate of the a3m - are no longer produced. At whole-genome scale this reduces the output file count by three orders of magnitude.
+- Structure prediction runs as a single batched process (`COLABFOLD2_INFERENCE_BATCH`); `--inference_batch_size 1` reproduces the previous per-sample behaviour. Batching above 1 remains unsupported with `--use_msa_server`.
+- Reports and ModelCIF assembly run as batched tasks (`--report_batch_size`, default `-1`); published report/ModelCIF files are unchanged.
+- The integer-encoded MSA TSV is replaced by the raw a3m file (consumed by the report and ModelCIF stages).
+- The inference task now deletes colabfold's per-rank scores JSONs and MSA staging copies once the packed metric stores are written (unless `--save_intermediates` is set), so the largest raw intermediates no longer accumulate in the work directory. Task directories also suppress `__pycache__` writes.
+
 ### Fixed
 
+- The `COLABFOLD2_INFERENCE_BATCH` task script could not execute outside stub runs: the indented `COLABFOLD2_BATCH_IDS` heredoc terminator never closed the heredoc and the embedded `python3 - <<'PY'` block rendered with a leading indent. The ids file is now written with `printf` and the script template is written at column 0.
 - AlphaFold3 JSON inputs could not run the ColabFold (MMseqs2) MSA search: the batch search task concatenated its inputs into an `id,sequence` query CSV while JSON-origin samples supplied a FASTA, so `colabfold_search` aborted on its column assertion. All MSA search inputs are now colon-delimited FASTA — `multifasta_to_csv` is replaced by `multifasta_to_colabfold_fasta` (one `>sample_id` record with colon-joined chains, matching the JSON extraction), the AF3 JSON extractor keeps emitting that FASTA, and the batch search concatenates plain FASTA.
 
 ### Unified pipeline restructuring

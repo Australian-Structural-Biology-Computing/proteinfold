@@ -25,8 +25,8 @@ nextflow_pipeline {
             // outputs are split back per sample and published flat
             assert file("${params.outdir}/top_ranked_structures/T1024_af3_mmseqs.cif").exists()
             assert file("${params.outdir}/top_ranked_structures/T1026_af3_mmseqs.cif").exists()
-            assert file("${params.outdir}/metrics/T1024_af3_mmseqs_plddt.tsv").exists()
-            assert file("${params.outdir}/metrics/T1026_af3_mmseqs_confidence.tsv").exists()
+            assert file("${params.outdir}/reports/T1024_af3_mmseqs_report.html").exists()
+            assert file("${params.outdir}/reports/T1026_af3_mmseqs_report.html").exists()
             def stable_name = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
             def stable_path = getAllFilesFromDir(params.outdir, ignoreFile: 'tests/.nftignore')
             assert snapshot(
@@ -55,7 +55,7 @@ nextflow_pipeline {
             assert batches.any { it.name.contains('batch_T1024_T1026') }
             assert batches.any { it.name.contains('batch_T1027') }
             assert file("${params.outdir}/top_ranked_structures/T1027_af3_mmseqs.cif").exists()
-            assert file("${params.outdir}/metrics/T1027_af3_mmseqs_iptm.tsv").exists()
+            assert file("${params.outdir}/reports/T1027_af3_mmseqs_report.html").exists()
         }
     }
 

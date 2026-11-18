@@ -25,7 +25,6 @@ include { ALPHAFOLD3_JSON_TO_COLABFOLD_A3M   } from '../modules/local/af3_msa_js
 include { MSA_COLABFOLD_SEARCH } from '../subworkflows/local/msa_colabfold_search'
 include { MSA_ALPHAFOLD2       } from '../subworkflows/local/msa_alphafold2'
 include { MSA_ALPHAFOLD3       } from '../subworkflows/local/msa_alphafold3'
-include { collectMultiqcMetrics; modeChannel } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
 
 
 // Mirrors colabfold's safe_filename: colabfold_batch sanitises query/job
@@ -58,7 +57,15 @@ def splitBatchSingleFiles(out_channel) {
     }
 }
 
-// Several files per sample (ranked structures, score JSONs): emit [meta, [files]] sorted by rank.
+// Batched a3m outputs: one [meta, file] tuple per sample.
+def splitBatchA3M(out_channel) {
+    out_channel.flatMap { batch_meta, files ->
+        def list = files instanceof List ? files : [files]
+        list.collect { file -> [matchBatchSample(batch_meta, file.name), file] }
+    }
+}
+
+// Several files per sample (ranked structures): emit [meta, [files]] sorted by rank.
 def splitBatchGroupedFiles(out_channel) {
     out_channel.flatMap { batch_meta, files ->
         def list = files instanceof List ? files : [files]
@@ -75,32 +82,6 @@ def splitBatchGroupedFiles(out_channel) {
             [meta, sample_files]
         }
     }
-}
-
-// Normalise the batch process outputs into the per-sample channel map the
-// single-sample dispatch produces.
-def splitBatchOutputs(out) {
-    [
-        top_ranked_structure: splitBatchSingleFiles(out.top_ranked_structures),
-        structures          : splitBatchGroupedFiles(out.structures_cif),
-        structures_pdb      : splitBatchGroupedFiles(out.structures_pdb),
-        msa                 : splitBatchSingleFiles(out.msa),
-        pae                 : splitBatchSingleFiles(out.pae),
-        ptms                : splitBatchSingleFiles(out.ptms),
-        iptms               : splitBatchSingleFiles(out.iptms),
-        // The *_ipsae.tsv glob also sweeps the chainwise ipSAE store
-        // (T1024_chainwise_ipsae.tsv ends in _ipsae.tsv); keep it out of the
-        // per-sample ipSAE stream, where a duplicate tuple would double every
-        // downstream join on the sample meta.
-        ipsaes              : splitBatchSingleFiles(out.ipsaes)
-            .filter { meta, file -> !file.name.endsWith('_chainwise_ipsae.tsv') },
-        chainwise           : splitBatchSingleFiles(out.chainwise),
-        chainwise_ipsaes    : splitBatchSingleFiles(out.chainwise_ipsaes),
-        confidence          : splitBatchSingleFiles(out.confidence),
-        plddt               : splitBatchSingleFiles(out.plddt),
-        scores              : splitBatchGroupedFiles(out.scores),
-        raw                 : out.raw
-    ]
 }
 
 // Group one backend's per-sample stream into batch tasks. Samples are grouped
@@ -168,6 +149,7 @@ workflow PROTEINFOLD {
         // Resolved against the launch directory, matching the module's bind.
         new File(file(params.colabfold2_compile_cache).toAbsolutePath().toString()).mkdirs()
     }
+
     def COLABFOLD2_BACKENDS = [
         'auto'                   : 'ALPHAFOLD2',   // the plain alphafold2 token
         'alphafold2'             : 'ALPHAFOLD2',   // defensive alias for the same token
@@ -418,114 +400,81 @@ workflow PROTEINFOLD {
     def backends_out = [:]
     if (af2_specs) {
         ALPHAFOLD2(ch_backend_inputs['ALPHAFOLD2'], num_recycles)
-        backends_out['ALPHAFOLD2'] = splitBatchOutputs(ALPHAFOLD2.out)
+        backends_out['ALPHAFOLD2'] = ALPHAFOLD2.out
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'ALPHAFOLD3' }) {
         ALPHAFOLD3(ch_backend_inputs['ALPHAFOLD3'], num_recycles)
-        backends_out['ALPHAFOLD3'] = splitBatchOutputs(ALPHAFOLD3.out)
+        backends_out['ALPHAFOLD3'] = ALPHAFOLD3.out
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'BOLTZ2' }) {
         BOLTZ2(ch_backend_inputs['BOLTZ2'], num_recycles)
-        backends_out['BOLTZ2'] = splitBatchOutputs(BOLTZ2.out)
+        backends_out['BOLTZ2'] = BOLTZ2.out
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'OPENFOLD3' }) {
         OPENFOLD3(ch_backend_inputs['OPENFOLD3'], num_recycles)
-        backends_out['OPENFOLD3'] = splitBatchOutputs(OPENFOLD3.out)
+        backends_out['OPENFOLD3'] = OPENFOLD3.out
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'OPENBIND0' }) {
         OPENBIND0(ch_backend_inputs['OPENBIND0'], num_recycles)
-        backends_out['OPENBIND0'] = splitBatchOutputs(OPENBIND0.out)
+        backends_out['OPENBIND0'] = OPENBIND0.out
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'PROTEINX2' }) {
         PROTEINX2(ch_backend_inputs['PROTEINX2'], num_recycles)
-        backends_out['PROTEINX2'] = splitBatchOutputs(PROTEINX2.out)
+        backends_out['PROTEINX2'] = PROTEINX2.out
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'CHAI1' }) {
         CHAI1(ch_backend_inputs['CHAI1'], num_recycles)
-        backends_out['CHAI1'] = splitBatchOutputs(CHAI1.out)
+        backends_out['CHAI1'] = CHAI1.out
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'INTELLIFOLD2' }) {
         INTELLIFOLD2(ch_backend_inputs['INTELLIFOLD2'], num_recycles)
-        backends_out['INTELLIFOLD2'] = splitBatchOutputs(INTELLIFOLD2.out)
+        backends_out['INTELLIFOLD2'] = INTELLIFOLD2.out
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'OPENDDE' }) {
         OPENDDE(ch_backend_inputs['OPENDDE'], num_recycles)
-        backends_out['OPENDDE'] = splitBatchOutputs(OPENDDE.out)
+        backends_out['OPENDDE'] = OPENDDE.out
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'ROSETTAFOLD3' }) {
         ROSETTAFOLD3(ch_backend_inputs['ROSETTAFOLD3'], num_recycles)
-        backends_out['ROSETTAFOLD3'] = splitBatchOutputs(ROSETTAFOLD3.out)
+        backends_out['ROSETTAFOLD3'] = ROSETTAFOLD3.out
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'ESMFOLD2' }) {
         ESMFOLD2(ch_backend_inputs['ESMFOLD2'], num_recycles)
-        backends_out['ESMFOLD2'] = splitBatchOutputs(ESMFOLD2.out)
+        backends_out['ESMFOLD2'] = ESMFOLD2.out
     }
 
-    // Combine every backend's emits. The metas already carry the public
-    // mode (tagged at dispatch), so publication and MultiQC grouping stay
-    // collision-free without further tagging.
-    def combined = [top_ranked_structure: [], structures: [], structures_pdb: [], msa: [], pae: [], ptms: [], iptms: [], ipsaes: [], chainwise: [], chainwise_ipsaes: [], confidence: [], plddt: [], scores: [], raw: []]
+    // Split every backend's batch outputs back into per-sample streams and
+    // group the packed metric stores per public mode for MultiQC. The metas
+    // already carry the public mode and MSA source (tagged at dispatch), so
+    // publication stays collision-free without further tagging.
+    def ch_top_ranked_structure = Channel.empty()
+    def ch_structures_cif = Channel.empty()
+    def ch_structures_pdb = Channel.empty()
+    def ch_msa = Channel.empty()
+    def ch_packed_metrics = Channel.empty()
     backends_out.each { backend, out ->
-        combined.top_ranked_structure   << out.top_ranked_structure
-        combined.structures             << out.structures
-        combined.structures_pdb         << out.structures_pdb
-        combined.msa                    << out.msa
-        combined.pae                    << out.pae
-        combined.ptms                   << out.ptms
-        combined.iptms                  << out.iptms
-        combined.ipsaes                 << out.ipsaes
-        combined.chainwise             << out.chainwise
-        combined.chainwise_ipsaes      << out.chainwise_ipsaes
-        combined.confidence             << out.confidence
-        combined.plddt                  << out.plddt
-        combined.scores                 << out.scores
-        combined.raw                    << out.raw
+        ch_top_ranked_structure = ch_top_ranked_structure.mix(splitBatchSingleFiles(out.top_ranked_structures))
+        ch_structures_cif       = ch_structures_cif.mix(splitBatchGroupedFiles(out.structures_cif))
+        ch_structures_pdb       = ch_structures_pdb.mix(splitBatchGroupedFiles(out.structures_pdb))
+        ch_msa                  = ch_msa.mix(splitBatchA3M(out.msa_a3m))
+        ch_packed_metrics       = ch_packed_metrics.mix(out.metrics_packed)
     }
-    def ch_multiqc_metrics = Channel.empty()
-    backends_out.each { backend, out ->
-        ch_multiqc_metrics = ch_multiqc_metrics.mix(
-            collectMultiqcMetrics([
-                [ 'plddt', out.plddt ],
-                [ 'msa',   out.msa ],
-                [ 'ptm',   out.ptms ],
-                [ 'iptm',  out.iptms ]
-            ])
-        )
-    }
+    def ch_structures = ch_structures_pdb.mix(ch_structures_cif)
 
-    // Mix the per-backend channels; inject instead of the spread operator,
-    // which the Nextflow linter cannot parse. Optional emits can be empty
-    // per backend; inject on an empty list yields Channel.empty().
-    def ch_batch = [
-        top_ranked_structure: combined.top_ranked_structure.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
-        structures          : combined.structures.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
-        structures_pdb      : combined.structures_pdb.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
-        msa                 : combined.msa.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
-        pae                 : combined.pae.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
-        ptms                : combined.ptms.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
-        iptms               : combined.iptms.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
-        ipsaes              : combined.ipsaes.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
-        chainwise           : combined.chainwise.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
-        chainwise_ipsaes    : combined.chainwise_ipsaes.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
-        confidence          : combined.confidence.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
-        plddt               : combined.plddt.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
-        scores              : combined.scores.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
-        raw                 : combined.raw.inject(Channel.empty()) { acc, ch -> acc.mix(ch) }
-    ]
-    ch_top_ranked_structure = ch_batch.top_ranked_structure
-    ch_structures = ch_batch.structures_pdb.mix(ch_batch.structures)
+    // One grouped task per public mode receives every batch's scalar + array
+    // store; the MultiQC contents generator reads the stores natively.
+    def ch_multiqc_metrics = ch_packed_metrics
+        .map { batch_metas, scalars, arrays ->
+            def mode = (batch_metas instanceof List ? batch_metas[0] : batch_metas).model
+            [[id: mode, model: mode], [scalars, arrays]]
+        }
+        .groupTuple()
+        .map { mode_meta, file_lists -> [mode_meta, file_lists.flatten()] }
 
     emit:
     top_ranked_pdb  = ch_top_ranked_structure
     pdb             = ch_structures
-    msa             = ch_batch.msa
-    pae             = ch_batch.pae
-    ptm             = ch_batch.ptms
-    iptm            = ch_batch.iptms
-    ipsae           = ch_batch.ipsaes
-    chainwise       = ch_batch.chainwise
-    chainwise_ipsae = ch_batch.chainwise_ipsaes
-    confidence      = ch_batch.confidence
-    plddt           = ch_batch.plddt
+    msa             = ch_msa
     multiqc_metrics = ch_multiqc_metrics
+    metrics_packed  = ch_packed_metrics
 }

@@ -4,446 +4,458 @@
             {
                 "0": [
                     [
-                        {
-                            "id": "test_cw",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer",
-                            "missing_metrics": [
-                                "pae"
-                            ]
-                        },
-                        "test_cw_alphafold2.mmcif:md5,03fa9e74aa87a2f7ef9276dee9974d33"
+                        [
+                            {
+                                "id": "test_cw",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer"
+                            }
+                        ],
+                        "test_cw_alphafold2.mmcif:md5,fa736ce2ba992f5df93280eb1f72c2be"
                     ]
                 ],
                 "1": [
                     
                 ],
                 "2": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ],
                 "modelcif": [
                     [
-                        {
-                            "id": "test_cw",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer",
-                            "missing_metrics": [
-                                "pae"
-                            ]
-                        },
-                        "test_cw_alphafold2.mmcif:md5,03fa9e74aa87a2f7ef9276dee9974d33"
+                        [
+                            {
+                                "id": "test_cw",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer"
+                            }
+                        ],
+                        "test_cw_alphafold2.mmcif:md5,fa736ce2ba992f5df93280eb1f72c2be"
                     ]
                 ],
                 "pae": [
                     
                 ],
                 "versions": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ]
             }
         ],
-        "timestamp": "2026-11-17T09:01:13.61798445",
         "meta": {
-            "nf-test": "0.9.4",
+            "nf-test": "0.9.2",
             "nextflow": "25.10.4"
-        }
+        },
+        "timestamp": "2026-11-18T20:41:40.602349877"
     },
     "template search step is attributed to its own tool": {
         "content": [
             {
                 "0": [
                     [
-                        {
-                            "id": "test_tpl",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer",
-                            "missing_metrics": [
-                                "pae"
-                            ]
-                        },
-                        "test_tpl_alphafold2.mmcif:md5,deb35110fc754cd0c1bbe92b4ea53370"
+                        [
+                            {
+                                "id": "test_tpl",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer"
+                            }
+                        ],
+                        "test_tpl_alphafold2.mmcif:md5,038c34932c349ca0ba3f18c73f498e61"
                     ]
                 ],
                 "1": [
                     
                 ],
                 "2": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ],
                 "modelcif": [
                     [
-                        {
-                            "id": "test_tpl",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer",
-                            "missing_metrics": [
-                                "pae"
-                            ]
-                        },
-                        "test_tpl_alphafold2.mmcif:md5,deb35110fc754cd0c1bbe92b4ea53370"
+                        [
+                            {
+                                "id": "test_tpl",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer"
+                            }
+                        ],
+                        "test_tpl_alphafold2.mmcif:md5,038c34932c349ca0ba3f18c73f498e61"
                     ]
                 ],
                 "pae": [
                     
                 ],
                 "versions": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ]
             }
         ],
-        "timestamp": "2026-11-17T09:01:21.881551702",
         "meta": {
-            "nf-test": "0.9.4",
+            "nf-test": "0.9.2",
             "nextflow": "25.10.4"
-        }
+        },
+        "timestamp": "2026-11-18T20:41:46.531120282"
     },
     "dummy inputs produce modelcif with associated PAE": {
         "content": [
             {
                 "0": [
                     [
-                        {
-                            "id": "test",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer"
-                        },
-                        "test_alphafold2.mmcif:md5,eb1b7b26a2c1d1604777cd27b154ff1d"
+                        [
+                            {
+                                "id": "test",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer"
+                            }
+                        ],
+                        "test_alphafold2.mmcif:md5,849da9a78a0d6ee6bd36af2f3adb60b4"
                     ]
                 ],
                 "1": [
                     [
-                        "rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
+                        "test_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
                     ]
                 ],
                 "2": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ],
                 "modelcif": [
                     [
-                        {
-                            "id": "test",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer"
-                        },
-                        "test_alphafold2.mmcif:md5,eb1b7b26a2c1d1604777cd27b154ff1d"
+                        [
+                            {
+                                "id": "test",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer"
+                            }
+                        ],
+                        "test_alphafold2.mmcif:md5,849da9a78a0d6ee6bd36af2f3adb60b4"
                     ]
                 ],
                 "pae": [
                     [
-                        "rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
+                        "test_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
                     ]
                 ],
                 "versions": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ]
             }
         ],
-        "timestamp": "2026-11-17T08:59:57.275225092",
         "meta": {
-            "nf-test": "0.9.4",
+            "nf-test": "0.9.2",
             "nextflow": "25.10.4"
-        }
+        },
+        "timestamp": "2026-11-18T20:41:07.059518164"
     },
     "dummy inputs produce modelcif with embedded PAE": {
         "content": [
             {
                 "0": [
                     [
-                        {
-                            "id": "test_embed",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer"
-                        },
-                        "test_embed_alphafold2.mmcif:md5,450b7c7aa1663c827c996b254b59c3bc"
+                        [
+                            {
+                                "id": "test_embed",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer"
+                            }
+                        ],
+                        "test_embed_alphafold2.mmcif:md5,d3b47375207f83e3d46e8e60757233e4"
                     ]
                 ],
                 "1": [
                     [
-                        "rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_1_pae.tsv:md5,54440f2807f1b0abc445490fd8a2b72c"
+                        "test_embed_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_embed_1_pae.tsv:md5,54440f2807f1b0abc445490fd8a2b72c"
                     ]
                 ],
                 "2": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ],
                 "modelcif": [
                     [
-                        {
-                            "id": "test_embed",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer"
-                        },
-                        "test_embed_alphafold2.mmcif:md5,450b7c7aa1663c827c996b254b59c3bc"
+                        [
+                            {
+                                "id": "test_embed",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer"
+                            }
+                        ],
+                        "test_embed_alphafold2.mmcif:md5,d3b47375207f83e3d46e8e60757233e4"
                     ]
                 ],
                 "pae": [
                     [
-                        "rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_1_pae.tsv:md5,54440f2807f1b0abc445490fd8a2b72c"
+                        "test_embed_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_embed_1_pae.tsv:md5,54440f2807f1b0abc445490fd8a2b72c"
                     ]
                 ],
                 "versions": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ]
             }
         ],
-        "timestamp": "2026-11-17T09:00:07.766826895",
         "meta": {
-            "nf-test": "0.9.4",
+            "nf-test": "0.9.2",
             "nextflow": "25.10.4"
-        }
+        },
+        "timestamp": "2026-11-18T20:41:12.634673273"
     },
     "--seed tsv attaches container and seed software parameters": {
         "content": [
             {
                 "0": [
                     [
-                        {
-                            "id": "test_seed",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer",
-                            "missing_metrics": [
-                                "pae"
-                            ]
-                        },
-                        "test_seed_alphafold2.mmcif:md5,dff1e9536be2278a0c8e900b9c91aca3"
+                        [
+                            {
+                                "id": "test_seed",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer"
+                            }
+                        ],
+                        "test_seed_alphafold2.mmcif:md5,5c40995d4a507fe10800b5e9c0965f38"
                     ]
                 ],
                 "1": [
                     
                 ],
                 "2": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ],
                 "modelcif": [
                     [
-                        {
-                            "id": "test_seed",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer",
-                            "missing_metrics": [
-                                "pae"
-                            ]
-                        },
-                        "test_seed_alphafold2.mmcif:md5,dff1e9536be2278a0c8e900b9c91aca3"
+                        [
+                            {
+                                "id": "test_seed",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer"
+                            }
+                        ],
+                        "test_seed_alphafold2.mmcif:md5,5c40995d4a507fe10800b5e9c0965f38"
                     ]
                 ],
                 "pae": [
                     
                 ],
                 "versions": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ]
             }
         ],
-        "timestamp": "2026-11-17T09:00:58.091619279",
         "meta": {
-            "nf-test": "0.9.4",
+            "nf-test": "0.9.2",
             "nextflow": "25.10.4"
-        }
+        },
+        "timestamp": "2026-11-18T20:41:35.046575272"
     },
     "dummy inputs include all ranked models by default": {
         "content": [
             {
                 "0": [
                     [
-                        {
-                            "id": "test_multi_default",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer"
-                        },
-                        "test_multi_default_alphafold2.mmcif:md5,1de3ee98ab0b73d5297b012fecf0b1f9"
+                        [
+                            {
+                                "id": "test_multi_default",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer"
+                            }
+                        ],
+                        "test_multi_default_alphafold2.mmcif:md5,62133dcbc1341b9f670cefb32167ac40"
                     ]
                 ],
                 "1": [
                     [
-                        "rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_2_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_3_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_4_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
+                        "test_multi_default_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_multi_default_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_multi_default_2_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_multi_default_3_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_multi_default_4_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
                     ]
                 ],
                 "2": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ],
                 "modelcif": [
                     [
-                        {
-                            "id": "test_multi_default",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer"
-                        },
-                        "test_multi_default_alphafold2.mmcif:md5,1de3ee98ab0b73d5297b012fecf0b1f9"
+                        [
+                            {
+                                "id": "test_multi_default",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer"
+                            }
+                        ],
+                        "test_multi_default_alphafold2.mmcif:md5,62133dcbc1341b9f670cefb32167ac40"
                     ]
                 ],
                 "pae": [
                     [
-                        "rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_2_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_3_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_4_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
+                        "test_multi_default_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_multi_default_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_multi_default_2_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_multi_default_3_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_multi_default_4_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
                     ]
                 ],
                 "versions": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ]
             }
         ],
-        "timestamp": "2026-11-17T09:00:34.029991786",
         "meta": {
-            "nf-test": "0.9.4",
+            "nf-test": "0.9.2",
             "nextflow": "25.10.4"
-        }
+        },
+        "timestamp": "2026-11-18T20:50:46.017395553"
     },
     "dummy inputs produce modelcif from five mmcif structures": {
         "content": [
             {
                 "0": [
                     [
-                        {
-                            "id": "test_multi",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer"
-                        },
-                        "test_multi_alphafold2.mmcif:md5,dee7d6415bf7613313c9271e7d38bca9"
+                        [
+                            {
+                                "id": "test_multi",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer"
+                            }
+                        ],
+                        "test_multi_alphafold2.mmcif:md5,f4c8926bf8fea79dcbd6f79e0cc7584d"
                     ]
                 ],
                 "1": [
                     [
-                        "rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_2_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_3_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_4_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
+                        "test_multi_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_multi_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_multi_2_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_multi_3_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_multi_4_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
                     ]
                 ],
                 "2": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ],
                 "modelcif": [
                     [
-                        {
-                            "id": "test_multi",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer"
-                        },
-                        "test_multi_alphafold2.mmcif:md5,dee7d6415bf7613313c9271e7d38bca9"
+                        [
+                            {
+                                "id": "test_multi",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer"
+                            }
+                        ],
+                        "test_multi_alphafold2.mmcif:md5,f4c8926bf8fea79dcbd6f79e0cc7584d"
                     ]
                 ],
                 "pae": [
                     [
-                        "rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_2_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_3_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_4_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
+                        "test_multi_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_multi_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_multi_2_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_multi_3_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_multi_4_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
                     ]
                 ],
                 "versions": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ]
             }
         ],
-        "timestamp": "2026-11-17T09:00:41.473030383",
         "meta": {
-            "nf-test": "0.9.4",
+            "nf-test": "0.9.2",
             "nextflow": "25.10.4"
-        }
+        },
+        "timestamp": "2026-11-18T20:50:51.665673348"
     },
     "pLDDT metric type follows --plddt-scale": {
         "content": [
             {
                 "0": [
                     [
-                        {
-                            "id": "test_scale",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer",
-                            "missing_metrics": [
-                                "pae"
-                            ]
-                        },
-                        "test_scale_alphafold2.mmcif:md5,dc9d72ebfc81fff11bd0148c24bd2c31"
+                        [
+                            {
+                                "id": "test_scale",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer"
+                            }
+                        ],
+                        "test_scale_alphafold2.mmcif:md5,76d198342203826136c9feaef908270b"
                     ]
                 ],
                 "1": [
                     
                 ],
                 "2": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ],
                 "modelcif": [
                     [
-                        {
-                            "id": "test_scale",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer",
-                            "missing_metrics": [
-                                "pae"
-                            ]
-                        },
-                        "test_scale_alphafold2.mmcif:md5,dc9d72ebfc81fff11bd0148c24bd2c31"
+                        [
+                            {
+                                "id": "test_scale",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer"
+                            }
+                        ],
+                        "test_scale_alphafold2.mmcif:md5,76d198342203826136c9feaef908270b"
                     ]
                 ],
                 "pae": [
                     
                 ],
                 "versions": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ]
             }
         ],
-        "timestamp": "2026-11-17T09:00:48.589120589",
         "meta": {
-            "nf-test": "0.9.4",
+            "nf-test": "0.9.2",
             "nextflow": "25.10.4"
-        }
+        },
+        "timestamp": "2026-11-18T20:41:29.497037698"
     },
     "dummy inputs produce binaryCIF": {
         "content": [
             {
                 "0": [
                     [
-                        {
-                            "id": "test_binary",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer"
-                        },
-                        "test_binary_alphafold2.bcif:md5,ceb0f2c80d93f04334b9691f98375807"
+                        [
+                            {
+                                "id": "test_binary",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer"
+                            }
+                        ],
+                        "test_binary_alphafold2.bcif:md5,66384988df7e1587c3a12cd2819f9f5e"
                     ]
                 ],
                 "1": [
-                    "DUMMY_PAE.tsv:md5,303948e029199ff88b8242abb5b01182"
+                    "test_binary_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
                 ],
                 "2": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ],
                 "modelcif": [
                     [
-                        {
-                            "id": "test_binary",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer"
-                        },
-                        "test_binary_alphafold2.bcif:md5,ceb0f2c80d93f04334b9691f98375807"
+                        [
+                            {
+                                "id": "test_binary",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer"
+                            }
+                        ],
+                        "test_binary_alphafold2.bcif:md5,66384988df7e1587c3a12cd2819f9f5e"
                     ]
                 ],
                 "pae": [
-                    "DUMMY_PAE.tsv:md5,303948e029199ff88b8242abb5b01182"
+                    "test_binary_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
                 ],
                 "versions": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ]
             }
         ],
-        "timestamp": "2026-11-17T09:00:25.268372218",
         "meta": {
-            "nf-test": "0.9.4",
+            "nf-test": "0.9.2",
             "nextflow": "25.10.4"
-        }
+        },
+        "timestamp": "2026-11-18T20:41:23.570056821"
     }
 }

@@ -4,44 +4,48 @@
             {
                 "0": [
                     [
-                        {
-                            "id": "sw_entries",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer",
-                            "no_template_search": true
-                        },
-                        "sw_entries_alphafold2.mmcif:md5,d77523b2282642b12a980032671f659f"
+                        [
+                            {
+                                "id": "sw_entries",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer",
+                                "no_template_search": true
+                            }
+                        ],
+                        "sw_entries_alphafold2.mmcif:md5,88873db88254e331360b37878620426c"
                     ]
                 ],
                 "1": [
-                    "DUMMY_PAE.tsv:md5,303948e029199ff88b8242abb5b01182"
+                    "sw_entries_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
                 ],
                 "2": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ],
                 "modelcif": [
                     [
-                        {
-                            "id": "sw_entries",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer",
-                            "no_template_search": true
-                        },
-                        "sw_entries_alphafold2.mmcif:md5,d77523b2282642b12a980032671f659f"
+                        [
+                            {
+                                "id": "sw_entries",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer",
+                                "no_template_search": true
+                            }
+                        ],
+                        "sw_entries_alphafold2.mmcif:md5,88873db88254e331360b37878620426c"
                     ]
                 ],
                 "pae": [
-                    "DUMMY_PAE.tsv:md5,303948e029199ff88b8242abb5b01182"
+                    "sw_entries_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
                 ],
                 "versions": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ]
             }
         ],
-        "timestamp": "2026-11-17T08:56:39.36839471",
         "meta": {
-            "nf-test": "0.9.4",
+            "nf-test": "0.9.2",
             "nextflow": "25.10.4"
-        }
+        },
+        "timestamp": "2026-11-18T20:52:57.47402149"
     }
 }

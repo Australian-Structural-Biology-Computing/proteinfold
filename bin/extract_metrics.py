@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 
 import os
-import argparse
 import json
 import sys
 import warnings
 #import torch moved to a conditional import since too bulky import if not used
 import numpy as np
-import csv
 import re
-from utils import plddt_from_struct_b_factor, get_chain_ids
+from utils import plddt_from_struct_b_factor
 
 # TODO: Issue #309, make into a proper separate process, it its own module so that dependencies can be managed better
 # TODO: Need a sense of ranking, so that metrics can be traced back to correct model structure, even if they're not in sequential order. The enumerates() here are not sufficient.
@@ -59,12 +57,6 @@ def a3m_to_int(a3m_file):
     int_sequences_array = np.array(int_sequences, dtype=object)
     return int_sequences_array
 
-def format_msa_rows(msa_data):
-    return [[str(x) for x in val] for val in msa_data]
-
-def format_pae_rows(pae_data):
-    return [[f"{num:.4f}" for num in row] for row in pae_data]
-
 def format_pair_score_rows(pair_score_entries, pair_labels=None):
     if pair_labels is None:
         pair_labels = sorted({label for score_values in pair_score_entries.values() for label, _ in score_values})
@@ -75,17 +67,6 @@ def format_pair_score_rows(pair_score_entries, pair_labels=None):
         rows.append([model_idx] + [f"{score_map[label]:.4f}" if label in score_map else "n/a" for label in pair_labels])
 
     return [list(row) for row in zip(*rows)]
-
-def write_tsv(file_path, rows):
-    with open(file_path, 'w') as out_f:
-        writer = csv.writer(out_f, delimiter='\t')
-        writer.writerows(rows)
-
-def sort_model_label(label):
-    try:
-        return (0, int(label))
-    except (TypeError, ValueError):
-        return (1, str(label))
 
 def infer_model_rank(file_path):
     normalized_path = file_path.replace(os.sep, "/")
@@ -112,38 +93,6 @@ def sort_paths_by_rank(paths):
         return (0, rank, os.path.basename(path))
 
     return sorted(paths, key=sort_key)
-
-def colabfold_chainwise_rows(data):
-    """Read the chainwise metrics surfaced in a colabfold scores JSON.
-
-    The chain-pair metrics come from the scores JSON: the AF3-family
-    backends write their confidence head's chain_pair_iptm values and
-    per-chain pTM (via the colabfold_batch_af3_chainwise.py wrapper), the
-    AlphaFold2 backends write the --calc-extra-ptm pairwise metrics. Both
-    report one entry per unordered pair: the on-diagonal (A:A) rows are
-    the per-chain pTM and the off-diagonal (A:B) rows the pairwise
-    interface ipTM. Returns an empty list for monomer models, which have
-    no interface pairs.
-    """
-    entries = []
-    per_chain_ptm = data.get("per_chain_ptm") or {}
-    for chain_id, value in per_chain_ptm.items():
-        try:
-            entries.append((f"{chain_id}:{chain_id}", float(value)))
-        except (TypeError, ValueError):
-            continue
-    for pair_label, value in (data.get("pairwise_iptm") or {}).items():
-        chains = pair_label.split("-")
-        if len(chains) != 2:
-            continue
-        try:
-            entries.append((f"{chains[0]}:{chains[1]}", float(value)))
-        except (TypeError, ValueError):
-            continue
-    # No off-diagonal pairs means a monomer: nothing beyond the global
-    # scores is worth emitting.
-    has_pairs = any(label.split(":")[0] != label.split(":")[1] for label, _ in entries)
-    return entries if has_pairs else []
 
 def _scores_json_is_structure_only(scores_files):
     if not scores_files:
@@ -181,10 +130,11 @@ def _model_type_from_scores_path(scores_path):
     match = re.search(r"_scores_rank_\d+_(.+)_seed_\d+_sample_\d+\.json$", os.path.basename(scores_path))
     return match.group(1) if match and match.group(1) else "unknown"
 
-def extract_structs_plddt_to_tsv(name, structures, scores_files=None):
+def compute_plddt_columns(structures, scores_files=None, name="untitled"):
     """
-    Write out a tsv file contain pLDDTs for reading by MultiQC in nf-core/proteinfold
-    Uses utils function with BioPython PDB package to extract residue pLDDT values from the b-factor column.
+    Compute per-rank pLDDT columns from structure B-factors, plus the
+    structure-only classification shared by the TSV writer and the packed
+    metric store.
     """
     sorted_structures = sort_paths_by_rank(structures)
     plddt_cols = [plddt_from_struct_b_factor(structure) for structure in sorted_structures]
@@ -204,25 +154,59 @@ def extract_structs_plddt_to_tsv(name, structures, scores_files=None):
         if rank is None:
             warnings.warn(f"Unable to infer model rank from path: {structure}; falling back to index {idx}")
         rank_names.append(f"rank_{rank}" if rank is not None else f"rank_{idx}")
-    # Create header as the first row
-    plddt_rows =  [["Positions"] + rank_names]
-    if structure_only:
-        plddt_rows.extend([[res_id] + ["n/a"] * len(plddt_cols) for res_id in range(res_counts[0])])
-    else:
-        res_id_col = list(range(len(plddt_cols[0])))
-        plddt_rows.extend([list(row) for row in zip(res_id_col, *plddt_cols)])  # Combine lists column-wise to make rows
-    write_tsv(f"{name}_plddt.tsv", plddt_rows)
 
-def read_paired_a3m(name, a3m_file):
-    msa_rows = a3m_to_int(a3m_file)
-    write_tsv(f"{name}_msa.tsv", format_msa_rows(msa_rows))
+    return {
+        "rank_names": rank_names,
+        "ranks": [int(rank_name[len("rank_"):]) for rank_name in rank_names],
+        "plddt_cols": plddt_cols,
+        "structure_only": structure_only,
+        "res_count": res_counts[0],
+    }
 
-def read_colabfold_metrics(name, colabfold_metrics_files):
+def colabfold_chainwise_rows(data):
+    """Read the chainwise metrics surfaced in a colabfold scores JSON.
+
+    The chain-pair metrics come from the scores JSON: the AF3-family
+    backends write their confidence head's chain_pair_iptm values and
+    per-chain pTM (via the colabfold_batch_af3_chainwise.py wrapper), the
+    AlphaFold2 backends write the --calc-extra-ptm pairwise metrics. Both
+    report one entry per unordered pair: the on-diagonal (A:A) rows are
+    the per-chain pTM and the off-diagonal (A:B) rows the pairwise
+    interface ipTM. Returns an empty list for monomer models, which have
+    no interface pairs.
+    """
+    entries = []
+    per_chain_ptm = data.get("per_chain_ptm") or {}
+    for chain_id, value in per_chain_ptm.items():
+        try:
+            entries.append((f"{chain_id}:{chain_id}", float(value)))
+        except (TypeError, ValueError):
+            continue
+    for pair_label, value in (data.get("pairwise_iptm") or {}).items():
+        chains = pair_label.split("-")
+        if len(chains) != 2:
+            continue
+        try:
+            entries.append((f"{chains[0]}:{chains[1]}", float(value)))
+        except (TypeError, ValueError):
+            continue
+    # No off-diagonal pairs means a monomer: nothing beyond the global
+    # scores is worth emitting.
+    has_pairs = any(label.split(":")[0] != label.split(":")[1] for label, _ in entries)
+    return entries if has_pairs else []
+
+def collect_colabfold_metrics(colabfold_metrics_files, name="untitled"):
+    """
+    Extract rank metrics from ColabFold scores JSON files without writing
+    anything: shared by the legacy per-sample TSV writer and the packed
+    metric store. Returns raw (unformatted) values.
+    """
     ptm_rows = []
     iptm_rows = []
     ipsae_rows = []
     chainwise = {}
     chainwise_ipsae = {}
+    pae_by_rank = {}
     for fn in colabfold_metrics_files:
         with open(fn) as f:
             data = json.load(f)
@@ -230,7 +214,7 @@ def read_colabfold_metrics(name, colabfold_metrics_files):
         if rank_id is None:
             raise ValueError(f"Unable to infer ColabFold rank from metrics filename: {fn}")
         if "pae" in data:
-            write_tsv(f"{name}_{rank_id}_pae.tsv", format_pae_rows(data["pae"]))
+            pae_by_rank[rank_id] = data["pae"]
         if "ptm" in data:
             ptm_rows.append((f"{rank_id}", data["ptm"]))
         if "iptm" in data:
@@ -251,31 +235,11 @@ def read_colabfold_metrics(name, colabfold_metrics_files):
         chainwise_entries = colabfold_chainwise_rows(data)
         if chainwise_entries:
             chainwise[rank_id] = chainwise_entries
-    if len(ptm_rows)>0:
-        write_tsv(f"{name}_ptm.tsv", sorted(ptm_rows, key = lambda x: x[0]))
-    if len(iptm_rows)>0:
-        write_tsv(f"{name}_iptm.tsv", sorted(iptm_rows, key = lambda x: x[0]))
-    if len(ipsae_rows)>0:
-        write_tsv(f"{name}_ipsae.tsv", sorted(ipsae_rows, key = lambda x: x[0]))
-    if len(chainwise)>0:
-        write_tsv(f"{name}_chainwise.tsv", format_pair_score_rows(dict(sorted(chainwise.items(), key=lambda x: x[0]))))
-    if len(chainwise_ipsae)>0:
-        write_tsv(f"{name}_chainwise_ipsae.tsv", format_pair_score_rows(dict(sorted(chainwise_ipsae.items(), key=lambda x: x[0]))))
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--paired_a3m", dest="paired_a3m", required=False) # For reading the ColabFold MSA format
-    parser.add_argument("--colabfold_metrics_files", required=False, nargs="+")
-    parser.add_argument("--structs", dest="structs", required=False, nargs="+")
-    parser.add_argument("--name", default="untitled", dest="name") # might need a --name $meta.id
-    args = parser.parse_args()
-
-    if args.paired_a3m:
-        read_paired_a3m(args.name, args.paired_a3m)
-    if args.structs:
-        extract_structs_plddt_to_tsv(args.name, args.structs, args.colabfold_metrics_files)
-    if args.colabfold_metrics_files:
-        read_colabfold_metrics(args.name, args.colabfold_metrics_files)
-
-if __name__ == "__main__":
-    main()
+    return {
+        "ptm_rows": ptm_rows,
+        "iptm_rows": iptm_rows,
+        "ipsae_rows": ipsae_rows,
+        "chainwise_iptm": chainwise,
+        "chainwise_ipsae": chainwise_ipsae,
+        "pae_by_rank": pae_by_rank,
+    }

@@ -2,7 +2,7 @@ nextflow_process {
 
     name "Test Process MODELCIF_SW_ENTRIES"
     script "../modules/local/assemble_modelcif/main.nf"
-    process "MODELCIF_ASSEMBLE"
+    process "MODELCIF_ASSEMBLE_BATCH"
 
     tag "modelcif_sw_entries"
     tag "ci_img_misc"
@@ -15,23 +15,34 @@ nextflow_process {
                 outdir = "$outputDir"
             }
             process {
-                def plddt = new File(outputDir, 'one_rank_plddt.tsv')
-                plddt.text = new URL((params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/') + "testdata/metrics/DUMMY_PLDDT.tsv").readLines()
-                    .collect { it.split('\t')[0..1].join('\t') }.join('\n') + '\n'
-                new File(outputDir, 'ptm.tsv').text = 'rank_0\t0.381\n'
-                new File(outputDir, 'iptm.tsv').text = 'rank_0\t0.617\n'
+                def testdataBase = (System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')
+                new File(outputDir, 'sw_entries_rank_0.cif').text =
+                    new URL(testdataBase + 'testdata/models/DUMMY_MODELCIF.mmcif').text
+                new File(outputDir, 'sw_entries_plddt_0.tsv').text = new URL(testdataBase + 'testdata/metrics/DUMMY_PLDDT.tsv').readLines()
+                    .tail().collect { it.split('\t')[1] }.join('\n') + '\n'
+                new File(outputDir, 'sw_entries_pae_0.tsv').text = new File(projectDir, 'tests/fixtures/DUMMY_PAE.tsv').text
+                // single-sequence a3m matching the fixture structure
+                new File(outputDir, 'sw_entries.a3m').text = '>sw_entries\n' + ('A' * 20) + '\n'
+                def generator = [
+                    'python3', "$projectDir/tests/make_packed_store.py",
+                    '--sample-id', 'sw_entries',
+                    '--out-prefix', "$outputDir/sw_entries",
+                    '--plddt', "rank_0=$outputDir/sw_entries_plddt_0.tsv",
+                    '--pae', "rank_0=$outputDir/sw_entries_pae_0.tsv",
+                    '--scores', 'rank_0=0.5'
+                ].execute()
+                assert generator.waitFor() == 0 : generator.err.text
                 """
                 input[0] = [
-                    [ id: 'sw_entries', model: 'alphafold2', msa_tool: 'jackhmmer', no_template_search: true ],
-                    file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_MODELCIF.mmcif", checkIfExists: true),
-                    file("$projectDir/tests/fixtures/DUMMY_MSA.tsv",         checkIfExists: true),
-                    file("$outputDir/one_rank_plddt.tsv",           checkIfExists: true),
-                    file("$projectDir/tests/fixtures/DUMMY_PAE.tsv",         checkIfExists: true),
-                    file("$outputDir/ptm.tsv",                       checkIfExists: true),
-                    file("$outputDir/iptm.tsv",                      checkIfExists: true),
-                    file("$projectDir/tests/fixtures/NO_FILE",               checkIfExists: true),
-                    file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
+                    [[ id: 'sw_entries', model: 'alphafold2', msa_tool: 'jackhmmer', no_template_search: true ]],
+                    [file("$outputDir/sw_entries_rank_0.cif", checkIfExists: true)],
+                    [file("$outputDir/sw_entries.a3m", checkIfExists: true)],
+                    [file("$outputDir/sw_entries_metrics.jsonl.gz", checkIfExists: true), file("$outputDir/sw_entries_metrics.npz", checkIfExists: true)],
+                    'sw_entries\tsw_entries_metrics.jsonl.gz\tsw_entries_metrics.npz'
                 ]
+                input[1] = file("${testdataBase}testdata/metrics/DUMMY_SOFTWARE_VERSIONS.yml", checkIfExists: true)
+                input[2] = 'cif'
+                input[3] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
                 """
             }
         }
