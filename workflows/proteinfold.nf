@@ -174,7 +174,7 @@ workflow PROTEINFOLD {
     // The alphafold2 backends predate the AlphaFold3 input JSON: they consume
     // ColabFold a3m queries (or a plain FASTA when the MSA server does the
     // search). Convert whichever MSA JSON the selected tool produced.
-    def af2_backend = model_type == 'auto' || model_type.startsWith('alphafold2') || model_type.startsWith('deepfold')
+    def af2_backend = model_type == 'auto' || model_type.startsWith('alphafold2')
     if (af2_backend && msa_tool != 'msa_server') {
         ALPHAFOLD3_JSON_TO_COLABFOLD_A3M(ch_msa_input)
         ch_inference_input = ALPHAFOLD3_JSON_TO_COLABFOLD_A3M.out.a3m.mix(ch_byo_msa)
