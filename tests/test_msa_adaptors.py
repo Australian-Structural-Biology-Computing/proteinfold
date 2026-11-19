@@ -446,6 +446,43 @@ class JsonToA3mTests(unittest.TestCase):
         self.assertEqual(lines[2], "MKTAY")
         self.assertIn("MKTAiY", lines)
 
+    def test_crlf_msa_rows_are_normalized(self):
+        job = self._job(">101\r\nMKTAY\r\n>102\r\nMKTAiY\r\n", "")
+        result, dst = self._run(job)
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        with open(dst, encoding="utf-8") as handle:
+            lines = handle.read().splitlines()
+        self.assertEqual(lines[0], "#5\t1")
+        self.assertEqual(lines[1:], [">101", "MKTAY", ">102", "MKTAiY"])
+
+    def test_homodimer_msa_width_matches_cardinality(self):
+        job = self._job(">101\nMKTAY\n>102\nMKTAiY\n", "")
+        job["sequences"][0]["protein"]["id"] = ["A", "B"]
+        result, dst = self._run(job)
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        with open(dst, encoding="utf-8") as handle:
+            lines = handle.read().splitlines()
+        self.assertEqual(lines[0], "#5\t2")
+        self.assertEqual([len(line.replace("i", "")) for line in lines[1:] if not line.startswith(">")], [10, 10, 10, 10])
+
+    def test_separate_identical_entities_share_one_msa_block(self):
+        job = self._job(
+            ">101\nMKTAY\n>102\nMKTAiY\n",
+            ">101\nMKTAY\n>tr|x|x_00001\nMKTAY\n",
+        )
+        job["sequences"].append({"protein": {
+            "id": ["B"], "sequence": "MKTAY",
+            "unpairedMsa": ">101\nMKTAY\n>ignored\nAAAAA\n",
+            "pairedMsa": ">101\nMKTAY\n>ignored\nAAAAA\n",
+        }})
+        result, dst = self._run(job)
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        with open(dst, encoding="utf-8") as handle:
+            lines = handle.read().splitlines()
+        self.assertEqual(lines[0], "#5\t2")
+        self.assertNotIn("ignored", "\n".join(lines))
+        self.assertEqual({len(line.replace("i", "")) for line in lines[1:] if not line.startswith(">")}, {10})
+
     def test_unequal_paired_depths_rejected(self):
         job = self._job(
             ">101\nMKTAY\n>102\nMKTAY\n", ">101\nMKTAY\n>tr|a|a_00001\nMKTAY\n",
@@ -455,18 +492,25 @@ class JsonToA3mTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn(b"unequal depth", result.stderr)
 
-    def test_missing_unpaired_rejected(self):
+    def test_missing_unpaired_reports_absent_msa(self):
         job = self._job("", "")
         result, dst = self._run(job)
-        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.returncode, 2)
         self.assertIn(b"no unpairedMsa", result.stderr)
 
-    def test_protein_free_json_rejected(self):
+    def test_protein_free_json_reports_absent_msa(self):
         job = {"dialect": "alphafold3", "version": 2, "name": "t",
                "sequences": [{"ligand": {"ccdCodes": ["ATP"]}}], "modelSeeds": [1]}
         result, dst = self._run(job)
-        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.returncode, 2)
         self.assertIn(b"no protein entity", result.stderr)
+
+    def test_malformed_protein_remains_an_error(self):
+        job = {"dialect": "alphafold3", "version": 2, "name": "t",
+               "sequences": [{"protein": {"id": ["A"]}}], "modelSeeds": [1]}
+        result, dst = self._run(job)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(b"missing its sequence", result.stderr)
 
 
 STUB_TREE = """alphafold/__init__.py:

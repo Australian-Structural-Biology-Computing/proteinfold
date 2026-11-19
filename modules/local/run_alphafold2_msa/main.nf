@@ -72,7 +72,7 @@ process RUN_ALPHAFOLD2_MSA {
         extra_dbs="--pdb70_database_path=./pdb70/pdb70"
     fi
 
-    PYTHONPATH=/app/alphafold python3 run_msa.py \
+    PYTHONPATH=/app/alphafold python3 /app/alphafold/run_msa.py \
         --fasta_paths=${fasta} \
         --model_preset=\$model_preset \$extra_dbs \
         --db_preset=${db_preset_cmd} \
@@ -85,6 +85,7 @@ process RUN_ALPHAFOLD2_MSA {
         $args
 
     # Can't use fasta.baseName to batch outputs in publishDir
+    mkdir -p raw/
     mv "${fasta.baseName}" raw/
     """
 

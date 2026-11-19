@@ -129,7 +129,27 @@ process COLABFOLD2_INFERENCE {
         echo "COLABFOLD2_INFERENCE received FASTA input but the MSA server produced no a3m files" >&2
         exit 1
     else
-        touch "${meta.id}_colabfold2_msa.tsv"
+        input_file=${quoted_input_files}
+        if [[ "\$input_file" == *.a3m ]]; then
+            extract_metrics.py --name "${meta.id}" --paired_a3m "\$input_file"
+            mv "${meta.id}_msa.tsv" "${meta.id}_colabfold2_msa.tsv"
+        elif [[ "\$input_file" == *.json ]]; then
+            if af3_msa_json_to_a3m.py "\$input_file" --output "${meta.id}_input.a3m"; then
+                extract_metrics.py --name "${meta.id}" --paired_a3m "${meta.id}_input.a3m"
+                mv "${meta.id}_msa.tsv" "${meta.id}_colabfold2_msa.tsv"
+            else
+                conversion_status=\$?
+                if [[ "\$conversion_status" -eq 2 ]]; then
+                    touch "${meta.id}_colabfold2_msa.tsv"
+                else
+                    echo "COLABFOLD2_INFERENCE could not convert the input MSA" >&2
+                    exit "\$conversion_status"
+                fi
+            fi
+        else
+            echo "COLABFOLD2_INFERENCE cannot extract an MSA from \$input_file" >&2
+            exit 1
+        fi
     fi
 
     touch \

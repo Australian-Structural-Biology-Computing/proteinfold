@@ -41,10 +41,13 @@ def _single_job(document):
     return document
 
 
-def protein_chains(document):
-    """Unique protein sequences (first-appearance order) and their copy counts."""
-    unique = []
-    counts = []
+class MissingMsaError(ValueError):
+    pass
+
+
+def protein_inputs(document):
+    """Unique protein entities and their aggregate copy counts."""
+    unique = {}
     for entity in document.get("sequences", []):
         if not isinstance(entity, dict) or "protein" not in entity:
             continue
@@ -56,16 +59,15 @@ def protein_chains(document):
         copies = len(entity_ids) if isinstance(entity_ids, list) else 1
         copies = max(1, copies)
         if sequence in unique:
-            counts[unique.index(sequence)] += copies
+            unique[sequence]["copies"] += copies
         else:
-            unique.append(sequence)
-            counts.append(copies)
+            unique[sequence] = {"protein": protein, "copies": copies}
     if not unique:
-        raise ValueError(
+        raise MissingMsaError(
             "the AlphaFold2 backends fold protein chains only; the JSON has no "
             "protein entity"
         )
-    return unique, counts
+    return list(unique.values())
 
 
 def a3m_rows(a3m_text):
@@ -113,7 +115,7 @@ def pad_sequences(unpaired_msas, sequences, cardinalities):
     position = 0
     for chain, seq in enumerate(sequences):
         for _ in range(cardinalities[chain]):
-            for line in unpaired_msas[chain].split("\n"):
+            for line in unpaired_msas[chain].splitlines():
                 if len(line) == 0:
                     continue
                 if line.startswith(">"):
@@ -137,22 +139,19 @@ def main():
     with open(args.json_in, encoding="utf-8") as handle:
         document = _single_job(json.load(handle))
 
-    sequences, cardinalities = protein_chains(document)
+    inputs = protein_inputs(document)
+    sequences = [item["protein"]["sequence"] for item in inputs]
+    cardinalities = [item["copies"] for item in inputs]
 
     unpaired_msas = []
     paired_msas = []
     have_paired = False
-    for entity in document.get("sequences", []):
-        if not isinstance(entity, dict) or "protein" not in entity:
-            continue
-        protein = entity["protein"]
-        sequence = protein.get("sequence")
-        if sequence not in sequences:
-            continue  # only the first copy of each unique sequence carries the MSA
+    for item in inputs:
+        protein = item["protein"]
         unpaired = protein.get("unpairedMsa")
         paired = protein.get("pairedMsa")
         if not unpaired or not unpaired.strip():
-            raise ValueError(
+            raise MissingMsaError(
                 "protein chain {} has no unpairedMsa; the AlphaFold2 backends "
                 "need a full unpaired MSA".format(protein.get("id"))
             )
@@ -178,15 +177,19 @@ def main():
                     [sequences[i] for i in blank_chains]
                 )
             )
-        body = pair_sequences(paired_msas, [1] * len(sequences)) + "\n" + pad_sequences(
-            unpaired_msas, sequences, [1] * len(sequences)
+        body = pair_sequences(paired_msas, cardinalities) + "\n" + pad_sequences(
+            unpaired_msas, sequences, cardinalities
         )
     else:
-        body = pad_sequences(unpaired_msas, sequences, [1] * len(sequences))
+        body = pad_sequences(unpaired_msas, sequences, cardinalities)
 
     with open(args.output, "w", encoding="utf-8") as handle:
         handle.write(header + "\n" + body + "\n")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except MissingMsaError as error:
+        print(error, file=sys.stderr)
+        sys.exit(2)
