@@ -15,7 +15,7 @@ nextflow_process {
             process {
                 """
                 input[0] = tuple(
-                    [id: 'S1', model: 'boltz'],
+                    [id: 'S1', model: 'boltz2'],
                     [file(params.pipelines_testdata_base_path + 'testdata/models/rank_0.pdb', checkIfExists: true), file(params.pipelines_testdata_base_path + 'testdata/models/rank_1.pdb', checkIfExists: true)],
                     [file("${projectDir}/assets/NO_FILE")],
                     [file("${projectDir}/assets/NO_FILE")],
@@ -34,7 +34,7 @@ nextflow_process {
             def matcher = html =~ /(?s)<script type="application\/json" id="report-config">(.*?)<\/script>/
             assert matcher.count == 1
             def config = new groovy.json.JsonSlurper().parseText(matcher[0][1])
-            assert config.programName == "Boltz"
+            assert config.programName == "Boltz2"
             assert config.sampleName == "S1"
             assert config.structFormat == "cif"
             assert config.models == ["rank_0.cif", "rank_1.cif"]

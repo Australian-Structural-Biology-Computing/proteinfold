@@ -488,16 +488,20 @@ def build_pair_score_matrices(score_maps):
 print("Starting...")
 
 version = "1.0.0"
+# Display names for every --mode token the pipeline accepts; unknown
+# tokens fall back to the token itself in programName (see below).
 model_name = {
-    "esmfold2": "ESMFold2",
     "alphafold2": "AlphaFold2",
-    "alphafold3": "Alphafold3",
+    "alphafold3": "AlphaFold3",
+    "boltz2": "Boltz2",
     "chai1": "Chai1",
+    "esmfold2": "ESMFold2",
+    "intellifold2": "IntelliFold2",
+    "openbind0": "OpenBind0",
     "opendde": "OpenDDE",
+    "openfold3": "OpenFold3",
     "protenix2": "Protenix2",
-    "rosettafold3": "RosettFold3",
-    "boltz2": "Boltz2"
-
+    "rosettafold3": "RosettaFold3",
 }
 
 parser = argparse.ArgumentParser()
@@ -517,7 +521,7 @@ parser.add_argument("--output_dir", dest="output_dir")
 parser.add_argument("--html_template", dest="html_template")
 parser.add_argument("--version", action="version", version=f"{version}")
 parser.set_defaults(output_dir="")
-parser.set_defaults(in_type="esmfold")
+parser.set_defaults(in_type="alphafold3")
 parser.set_defaults(name="")
 args = parser.parse_args()
 
@@ -565,7 +569,7 @@ def script_safe_json_dumps(obj):
 report_config = {
     "reportType": "standard",
     "sampleName": args.name,
-    "programName": model_name[args.in_type.lower()],
+    "programName": model_name.get(args.in_type.lower(), args.in_type),
     "structFormat": "cif",
     "models": model_names,
     "models_data": models_data,
