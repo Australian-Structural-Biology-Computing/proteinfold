@@ -67,8 +67,8 @@ workflow NFCORE_PROTEINFOLD {
         'intellifold2', 'opendde', 'rosettafold3', 'esmfold2',
         'alphafold2'
     ]
-    requested_modes      = params.mode.toLowerCase().split(",").collect { it.trim() }
-    colabfold2_submodes  = requested_modes.findAll { colabfold2_models.contains(it) }
+    requested_modes      = params.mode.toLowerCase().split(",").collect { mode -> mode.trim() }
+    colabfold2_submodes  = requested_modes.findAll { mode -> colabfold2_models.contains(mode) }
     if (colabfold2_submodes != requested_modes) {
         error("Unknown ColabFold2 mode(s): ${(requested_modes - colabfold2_submodes).join(', ')}. Supported modes: ${colabfold2_models.join(', ')}.")
     }

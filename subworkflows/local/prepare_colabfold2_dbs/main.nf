@@ -45,7 +45,7 @@ process DOWNLOAD_COLABFOLD2_AF2_WEIGHTS {
     path 'af2_params', emit: params_path
 
     script:
-    def variant_list = colabfold2_variants.collect { "'${it}'" }.join(', ')
+    def variant_list = colabfold2_variants.collect { variant -> "'${variant}'" }.join(', ')
     """
     set -euo pipefail
     python3 - <<'PY'

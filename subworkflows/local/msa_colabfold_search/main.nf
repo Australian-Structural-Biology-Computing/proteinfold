@@ -65,7 +65,7 @@ workflow MSA_COLABFOLD_SEARCH {
         ch_search_input = ch_cache_results.miss.map { meta, csv, result -> [meta, csv] }
         ch_cached_json = ch_cache_results.hit.map { meta, csv, result -> [meta, result.resolve('hit.json')] }
     } else {
-        ch_cached_json = Channel.empty()
+        ch_cached_json = channel.empty()
     }
 
     if (batch_size == 1) {
@@ -85,7 +85,7 @@ workflow MSA_COLABFOLD_SEARCH {
                 if (ids.toSet().size() != ids.size()) error("Duplicate sample IDs are not allowed")
                 def effective_batch_size = batch_size == -1 ? Math.max(1, sorted.size()) : batch_size
                 sorted.collate(effective_batch_size).collect { batch ->
-                    [batch.collect { it[1] }, batch.collect { it[2] }]
+                    [batch.collect { item -> item[1] }, batch.collect { item -> item[2] }]
                 }
             }
         MMSEQS_COLABFOLDSEARCH_BATCH(ch_batches, ch_colabfold_db, ch_uniref30)
@@ -95,7 +95,7 @@ workflow MSA_COLABFOLD_SEARCH {
                 batch_files.collect { file ->
                     def sample_id = file.name.endsWith('.json') ? file.name[0..-6] : file.name
                     def sample = batch_meta.find { meta -> meta.get('id') == sample_id }
-                    if (sample == null) error("MMseqs batch output ${file.name} does not match input samples ${batch_meta*.id}")
+                    if (sample == null) error("MMseqs batch output ${file.name} does not match input samples ${batch_meta.collect { meta -> meta.id }}")
                     [sample, file]
                 }
             }
