@@ -569,7 +569,8 @@ workflow NFCORE_PROTEINFOLD {
     BENCHMARK(
         ch_top_ranked_model,
         ch_references,
-        colabfold2_public_mode
+        colabfold2_public_mode,
+        requested_modes.collect { it.trim() }
     )
 
     ch_multiqc_config        = channel.fromPath("$projectDir/assets/multiqc_config.yml", checkIfExists: true).first()

@@ -23,12 +23,20 @@ input:
   - colabfold2_public_mode:
       type: string
       description: Selected ColabFold2 backend mode (e.g. colabfold2-alphafold3), or null when ColabFold2 is not used
+  - benchmark_models:
+      type: list
+      description: Normalized prediction method names expected to emit a top-ranked structure
 output:
   - scores:
       type: channel
       description: |
         Structure of: [path(meta), path(benchmark.json)]
         Benchmarking scores of each predicted structure against its reference
+  - missing:
+      type: channel
+      description: |
+        Structure of: [val(id), val(model)]
+        Referenced sample and method pairs that emitted no top-ranked structure
 authors:
   - "@keiran-rowell-unsw"
 maintainers:
