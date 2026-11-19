@@ -99,7 +99,7 @@
                 },
                 "random_seed": {
                     "type": "integer",
-                    "description": "Global random seed for modules that natively support explicit seeding: alphafold2, boltz, and colabfold."
+                    "description": "Global random seed, forwarded to colabfold_batch (--random-seed) and honoured by every prediction backend: the AlphaFold2 backends seed the model runners, and the AlphaFold3-open backends set the folding input's rng_seeds."
                 },
                 "msa_server_url": {
                     "type": "string",

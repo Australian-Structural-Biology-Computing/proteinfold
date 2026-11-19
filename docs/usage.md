@@ -166,13 +166,9 @@ Alternatively, the required data layout for each MSA tool and backend is describ
 
 ## Random Seeds
 
-The pipeline-wide `--random_seed` parameter can be used to set the seed for the prediction backend.
+The pipeline-wide `--random_seed` parameter is forwarded to `colabfold_batch` (`--random-seed`) and honoured by every prediction backend: the AlphaFold2 backends seed the model runners, and the AlphaFold3-open backends (alphafold3, boltz2, protenix2, chai1, esmfold2, ...) set the folding input's `rng_seeds`.
 
-If no seed is explicitly provided, each mode keeps its native default behaviour:
-
-- `alphafold2`: AlphaFold2 generates a random seed internally.
-- `boltz`: Boltz leaves the seed unset (`--seed` is not passed).
-- `colabfold`: ColabFold defaults to `--random-seed 0`.
+If no seed is explicitly provided, `colabfold_batch` defaults to seed 0 for every backend.
 
 For reproducible results between runs, it is recommended to set an explicit seed.
 
