@@ -1,4 +1,8 @@
-"""Run with the OpenStructure container: python3 -m unittest discover -s tests -p test_benchmark_structure.py."""
+"""Tests for the OpenStructure benchmark wrapper.
+
+Run inside the BENCHMARK_STRUCTURE container so the ``ost`` Python bindings and
+``compare-structures`` command are both available.
+"""
 
 import json
 import importlib.util
@@ -11,6 +15,7 @@ from unittest.mock import patch
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "bin" / "benchmark_structure.py"
+FIXTURES = Path(__file__).resolve().parent / "fixtures" / "benchmark"
 
 
 def structure(chains):
@@ -33,6 +38,26 @@ def structure(chains):
 
 
 class BenchmarkStructureTest(unittest.TestCase):
+    def run_fixture_comparison(self, model):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "scores.json"
+            process = subprocess.run(
+                [
+                    "python3",
+                    str(SCRIPT),
+                    "--model",
+                    str(model),
+                    "--reference",
+                    str(FIXTURES / "reference.pdb"),
+                    "--output",
+                    str(output),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            result = json.loads(output.read_text()) if output.exists() else None
+            return process, result
+
     def run_comparison(self, model_chains, reference_chains):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -54,6 +79,23 @@ class BenchmarkStructureTest(unittest.TestCase):
         self.assertNotEqual(process.returncode, 0)
         self.assertIn("exactly one protein chain", process.stderr)
         self.assertIsNone(result)
+
+    def test_real_comparison_scores_identical_and_deformed_models(self):
+        identical_process, identical = self.run_fixture_comparison(FIXTURES / "reference.pdb")
+        self.assertEqual(identical_process.returncode, 0, identical_process.stderr)
+        self.assertEqual(identical["status"], "SUCCESS")
+        self.assertEqual(identical["lddt"], 1.0)
+        self.assertEqual(identical["tm_score"], 1.0)
+        self.assertEqual(identical["chain_mapping"], identical["usalign_mapping"])
+
+        deformed_process, deformed = self.run_fixture_comparison(FIXTURES / "model_deformed.pdb")
+        self.assertEqual(deformed_process.returncode, 0, deformed_process.stderr)
+        self.assertEqual(deformed["status"], "SUCCESS")
+        self.assertAlmostEqual(deformed["lddt"], 0.645, places=3)
+        self.assertAlmostEqual(deformed["tm_score"], 0.505, places=3)
+        self.assertLess(deformed["lddt"], identical["lddt"])
+        self.assertLess(deformed["tm_score"], identical["tm_score"])
+        self.assertEqual(deformed["chain_mapping"], deformed["usalign_mapping"])
 
     def test_score_validation(self):
         spec = importlib.util.spec_from_file_location("benchmark_structure", SCRIPT)
