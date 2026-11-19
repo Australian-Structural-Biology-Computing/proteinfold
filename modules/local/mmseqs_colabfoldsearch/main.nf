@@ -92,7 +92,7 @@ process MMSEQS_COLABFOLDSEARCH {
 }
 
 process MMSEQS_COLABFOLDSEARCH_BATCH {
-    tag "batch_${batch_meta*.id.join('_')}"
+    tag "batch_${batch_meta.collect { meta -> meta.id }.join('_')}"
     label 'process_high_memory'
     label 'process_high'
     container "ghcr.io/jscgh/proteinfold_mmseqs_colabfoldsearch:2.1.0dev"

@@ -178,7 +178,7 @@ workflow PIPELINE_COMPLETION {
     //
     // Completion email and summary
     //
-    workflow.onComplete {
+    workflow.onComplete = {
         if (email || email_on_fail) {
             completionEmail(
                 summary_params,
@@ -195,7 +195,7 @@ workflow PIPELINE_COMPLETION {
 
     }
 
-    workflow.onError {
+    workflow.onError = {
         log.error "Pipeline failed. Please refer to troubleshooting docs for common issues: https://nf-co.re/docs/running/troubleshooting"
     }
 }
@@ -210,7 +210,7 @@ workflow PIPELINE_COMPLETION {
 // Check and validate pipeline parameters
 //
 def validateInputParameters() {
-    def requestedModes = params.mode.toLowerCase().split(",")*.trim()
+    def requestedModes = params.mode.toLowerCase().split(",").collect { mode -> mode.trim() }
 
     if (requestedModes.contains("alphafold3")) {
         alphafold3Warn(log)
@@ -410,7 +410,7 @@ def randomSeedModeWarn(log, requestedModes) {
         'alphafold3',
         'alphafold2'
     ] as Set
-    def unsupportedModes = requestedModes.findAll { !supportedModes.contains(it) }.unique().sort()
+    def unsupportedModes = requestedModes.findAll { mode -> !supportedModes.contains(mode) }.unique().sort()
 
     if (!unsupportedModes.isEmpty()) {
         log.warn "===================================================================================\n" +

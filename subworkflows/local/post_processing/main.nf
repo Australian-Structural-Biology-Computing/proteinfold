@@ -99,9 +99,9 @@ workflow POST_PROCESSING {
 
         MULTIQC (
             GENERATE_MULTIQC_CONTENTS.out.mqc_json
-                .combine(ch_multiqc_files.collect().map { [it] })
-                .combine(ch_multiqc_config.collect().ifEmpty([]).map { [it] })
-                .combine(ch_multiqc_custom_config.collect().ifEmpty([]).map { [it] })
+                .combine(ch_multiqc_files.collect().map { files -> [files] })
+                .combine(ch_multiqc_config.collect().ifEmpty([]).map { config -> [config] })
+                .combine(ch_multiqc_custom_config.collect().ifEmpty([]).map { config -> [config] })
                 .map { meta, mqc_json, extra_files, config_files, custom_config_files ->
                     // A single-file glob output arrives as a bare java.nio.file.Path, which is Iterable: `path + list` would splice its name components into the list.
                     def mqc_json_files = mqc_json instanceof List ? mqc_json : [mqc_json]
