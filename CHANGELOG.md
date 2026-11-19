@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multiple ColabFold2 backends can now run in one invocation: `--mode` accepts a comma-delimited list (e.g. `alphafold3,alphafold2`). Every requested mode folds the shared MSA inputs and publishes under its own results subdirectory (`<mode>/...`, `reports/<mode>/...`), with per-mode report, ModelCIF and MultiQC content grouping; MultiQC runs once over all modes. Samples whose input cannot serve a backend are skipped by that backend with a warning instead of failing the run — the AlphaFold2 backends skip samples carrying non-protein entities (they would otherwise fold a truncated protein-only complex), while the AlphaFold3-open backends fold them in full.
 - Re-added AlphaFold2 structure prediction through the ColabFold2 module: `--mode alphafold2` (colabfold_batch selects `alphafold2_ptm` or `alphafold2_multimer_v3` per query). The new `ALPHAFOLD3_JSON_TO_COLABFOLD_A3M` adaptor converts the generated MSA JSON into ColabFold a3m queries, inference emits PDB structures for these backends, and `prepare_colabfold2_dbs` downloads the ColabFold AF2 parameter sets (`int8` precision is rejected for them).
 
+- The default `--mode` is now `opendde` instead of `alphafold3`, because the AlphaFold3 weights carry usage restrictions; `alphafold3` remains fully selectable, and the commercial-purpose warning still appears only when it is requested.
+
 ### Enhancements & fixes
 
 - [[PR #573](https://github.com/nf-core/proteinfold/pull/573)] - Adds affiliations for UNSW Structural Biology Facility (SBF).
