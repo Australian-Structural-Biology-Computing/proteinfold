@@ -499,11 +499,25 @@ class JsonToA3mTests(unittest.TestCase):
         self.assertIn(b"no unpairedMsa", result.stderr)
 
     def test_protein_free_json_reports_absent_msa(self):
+        # A ligand-only JSON has non-protein entities, which are reported
+        # distinctly (exit 3) before the missing-protein check applies.
         job = {"dialect": "alphafold3", "version": 2, "name": "t",
                "sequences": [{"ligand": {"ccdCodes": ["ATP"]}}], "modelSeeds": [1]}
         result, dst = self._run(job)
-        self.assertEqual(result.returncode, 2)
-        self.assertIn(b"no protein entity", result.stderr)
+        self.assertEqual(result.returncode, 3)
+        self.assertIn(b"non-protein entities", result.stderr)
+
+    def test_non_protein_entities_rejected_distinctly(self):
+        job = {"dialect": "alphafold3", "version": 2, "name": "t",
+               "sequences": [
+                   {"protein": {"id": ["A"], "sequence": "MKTAY",
+                                 "unpairedMsa": ">101\nMKTAY\n"}},
+                   {"ligand": {"id": ["L1"], "ccdCodes": ["ATP"]}},
+               ], "modelSeeds": [1]}
+        result, dst = self._run(job)
+        self.assertEqual(result.returncode, 3)
+        self.assertIn(b"non-protein entities", result.stderr)
+        self.assertIn(b"ligand", result.stderr)
 
     def test_malformed_protein_remains_an_error(self):
         job = {"dialect": "alphafold3", "version": 2, "name": "t",

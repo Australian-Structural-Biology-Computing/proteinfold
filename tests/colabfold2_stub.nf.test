@@ -62,7 +62,7 @@ nextflow_pipeline {
                     assert stable_name.contains("${sub.mode}/${id}/paes/${id}_1_pae.tsv".toString())
                     assert stable_name.contains("${sub.mode}/${id}/${id}_plddt.tsv".toString())
                     assert stable_name.contains("${sub.mode}/${id}/${id}_colabfold2_msa.tsv".toString())
-                    assert stable_name.contains("reports/${id}_colabfold2_report.html".toString())
+                    assert stable_name.contains("reports/${id}_${sub.mode}_report.html".toString())
                 }
                 assert stable_name.contains('multiqc/multiqc_report.html')
                 // Snapshot the task count and the versions report: that is what pins
@@ -91,7 +91,48 @@ nextflow_pipeline {
             def stableName = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
             assert workflow.success
             assert stableName.contains('alphafold3/top_ranked_structures/rich_sample.cif')
-            assert stableName.contains('reports/rich_sample_colabfold2_report.html')
+            assert stableName.contains('reports/rich_sample_alphafold3_report.html')
+        }
+    }
+    test("multi-mode run folds each sample with every compatible backend") {
+        tag "colabfold2-multimode"
+        def base = System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/'
+        setup {
+            def sheet = new File("${outputDir}/multimode_samplesheet.csv")
+            sheet.text = [
+                'id,fasta',
+                "T1024,${base}testdata/sequences/T1024.fasta",
+                "rich_sample,https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/testdata/sequences/boltz/mixed.json",
+            ].join('\n') + '\n'
+        }
+
+        when {
+            params {
+                outdir = "$outputDir"
+                mode   = 'alphafold3,alphafold2'
+                input  = "${outputDir}/multimode_samplesheet.csv"
+            }
+        }
+
+        then {
+            def stableName = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
+            assert workflow.success
+            // The protein-only sample is folded by both backends, each under
+            // its own mode directory (no output collisions).
+            assert stableName.contains('alphafold3/top_ranked_structures/T1024.cif')
+            assert stableName.contains('alphafold2/top_ranked_structures/T1024.pdb')
+            assert stableName.contains('alphafold2/T1024/T1024_colabfold2_msa.tsv')
+            assert stableName.contains('alphafold3/T1024/T1024_colabfold2_msa.tsv')
+            // Per-mode reports and MultiQC contents.
+            assert stableName.contains('reports/alphafold3/T1024_alphafold3_report.html')
+            assert stableName.contains('reports/alphafold2/T1024_alphafold2_report.html')
+            assert stableName.contains('multiqc/multiqc_data/proteinfold_alphafold3_generalstats_mqc.json')
+            assert stableName.contains('multiqc/multiqc_data/proteinfold_alphafold2_generalstats_mqc.json')
+            // The RNA-containing sample carries non-protein entities: the
+            // AlphaFold2 backend skips it (warned) rather than folding a
+            // truncated protein-only complex; AlphaFold3 still folds it.
+            assert stableName.contains('alphafold3/top_ranked_structures/rich_sample.cif')
+            assert !stableName.any { it.startsWith('alphafold2/rich_sample') }
         }
     }
 }

@@ -97,8 +97,13 @@ workflow POST_PROCESSING {
             mqc_generator_script
         )
 
+        // Multi-mode runs emit one contents task per mode; collect them so
+        // MULTIQC runs once over every mode's custom content.
         MULTIQC (
             GENERATE_MULTIQC_CONTENTS.out.mqc_json
+                .map { meta, files -> [ [id: 'multiqc'], files instanceof List ? files : [files] ] }
+                .groupTuple()
+                .map { meta, files -> [ meta, files.flatten() ] }
                 .combine(ch_multiqc_files.collect().map { files -> [files] })
                 .combine(ch_multiqc_config.collect().ifEmpty([]).map { config -> [config] })
                 .combine(ch_multiqc_custom_config.collect().ifEmpty([]).map { config -> [config] })

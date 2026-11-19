@@ -25,9 +25,9 @@ process MAKE_PROBE_METRICS {
 workflow COLLECT_MULTIQC_METRICS_PROBE {
 
     main:
-    MAKE_PROBE_METRICS(channel.of([ [ id: 'S1' ], 'S1' ], [ [ id: 'S2' ], 'S2' ]))
+    MAKE_PROBE_METRICS(channel.of([ [ id: 'S1', model: params.probe_mode ], 'S1' ], [ [ id: 'S2', model: params.probe_mode ], 'S2' ]))
 
-    out_metrics = collectMultiqcMetrics(params.probe_mode, [
+    out_metrics = collectMultiqcMetrics([
         [ 'plddt', MAKE_PROBE_METRICS.out.plddt ],
         [ 'msa',   MAKE_PROBE_METRICS.out.msa ],
         [ 'ptm',   MAKE_PROBE_METRICS.out.ptm ],

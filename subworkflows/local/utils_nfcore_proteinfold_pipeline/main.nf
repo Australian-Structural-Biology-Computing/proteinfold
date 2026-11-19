@@ -210,7 +210,7 @@ workflow PIPELINE_COMPLETION {
 // Check and validate pipeline parameters
 //
 def validateInputParameters() {
-    def requestedModes = params.mode.toLowerCase().split(",").collect { mode -> mode.trim() }
+    def requestedModes = (params.mode instanceof List ? params.mode : params.mode.split(",")).collect { mode -> mode.toString().trim().toLowerCase() }
 
     if (requestedModes.contains("alphafold3")) {
         alphafold3Warn(log)
@@ -238,10 +238,15 @@ def modeChannel(ch, mode) {
 // the rest are mixed in one at a time, because mix() is a channel operator -- it
 // does not exist on ArrayList.
 //
-def collectMultiqcMetrics(model, metric_channels) {
+def collectMultiqcMetrics(metric_channels) {
+    // The metric tuples carry their own meta, whose model field names the
+    // public mode; grouping collapses every sample of a mode into one
+    // tuple keyed by that mode, which is what MULTIQC consumes.
     def acc = null
     metric_channels.each { entry ->
-        def ch = entry[1].map { it -> [ [id: model, model: model], it[1] ] }
+        // Index form: some metric emits carry trailing fields (e.g. the MSA
+        // coverage plot), so positional destructuring would fail.
+        def ch = entry[1].map { it -> [it[0].model, it[1]] }
         acc = acc == null ? ch : acc.mix(ch)
     }
     if (acc == null) {
@@ -250,7 +255,7 @@ def collectMultiqcMetrics(model, metric_channels) {
     return acc
         .unique { entry -> entry[1] }
         .groupTuple()
-        .map { _model, paths ->
+        .map { model, paths ->
             [ [id: model, model: model], paths.flatten() ]
         }
 }

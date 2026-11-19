@@ -67,43 +67,46 @@ workflow NFCORE_PROTEINFOLD {
         'intellifold2', 'opendde', 'rosettafold3', 'esmfold2',
         'alphafold2'
     ]
-    requested_modes      = params.mode.toLowerCase().split(",").collect { mode -> mode.trim() }
+    // nf-schema delivers a comma-delimited --mode as a List; normalise both
+    // shapes into the trimmed token list.
+    def mode_param       = params.mode instanceof List ? params.mode.join(',') : params.mode.toString()
+    requested_modes      = mode_param.toLowerCase().split(",").collect { mode -> mode.trim() }
     colabfold2_submodes  = requested_modes.findAll { mode -> colabfold2_models.contains(mode) }
     if (colabfold2_submodes != requested_modes) {
         error("Unknown ColabFold2 mode(s): ${(requested_modes - colabfold2_submodes).join(', ')}. Supported modes: ${colabfold2_models.join(', ')}.")
     }
-    if (colabfold2_submodes.size() > 1) {
-        error("Running multiple ColabFold2 backends in one invocation is not supported yet; run them separately.")
-    }
-    colabfold2_public_mode = colabfold2_submodes[0]
     colabfold2_esmfold2_models = [
         'msa'    : [ model_type: 'esmfold2',        use_esm: false ],
         'lm300m' : [ model_type: 'esmfold2_lm300m', use_esm: true  ],
         'lm600m' : [ model_type: 'esmfold2_lm600m', use_esm: true  ]
     ]
     colabfold2_esmfold2_selection = params.esmfold2_model ?: 'msa'
-    if (colabfold2_public_mode == 'alphafold3' && params.colabfold2_weights_precision == 'int8') {
-        error("ColabFold2 official alphafold3 supports fp32 weights only; --colabfold2_weights_precision int8 cannot be used with --mode alphafold3.")
-    }
-    if (colabfold2_public_mode && colabfold2_public_mode.startsWith('alphafold2') && params.colabfold2_weights_precision == 'int8') {
-        error("The AlphaFold2 backends do not provide int8 weights; --colabfold2_weights_precision int8 cannot be used with --mode ${colabfold2_public_mode}.")
-    }
-    if (colabfold2_public_mode == 'esmfold2') {
-        def esmfold2_model = colabfold2_esmfold2_models[colabfold2_esmfold2_selection]
-        if (esmfold2_model == null) {
-            error("Unsupported --esmfold2_model '${colabfold2_esmfold2_selection}'. Choose one of: ${colabfold2_esmfold2_models.keySet().join(', ')}.")
+    // One spec per requested mode; every mode runs the shared MSA inputs
+    // through its own ColabFold2 inference call and publishes under its own
+    // public mode directory.
+    colabfold2_mode_specs = requested_modes.collect { mode ->
+        def spec = [ public_mode: mode, model_type: mode, use_esm: false ]
+        if (mode == 'alphafold3' && params.colabfold2_weights_precision == 'int8') {
+            error("ColabFold2 official alphafold3 supports fp32 weights only; --colabfold2_weights_precision int8 cannot be used with --mode alphafold3.")
         }
-        colabfold2_model_for_submode = esmfold2_model.model_type
-        colabfold2_use_esm = esmfold2_model.use_esm
-    } else {
-        colabfold2_model_for_submode = colabfold2_public_mode
-        colabfold2_use_esm = false
-        // The plain alphafold2 token delegates monomer/multimer selection to
-        // colabfold_batch ('auto': alphafold2_ptm / alphafold2_multimer_v3).
-        if (colabfold2_model_for_submode == 'alphafold2') {
-            colabfold2_model_for_submode = 'auto'
+        if (mode.startsWith('alphafold2') && params.colabfold2_weights_precision == 'int8') {
+            error("The AlphaFold2 backends do not provide int8 weights; --colabfold2_weights_precision int8 cannot be used with --mode ${mode}.")
         }
+        if (mode == 'esmfold2') {
+            def esmfold2_model = colabfold2_esmfold2_models[colabfold2_esmfold2_selection]
+            if (esmfold2_model == null) {
+                error("Unsupported --esmfold2_model '${colabfold2_esmfold2_selection}'. Choose one of: ${colabfold2_esmfold2_models.keySet().join(', ')}.")
+            }
+            spec.model_type = esmfold2_model.model_type
+            spec.use_esm    = esmfold2_model.use_esm
+        } else if (mode == 'alphafold2') {
+            // The plain alphafold2 token delegates monomer/multimer selection
+            // to colabfold_batch ('auto': alphafold2_ptm / alphafold2_multimer_v3).
+            spec.model_type = 'auto'
+        }
+        spec
     }
+    colabfold2_model_for_submode = colabfold2_mode_specs*.model_type.unique()
     //
     // Resolve the MSA generation module
     //
@@ -252,9 +255,7 @@ workflow NFCORE_PROTEINFOLD {
     PROTEINFOLD (
         ch_samplesheet,
         ch_colabfold2_params_path,
-        colabfold2_model_for_submode,
-        colabfold2_use_esm,
-        colabfold2_public_mode,
+        colabfold2_mode_specs,
         params.colabfold_num_recycles,
         msa_tool,
         params.msa_batch_size,
