@@ -3,12 +3,14 @@ nextflow_pipeline {
     name "Scientific validation: ColabFold2"
     script "../../main.nf"
     tag "scientific"
+    tag "gpu"
     tag "output_validation"
     tag "structure_validation"
     tag "colabfold2"
     profile "test_full_colabfold2,gpu"
 
     def backends = [
+        [mode: 'alphafold2', extension: '.pdb'],
         [mode: 'alphafold3'],
         [mode: 'boltz2', kernel: 'cuda_legacy'],
         [mode: 'protenix2', kernel: 'cuda_legacy'],
@@ -47,7 +49,7 @@ nextflow_pipeline {
                     'python3', new File('tests/scientific/validate_outputs.py').absolutePath,
                     '--mode', backend.mode,
                     '--display-name', "ColabFold2 ${backend.mode}${backend.model ? ' ' + backend.model : ''}",
-                    '--extension', '.cif',
+                    '--extension', backend.extension ?: '.cif',
                     '--outdir', params.outdir.toString(),
                     '--samplesheet', params.input.toString(),
                     '--require-pae'

@@ -22,7 +22,7 @@ warnings.filterwarnings("error", category=PDBConstructionWarning, message=".*cou
 INTERFACE_SUFFIXES = ("_iptm.tsv", "_chainwise_iptm.tsv", "_ipsae.tsv", "_chainwise_ipsae.tsv")
 
 COLABFOLD2_MODES = frozenset({
-    "colabfold2-alphafold3", "colabfold2-boltz2", "esmfold2", "protenix2",
+    "alphafold2", "alphafold3", "boltz2", "esmfold2", "protenix2",
     "chai1", "intellifold2", "opendde", "openfold3", "openbind0", "rosettafold3",
 })
 
