@@ -489,12 +489,15 @@ print("Starting...")
 
 version = "1.0.0"
 model_name = {
-    "esmfold": "ESMFold",
+    "esmfold2": "ESMFold2",
     "alphafold2": "AlphaFold2",
     "alphafold3": "Alphafold3",
-    "colabfold": "ColabFold",
-    "colabfold2": "ColabFold2",
-    "boltz": "Boltz"
+    "chai1": "Chai1",
+    "opendde": "OpenDDE",
+    "protenix2": "Protenix2",
+    "rosettafold3": "RosettFold3",
+    "boltz2": "Boltz2"
+
 }
 
 parser = argparse.ArgumentParser()

@@ -216,9 +216,6 @@ def validateInputParameters() {
         alphafold3Warn(log)
     }
 
-    if (params.random_seed != null) {
-        randomSeedModeWarn(log, requestedModes)
-    }
 }
 
 def modeChannel(ch, mode) {
@@ -406,22 +403,4 @@ def alphafold3Warn(log) {
         "  Be aware that the predicted structures can not be used for commercial purposes.\n" +
         "  More information here: \"https://github.com/google-deepmind/alphafold3/blob/main/README.md#alphafold-3-source-code-and-model-parameters.\"\n" +
         "==================================================================================="
-}
-
-def randomSeedModeWarn(log, requestedModes) {
-    // The seed is forwarded to colabfold_batch (--random-seed) and is consumed
-    // by the AlphaFold-family prediction backends; the other backends ignore it.
-    def supportedModes = [
-        'alphafold3',
-        'alphafold2'
-    ] as Set
-    def unsupportedModes = requestedModes.findAll { mode -> !supportedModes.contains(mode) }.unique().sort()
-
-    if (!unsupportedModes.isEmpty()) {
-        log.warn "===================================================================================\n" +
-            "  The global --random_seed parameter only applies to the AlphaFold-family prediction backends\n" +
-            "  (alphafold3 and the alphafold2 modes).\n" +
-            "  It will be ignored for the following selected mode(s): ${unsupportedModes.join(', ')}.\n" +
-            "==================================================================================="
-    }
 }
