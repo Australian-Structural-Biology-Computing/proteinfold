@@ -87,7 +87,38 @@ process MMSEQS_COLABFOLDSEARCH {
     """
     mkdir results
     touch results/${meta.id}.a3m
-    touch results/${meta.id}.json
+    python3 - ${fasta} ${meta.id} <<'PY'
+import json, sys
+path, sample_id = sys.argv[1], sys.argv[2]
+records, header, seq = [], None, []
+for line in open(path):
+    line = line.strip()
+    if line.startswith('>'):
+        if header is not None:
+            records.append((header, ''.join(seq)))
+        header, seq = line[1:], []
+    elif line:
+        seq.append(line)
+if header is not None:
+    records.append((header, ''.join(seq)))
+document = {
+    'dialect': 'alphafold3',
+    'version': 2,
+    'name': sample_id,
+    'modelSeeds': [1],
+    'sequences': [
+        {
+            'protein': {
+                'id': [chr(ord('A') + i) for i in range(len(records))] or ['A'],
+                'sequence': ':'.join(s for _, s in records) or 'ACDE',
+                'unpairedMsa': '>' + (records[0][0] if records else 'query') + '\\n' + (':'.join(s for _, s in records) or 'ACDE') + '\\n',
+            }
+        }
+    ],
+}
+with open(f'results/{sample_id}.json', 'w') as handle:
+    json.dump(document, handle)
+PY
     """
 }
 
@@ -147,6 +178,41 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
     stub:
     """
     mkdir results
-    for f in ${fastas}; do id=\$(basename "\$f"); id="\${id%.*}"; printf '>stub\n' > results/\${id}.a3m; printf '{"stub":true}\n' > results/\${id}.json; done
+    for f in ${fastas}; do
+        id=\$(basename "\$f"); id="\${id%.*}"
+        printf '>stub\n' > results/\${id}.a3m
+        python3 - "\$f" "\$id" <<'PY'
+import json, sys
+path, sample_id = sys.argv[1], sys.argv[2]
+records, header, seq = [], None, []
+for line in open(path):
+    line = line.strip()
+    if line.startswith('>'):
+        if header is not None:
+            records.append((header, ''.join(seq)))
+        header, seq = line[1:], []
+    elif line:
+        seq.append(line)
+if header is not None:
+    records.append((header, ''.join(seq)))
+document = {
+    'dialect': 'alphafold3',
+    'version': 2,
+    'name': sample_id,
+    'modelSeeds': [1],
+    'sequences': [
+        {
+            'protein': {
+                'id': [chr(ord('A') + i) for i in range(len(records))] or ['A'],
+                'sequence': ':'.join(s for _, s in records) or 'ACDE',
+                'unpairedMsa': '>' + (records[0][0] if records else 'query') + '\\n' + (':'.join(s for _, s in records) or 'ACDE') + '\\n',
+            }
+        }
+    ],
+}
+with open(f'results/{sample_id}.json', 'w') as handle:
+    json.dump(document, handle)
+PY
+    done
     """
 }

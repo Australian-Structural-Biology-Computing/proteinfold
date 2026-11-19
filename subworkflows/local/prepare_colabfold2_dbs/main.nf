@@ -9,11 +9,10 @@ process DOWNLOAD_COLABFOLD2_WEIGHTS {
     container "ghcr.io/jscgh/proteinfold_colabfold:af3-preview-e9e8bd0"
 
     input:
-    val colabfold2_model
-    val colabfold2_precision
+    tuple val(colabfold2_model), val(colabfold2_precision)
 
     output:
-    path 'colabfold2_models', emit: params_path
+    tuple val(colabfold2_model), path('colabfold2_models'), emit: params_path
 
     script:
     def markerRevision = colabfold2_model == 'chai1' ? '_r3' : (colabfold2_model == 'boltz2' ? '_r1' : '')
@@ -68,7 +67,7 @@ workflow PREPARE_COLABFOLD2_DBS {
     take:
     colabfold2_params_path
     colabfold_db
-    colabfold2_model
+    colabfold2_models
     colabfold2_precision
     use_msa_server
     colabfold_envdb_path
@@ -78,73 +77,113 @@ workflow PREPARE_COLABFOLD2_DBS {
     colabfold_create_index
 
     main:
+    // Resolve the weights root once per requested model type and emit
+    // [model_type, params_dir] tuples so the dispatch loop can pair each
+    // mode with the weights it needs (AF2-family and AF3-family layouts
+    // differ, and multiple AF3-family modes each need their own weights).
     def localModels = colabfold_db && !colabfold_db.toString().contains('://') ? "${colabfold_db}/colabfold2_models" : null
     def companions = [
         'esmfold2_lm300m': 'esmc_300m',
         'esmfold2_lm600m': 'esmc_600m'
     ]
     def suffix = colabfold2_precision == 'int8' ? '-int8' : ''
-    def companion = companions[colabfold2_model]
-    def markerRevision = colabfold2_model == 'chai1' ? '_r3' : (colabfold2_model == 'boltz2' ? '_r1' : '')
-    def marker = "params/af3/${colabfold2_model}${suffix}/download_${colabfold2_model}_${colabfold2_precision}${markerRevision}_finished.txt"
-    def localReady = localModels && new File(localModels, marker).isFile() && new File(localModels, 'params/af3/libcifpp/components.cif').isFile()
     def rosettafold3Blob = 'params/af3/rosettafold3/rosettafold3.bin.zst'
     def rosettafold3Bytes = 1361361731L
-    if (localReady && colabfold2_model == 'rosettafold3' && colabfold2_precision == 'fp32') {
-        localReady = new File(localModels, rosettafold3Blob).length() == rosettafold3Bytes
-    }
-    if (localReady && companion) {
-        localReady = new File(localModels, "params/af3/${colabfold2_model}${suffix}/${colabfold2_model}.lm.npz").isFile() && new File(localModels, "params/af3/${companion}/${companion}.bin.zst").isFile()
-    }
-    def weightsRoot = colabfold2_params_path ?: (localReady ? localModels : null)
-    def af3_dir = "${weightsRoot}/params/af3"
-    def model_dir = "${af3_dir}/${colabfold2_model}${suffix}"
 
-    // The alphafold2 backends use ColabFold's own AF2 parameter layout
-    // (<root>/params with alphafold_params .npz files), not the AF3 weights
-    // root. 'auto' (the plain alphafold2 mode token) needs both the ptm and
-    // the multimer_v3 parameter sets so colabfold_batch can pick per query.
     def af2Variants = null
-    if (colabfold2_model == 'auto') {
-        af2Variants = ['alphafold2_ptm', 'alphafold2_multimer_v3']
-    } else if (colabfold2_model.startsWith('alphafold2')) {
-        af2Variants = [colabfold2_model]
+    def af2Models = []
+    def af3Models = []
+    colabfold2_models.each { model ->
+        if (model == 'auto') {
+            af2Variants = (af2Variants ?: []) + ['alphafold2_ptm', 'alphafold2_multimer_v3']
+            af2Models << model
+        } else if (model.startsWith('alphafold2')) {
+            af2Variants = (af2Variants ?: []) + [model]
+            af2Models << model
+        } else {
+            af3Models << model
+        }
     }
 
-    if (af2Variants) {
+    def ch_params_specs = channel.empty()
+
+    // AF2-family weights use ColabFold's own layout (<root>/params with
+    // alphafold_params .npz files); one root serves every AF2 variant, and
+    // 'auto' needs both the ptm and the multimer_v3 parameter sets.
+    if (af2Models) {
         if (colabfold2_params_path) {
             file(colabfold2_params_path, type: 'dir', checkIfExists: true)
             if (!workflow.stubRun) {
                 file("${colabfold2_params_path}/params", type: 'dir', checkIfExists: true)
             }
-            ch_params_path = channel.value(file(colabfold2_params_path, type: 'dir', checkIfExists: true))
+            af2Models.each { model ->
+                ch_params_specs = ch_params_specs.mix(channel.value([model, file(colabfold2_params_path, type: 'dir', checkIfExists: true)]))
+            }
         } else if (workflow.stubRun) {
-            ch_params_path = channel.value(file('assets/dummy_db_dir', type: 'dir', checkIfExists: true))
+            af2Models.each { model ->
+                ch_params_specs = ch_params_specs.mix(channel.value([model, file('assets/dummy_db_dir', type: 'dir', checkIfExists: true)]))
+            }
         } else {
-            DOWNLOAD_COLABFOLD2_AF2_WEIGHTS(af2Variants)
-            ch_params_path = DOWNLOAD_COLABFOLD2_AF2_WEIGHTS.out.params_path
+            DOWNLOAD_COLABFOLD2_AF2_WEIGHTS(af2Variants.unique())
+            ch_params_specs = ch_params_specs.mix(
+                DOWNLOAD_COLABFOLD2_AF2_WEIGHTS.out.params_path.map { dir -> af2Models.collect { [model: it, dir: dir] } }.flatten().map { spec -> [spec.model, spec.dir] }
+            )
         }
-    } else if (weightsRoot) {
-        file(weightsRoot, type: 'dir', checkIfExists: true)
-        if (!workflow.stubRun) {
-            file(model_dir, type: 'dir', checkIfExists: true)
-            file("${model_dir}/download_${colabfold2_model}_${colabfold2_precision}${markerRevision}_finished.txt", checkIfExists: true)
-            if (colabfold2_model == 'rosettafold3' && colabfold2_precision == 'fp32' && !weightsRoot.toString().contains('://') && new File(weightsRoot.toString(), rosettafold3Blob).length() != rosettafold3Bytes) {
-                error "RosettaFold3 weights in ${weightsRoot} do not match the checkpoint required by this ColabFold2 image (${rosettafold3Bytes} bytes). Use a refreshed weights cache."
-            }
-            if (companion) {
-                file("${model_dir}/${colabfold2_model}.lm.npz", checkIfExists: true)
-                file("${af3_dir}/${companion}/${companion}.bin.zst", checkIfExists: true)
-            }
-            file("${af3_dir}/libcifpp/components.cif", checkIfExists: true)
-        }
-        ch_params_path = channel.value(file(weightsRoot, type: 'dir', checkIfExists: true))
-    } else if (workflow.stubRun) {
-        ch_params_path = channel.value(file('assets/dummy_db_dir', type: 'dir', checkIfExists: true))
-    } else {
-        DOWNLOAD_COLABFOLD2_WEIGHTS(colabfold2_model, colabfold2_precision)
-        ch_params_path = DOWNLOAD_COLABFOLD2_WEIGHTS.out.params_path
     }
+
+    // AF3-family weights live under <root>/params/af3/<model>; every
+    // requested AF3-family model must be present in (or downloaded to) the
+    // shared root.
+    if (af3Models) {
+        def weightsRoot = colabfold2_params_path ?: (localModels ? localModels : null)
+        if (colabfold2_params_path || (localModels && af3Models.every { model ->
+            def markerRevision = model == 'chai1' ? '_r3' : (model == 'boltz2' ? '_r1' : '')
+            def marker = "params/af3/${model}${suffix}/download_${model}_${colabfold2_precision}${markerRevision}_finished.txt"
+            def ready = new File(localModels, marker).isFile() && new File(localModels, 'params/af3/libcifpp/components.cif').isFile()
+            if (ready && model == 'rosettafold3' && colabfold2_precision == 'fp32') {
+                ready = new File(localModels, rosettafold3Blob).length() == rosettafold3Bytes
+            }
+            def companion = companions[model]
+            if (ready && companion) {
+                ready = new File(localModels, "params/af3/${model}${suffix}/${model}.lm.npz").isFile() && new File(localModels, "params/af3/${companion}/${companion}.bin.zst").isFile()
+            }
+            ready
+        })) {
+            def root = weightsRoot
+            if (!workflow.stubRun) {
+                af3Models.each { model ->
+                    def markerRevision = model == 'chai1' ? '_r3' : (model == 'boltz2' ? '_r1' : '')
+                    def model_dir = "${root}/params/af3/${model}${suffix}"
+                    file(model_dir, type: 'dir', checkIfExists: true)
+                    file("${model_dir}/download_${model}_${colabfold2_precision}${markerRevision}_finished.txt", checkIfExists: true)
+                    if (model == 'rosettafold3' && colabfold2_precision == 'fp32' && !root.toString().contains('://') && new File(root.toString(), rosettafold3Blob).length() != rosettafold3Bytes) {
+                        error "RosettaFold3 weights in ${root} do not match the checkpoint required by this ColabFold2 image (${rosettafold3Bytes} bytes). Use a refreshed weights cache."
+                    }
+                    def companion = companions[model]
+                    if (companion) {
+                        file("${model_dir}/${model}.lm.npz", checkIfExists: true)
+                        file("${root}/params/af3/${companion}/${companion}.bin.zst", checkIfExists: true)
+                    }
+                }
+                file("${root}/params/af3/libcifpp/components.cif", checkIfExists: true)
+            }
+            af3Models.each { model ->
+                ch_params_specs = ch_params_specs.mix(channel.value([model, file(root, type: 'dir', checkIfExists: true)]))
+            }
+        } else if (workflow.stubRun) {
+            af3Models.each { model ->
+                ch_params_specs = ch_params_specs.mix(channel.value([model, file('assets/dummy_db_dir', type: 'dir', checkIfExists: true)]))
+            }
+        } else {
+            // Channel-fed invocation: processes cannot be called from within
+            // a closure, so each AF3-family model streams in as a tuple.
+            ch_af3_weights = channel.fromList(af3Models).map { model -> tuple(model, colabfold2_precision) }
+            DOWNLOAD_COLABFOLD2_WEIGHTS(ch_af3_weights)
+            ch_params_specs = ch_params_specs.mix(DOWNLOAD_COLABFOLD2_WEIGHTS.out.params_path)
+        }
+    }
+
+    ch_params_path = ch_params_specs
 
     ch_colabfold_db = channel.empty()
     ch_uniref30 = channel.empty()

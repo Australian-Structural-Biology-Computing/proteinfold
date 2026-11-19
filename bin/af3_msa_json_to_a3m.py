@@ -45,6 +45,10 @@ class MissingMsaError(ValueError):
     pass
 
 
+class NonProteinEntityError(ValueError):
+    pass
+
+
 def protein_inputs(document):
     """Unique protein entities and their aggregate copy counts."""
     unique = {}
@@ -139,6 +143,23 @@ def main():
     with open(args.json_in, encoding="utf-8") as handle:
         document = _single_job(json.load(handle))
 
+    non_protein = [
+        entity_key
+        for entity in document.get("sequences", [])
+        if isinstance(entity, dict)
+        for entity_key in entity.keys()
+        if entity_key != "protein"
+    ]
+    if non_protein:
+        # The AlphaFold2 backends fold protein chains only; a sample whose
+        # input carries non-protein entities would be folded as a truncated
+        # complex, so report it as unsupported instead of silently dropping
+        # the extra entities.
+        raise NonProteinEntityError(
+            "the AlphaFold2 backends fold protein chains only; the JSON has "
+            "non-protein entities: {}".format(', '.join(sorted(set(non_protein))))
+        )
+
     inputs = protein_inputs(document)
     sequences = [item["protein"]["sequence"] for item in inputs]
     cardinalities = [item["copies"] for item in inputs]
@@ -190,6 +211,6 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except MissingMsaError as error:
+    except (MissingMsaError, NonProteinEntityError) as error:
         print(error, file=sys.stderr)
-        sys.exit(2)
+        sys.exit(3 if isinstance(error, NonProteinEntityError) else 2)

@@ -11,7 +11,7 @@ process ALPHAFOLD3_JSON_TO_COLABFOLD_A3M {
     tuple val(meta), path(input_json)
 
     output:
-    tuple val(meta), path("${meta.id}.a3m"), emit: a3m
+    tuple val(meta), path("${meta.id}.a3m"), path("*compatibility.flag"), emit: a3m
     path "versions.yml"                    , emit: versions
 
     when:
@@ -19,9 +19,23 @@ process ALPHAFOLD3_JSON_TO_COLABFOLD_A3M {
 
     script:
     """
-    af3_msa_json_to_a3m.py \\
+    if af3_msa_json_to_a3m.py \\
         ${input_json} \\
-        --output ${meta.id}.a3m
+        --output ${meta.id}.a3m; then
+        touch compatible.compatibility.flag
+    else
+        conversion_status=\$?
+        if [ "\$conversion_status" -ne 2 ] && [ "\$conversion_status" -ne 3 ]; then
+            echo "af3_msa_json_to_a3m.py failed with status \$conversion_status" >&2
+            exit "\$conversion_status"
+        fi
+        # Exit 2 means the JSON has no reusable protein MSA (no protein
+        # entity, or no unpairedMsa): emit an empty a3m and mark the sample
+        # incompatible with the AlphaFold2 backends instead of failing the
+        # run, so multi-mode invocations can still fold it elsewhere.
+        touch ${meta.id}.a3m
+        touch incompatible.compatibility.flag
+    fi
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -31,7 +45,18 @@ process ALPHAFOLD3_JSON_TO_COLABFOLD_A3M {
 
     stub:
     """
-    touch ${meta.id}.a3m
+    if af3_msa_json_to_a3m.py \\
+        ${input_json} \\
+        --output ${meta.id}.a3m; then
+        touch compatible.compatibility.flag
+    else
+        conversion_status=\$?
+        if [ "\$conversion_status" -ne 2 ] && [ "\$conversion_status" -ne 3 ]; then
+            exit "\$conversion_status"
+        fi
+        touch ${meta.id}.a3m
+        touch incompatible.compatibility.flag
+    fi
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         python: \$(python3 --version | sed 's/Python //g')

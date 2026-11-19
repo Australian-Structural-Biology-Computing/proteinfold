@@ -34,21 +34,8 @@
                 "mode": {
                     "type": "string",
                     "default": "alphafold3",
-                    "description": "Specifies the prediction backend mode. ColabFold2 backends are named after the tool they run. alphafold2 runs the AlphaFold2 models through the ColabFold2 module; colabfold_batch picks alphafold2_ptm for monomers and alphafold2_multimer_v3 for complexes. Use --esmfold2_model to select the ESMFold2 variant.",
-                    "fa_icon": "fas fa-cogs",
-                    "enum": [
-                        "alphafold3",
-                        "boltz2",
-                        "esmfold2",
-                        "protenix2",
-                        "chai1",
-                        "intellifold2",
-                        "opendde",
-                        "openfold3",
-                        "openbind0",
-                        "rosettafold3",
-                        "alphafold2"
-                    ]
+                    "description": "Specifies the prediction backend mode; provide a comma-delimited list to run several backends over the same MSA inputs (e.g. \"alphafold3,alphafold2\"). Each mode publishes under its own results subdirectory. ColabFold2 backends are named after the tool they run. alphafold2 runs the AlphaFold2 models through the ColabFold2 module; colabfold_batch picks alphafold2_ptm for monomers and alphafold2_multimer_v3 for complexes, and the AlphaFold2 backends only fold samples whose input has a reusable protein MSA. Use --esmfold2_model to select the ESMFold2 variant.",
+                    "fa_icon": "fas fa-cogs"
                 },
                 "msa_tool": {
                     "type": "string",

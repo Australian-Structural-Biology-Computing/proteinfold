@@ -6,12 +6,8 @@ process COLABFOLD2_INFERENCE {
     container "ghcr.io/jscgh/proteinfold_colabfold:af3-preview-e9e8bd0"
 
     input:
-    tuple val(meta), path(input)
-    val model_type
-    val use_esm
-    val public_mode
+    tuple val(meta), path(input), val(model_type), val(use_esm), path(params_path)
     val num_recycles
-    path params_path
 
     output:
     path "raw/**"                                             , optional: true, emit: raw
@@ -139,7 +135,7 @@ process COLABFOLD2_INFERENCE {
                 mv "${meta.id}_msa.tsv" "${meta.id}_colabfold2_msa.tsv"
             else
                 conversion_status=\$?
-                if [[ "\$conversion_status" -eq 2 ]]; then
+                if [[ "\$conversion_status" -eq 2 || "\$conversion_status" -eq 3 ]]; then
                     touch "${meta.id}_colabfold2_msa.tsv"
                 else
                     echo "COLABFOLD2_INFERENCE could not convert the input MSA" >&2

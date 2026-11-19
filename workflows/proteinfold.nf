@@ -31,10 +31,8 @@ workflow PROTEINFOLD {
 
     take:
     ch_samplesheet  // channel: samplesheet read in from --input
-    ch_params_path  // channel: path(colabfold2_params_path, the weights/data dir root)
-    model_type      // string: explicit upstream AF3-family model name
-    use_esm         // boolean: select the ESM-C language-model path for ESMFold2
-    public_mode     // string: public mode token used for output publication
+    ch_params_path  // channel: tuple(model_type, params dir) from PREPARE_COLABFOLD2_DBS
+    mode_specs      // list of maps: [public_mode, model_type, use_esm] per requested --mode
     num_recycles    // int: Number of recycles for the selected backend
     msa_tool        // string: colabfold_search | alphafold2_msa | alphafold3_msa | msa_server
     msa_batch_size  // int: number of samples processed together during MSA search (-1 = one batch)
@@ -83,11 +81,6 @@ workflow PROTEINFOLD {
         'esmfold2_lm300m' : 'ESMFOLD2',
         'esmfold2_lm600m' : 'ESMFOLD2'
     ]
-
-    def backend_process = COLABFOLD2_BACKENDS[model_type]
-    if (backend_process == null) {
-        error("ColabFold2 backend '${model_type}' is not wired to an inference process. Wired backends: ${COLABFOLD2_BACKENDS.keySet().join(', ')}.")
-    }
 
     ch_byo_msa = ch_samplesheet
         .filter { meta, input -> meta.msa }
@@ -174,115 +167,205 @@ workflow PROTEINFOLD {
     // The alphafold2 backends predate the AlphaFold3 input JSON: they consume
     // ColabFold a3m queries (or a plain FASTA when the MSA server does the
     // search). Convert whichever MSA JSON the selected tool produced.
-    def af2_backend = model_type == 'auto' || model_type.startsWith('alphafold2')
-    if (af2_backend && msa_tool != 'msa_server') {
-        ALPHAFOLD3_JSON_TO_COLABFOLD_A3M(ch_msa_input)
-        ch_inference_input = ALPHAFOLD3_JSON_TO_COLABFOLD_A3M.out.a3m.mix(ch_byo_msa)
-    } else if (af2_backend) {
-        // Server mode: let colabfold_batch run the server search itself; JSON
-        // inputs are reduced to their protein chains first.
-        ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA(ch_input_by_ext.json)
-        ch_inference_input = ch_input_by_ext.fasta.mix(ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA.out.query_fasta).mix(ch_byo_msa)
-    } else {
-        ch_inference_input = ch_msa_input.mix(ch_byo_msa)
+
+    // Split the requested modes into backend families. The AlphaFold2
+    // backends run ColabFold's AF2 graph and consume ColabFold a3m queries:
+    // they cannot fold non-protein entities. Every other mode runs the
+    // AlphaFold3-open graph and accepts full AlphaFold3 JSON inputs,
+    // including nucleic-acid and ligand entities (esmfold2 included).
+    def af2_specs = mode_specs.findAll { it.model_type == 'auto' || it.model_type.startsWith('alphafold2') }
+    def af3_specs = mode_specs.findAll { !(it.model_type == 'auto' || it.model_type.startsWith('alphafold2')) }
+
+    def ch_af3_inference_input = null
+    def ch_af2_inference_input = null
+
+    if (af3_specs) {
+        ch_af3_inference_input = ch_msa_input.mix(ch_byo_msa)
     }
 
-    if (backend_process == 'ALPHAFOLD2') {
-        ALPHAFOLD2(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
-        ch_batch = ALPHAFOLD2.out
-        ch_batch_structures = ALPHAFOLD2.out.structures_pdb
-    } else if (backend_process == 'ALPHAFOLD3') {
-        ALPHAFOLD3(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
-        ch_batch = ALPHAFOLD3.out
-        ch_batch_structures = ch_batch.structures
-    } else if (backend_process == 'BOLTZ2') {
-        BOLTZ2(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
-        ch_batch = BOLTZ2.out
-        ch_batch_structures = ch_batch.structures
-    } else if (backend_process == 'OPENFOLD3') {
-        OPENFOLD3(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
-        ch_batch = OPENFOLD3.out
-        ch_batch_structures = ch_batch.structures
-    } else if (backend_process == 'OPENBIND0') {
-        OPENBIND0(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
-        ch_batch = OPENBIND0.out
-        ch_batch_structures = ch_batch.structures
-    } else if (backend_process == 'PROTEINX2') {
-        PROTEINX2(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
-        ch_batch = PROTEINX2.out
-        ch_batch_structures = ch_batch.structures
-    } else if (backend_process == 'CHAI1') {
-        CHAI1(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
-        ch_batch = CHAI1.out
-        ch_batch_structures = ch_batch.structures
-    } else if (backend_process == 'INTELLIFOLD2') {
-        INTELLIFOLD2(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
-        ch_batch = INTELLIFOLD2.out
-        ch_batch_structures = ch_batch.structures
-    } else if (backend_process == 'OPENDDE') {
-        OPENDDE(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
-        ch_batch = OPENDDE.out
-        ch_batch_structures = ch_batch.structures
-    } else if (backend_process == 'ROSETTAFOLD3') {
-        ROSETTAFOLD3(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
-        ch_batch = ROSETTAFOLD3.out
-        ch_batch_structures = ch_batch.structures
-    } else if (backend_process == 'ESMFOLD2') {
-        ESMFOLD2(ch_inference_input, model_type, use_esm, public_mode, num_recycles, ch_params_path)
-        ch_batch = ESMFOLD2.out
-        ch_batch_structures = ch_batch.structures
-    } else {
-        error("ColabFold2 backend '${model_type}' resolved to unknown process '${backend_process}'.")
+    if (af2_specs) {
+        if (msa_tool == 'msa_server') {
+            // Server mode: colabfold_batch runs the webserver search itself;
+            // JSON inputs are reduced to their protein chains first.
+            ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA(ch_input_by_ext.json)
+            ch_af2_inference_input = ch_input_by_ext.fasta.mix(ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA.out.query_fasta).mix(ch_byo_msa)
+        } else {
+            // Convert the MSA JSON into ColabFold a3m queries. Samples whose
+            // JSON cannot serve the AF2 graph (non-protein entities, no
+            // protein entity, or no MSA to reuse) are flagged rather than
+            // fatal so the remaining modes still fold them; the AF2 modes
+            // skip those samples with a warning.
+            ALPHAFOLD3_JSON_TO_COLABFOLD_A3M(ch_msa_input)
+            def ch_convertible = ALPHAFOLD3_JSON_TO_COLABFOLD_A3M.out.a3m
+                .map { meta, a3m, flag ->
+                    def compatible = flag.name.startsWith('compatible')
+                    if (!compatible) {
+                        log.warn "Sample '${meta.id}' cannot be folded by the AlphaFold2 backends (${af2_specs*.public_mode.join(', ')}): its input carries non-protein entities or has no reusable protein MSA. It is still folded by: ${af3_specs ? af3_specs*.public_mode.join(', ') : 'no other requested mode'}."
+                    }
+                    [meta, a3m, compatible]
+                }
+            ch_af2_inference_input = ch_convertible
+                .filter { meta, a3m, compatible -> compatible }
+                .map { meta, a3m, compatible -> [meta, a3m] }
+                .mix(ch_byo_msa)
+        }
     }
 
-    ch_batch.top_ranked_structure
-        .map { meta, structure ->
-            def report_meta = meta.clone()
-            report_meta.model = 'colabfold2'
-            [report_meta, structure]
+    // Structure prediction: one invocation per backend process, at workflow
+    // level (the Nextflow linter forbids process calls inside closures).
+    // Each requested mode streams its samples into its backend's channel,
+    // tagging the meta with the public mode and pairing every sample with
+    // that mode's weights directory, so a single call covers every mode
+    // routed to the backend.
+    def ch_backends = [
+        ALPHAFOLD2  : Channel.empty(),
+        ALPHAFOLD3  : Channel.empty(),
+        BOLTZ2      : Channel.empty(),
+        OPENFOLD3   : Channel.empty(),
+        OPENBIND0   : Channel.empty(),
+        PROTEINX2   : Channel.empty(),
+        CHAI1       : Channel.empty(),
+        INTELLIFOLD2: Channel.empty(),
+        OPENDDE     : Channel.empty(),
+        ROSETTAFOLD3: Channel.empty(),
+        ESMFOLD2    : Channel.empty()
+    ]
+    mode_specs.each { spec ->
+        def backend = COLABFOLD2_BACKENDS[spec.model_type]
+        if (backend == null) {
+            error("ColabFold2 backend '${spec.model_type}' is not wired to an inference process. Wired backends: ${COLABFOLD2_BACKENDS.keySet().join(', ')}.")
         }
-        .set { ch_top_ranked_structure }
+        def input_for_mode = (spec.model_type == 'auto' || spec.model_type.startsWith('alphafold2')) ? ch_af2_inference_input : ch_af3_inference_input
+        // first() promotes the mode's weights directory to a value channel;
+        // combine with a value channel pairs it with every sample (join
+        // consumes right-side entries once, and combine against a queue is
+        // a cartesian product).
+        def params_for_mode = ch_params_path
+            .filter { model, dir -> model == spec.model_type }
+            .map { model, dir -> dir }
+            .first()
+        ch_backends[backend] = ch_backends[backend].mix(
+            input_for_mode
+                .combine(params_for_mode)
+                .map { meta, input, dir ->
+                    def tagged = meta.clone()
+                    tagged.model = spec.public_mode
+                    tuple(tagged, input, spec.model_type, spec.use_esm, dir)
+                }
+        )
+    }
 
-    ch_batch_structures
-        .map { meta, structures ->
-            def report_meta = meta.clone()
-            report_meta.model = 'colabfold2'
-            def ranked = (structures instanceof List ? structures : [structures]).sort { structure ->
-                def matcher = structure.name =~ /_rank_(\d+)_/
-                matcher.find() ? matcher.group(1).toInteger() : Integer.MAX_VALUE
-            }
-            [report_meta, ranked]
-        }
-        .set { ch_structures }
+    def backends_out = [:]
+    if (af2_specs) {
+        ALPHAFOLD2(ch_backends['ALPHAFOLD2'], num_recycles)
+        backends_out['ALPHAFOLD2'] = ALPHAFOLD2.out
+    }
+    if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'ALPHAFOLD3' }) {
+        ALPHAFOLD3(ch_backends['ALPHAFOLD3'], num_recycles)
+        backends_out['ALPHAFOLD3'] = ALPHAFOLD3.out
+    }
+    if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'BOLTZ2' }) {
+        BOLTZ2(ch_backends['BOLTZ2'], num_recycles)
+        backends_out['BOLTZ2'] = BOLTZ2.out
+    }
+    if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'OPENFOLD3' }) {
+        OPENFOLD3(ch_backends['OPENFOLD3'], num_recycles)
+        backends_out['OPENFOLD3'] = OPENFOLD3.out
+    }
+    if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'OPENBIND0' }) {
+        OPENBIND0(ch_backends['OPENBIND0'], num_recycles)
+        backends_out['OPENBIND0'] = OPENBIND0.out
+    }
+    if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'PROTEINX2' }) {
+        PROTEINX2(ch_backends['PROTEINX2'], num_recycles)
+        backends_out['PROTEINX2'] = PROTEINX2.out
+    }
+    if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'CHAI1' }) {
+        CHAI1(ch_backends['CHAI1'], num_recycles)
+        backends_out['CHAI1'] = CHAI1.out
+    }
+    if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'INTELLIFOLD2' }) {
+        INTELLIFOLD2(ch_backends['INTELLIFOLD2'], num_recycles)
+        backends_out['INTELLIFOLD2'] = INTELLIFOLD2.out
+    }
+    if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'OPENDDE' }) {
+        OPENDDE(ch_backends['OPENDDE'], num_recycles)
+        backends_out['OPENDDE'] = OPENDDE.out
+    }
+    if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'ROSETTAFOLD3' }) {
+        ROSETTAFOLD3(ch_backends['ROSETTAFOLD3'], num_recycles)
+        backends_out['ROSETTAFOLD3'] = ROSETTAFOLD3.out
+    }
+    if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'ESMFOLD2' }) {
+        ESMFOLD2(ch_backends['ESMFOLD2'], num_recycles)
+        backends_out['ESMFOLD2'] = ESMFOLD2.out
+    }
 
-    modeChannel(ch_batch.msa, 'colabfold2').set { ch_msa }
-    modeChannel(ch_batch.pae, 'colabfold2').set { ch_pae }
-    modeChannel(ch_batch.ptms, 'colabfold2').set { ch_ptm }
-    modeChannel(ch_batch.iptms, 'colabfold2').set { ch_iptm }
-    modeChannel(ch_batch.ipsaes, 'colabfold2').set { ch_ipsae }
-    modeChannel(ch_batch.chainwise_iptms, 'colabfold2').set { ch_chainwise_iptm }
-    modeChannel(ch_batch.chainwise_ipsaes, 'colabfold2').set { ch_chainwise_ipsae }
-    modeChannel(ch_batch.confidence, 'colabfold2').set { ch_confidence }
-    modeChannel(ch_batch.plddt, 'colabfold2').set { ch_plddt }
+    // Combine every backend's emits. The metas already carry the public
+    // mode (tagged at dispatch), so publication and MultiQC grouping stay
+    // collision-free without further tagging.
+    def combined = [top_ranked_structure: [], structures: [], structures_pdb: [], msa: [], pae: [], ptms: [], iptms: [], ipsaes: [], chainwise_iptms: [], chainwise_ipsaes: [], confidence: [], plddt: [], scores: [], raw: []]
+    backends_out.each { backend, out ->
+        combined.top_ranked_structure   << out.top_ranked_structure
+        combined.structures             << out.structures
+        combined.structures_pdb         << out.structures_pdb
+        combined.msa                    << out.msa
+        combined.pae                    << out.pae
+        combined.ptms                   << out.ptms
+        combined.iptms                  << out.iptms
+        combined.ipsaes                 << out.ipsaes
+        combined.chainwise_iptms        << out.chainwise_iptms
+        combined.chainwise_ipsaes       << out.chainwise_ipsaes
+        combined.confidence             << out.confidence
+        combined.plddt                  << out.plddt
+        combined.scores                 << out.scores
+        combined.raw                    << out.raw
+    }
+    def ch_multiqc_metrics = Channel.empty()
+    backends_out.each { backend, out ->
+        ch_multiqc_metrics = ch_multiqc_metrics.mix(
+            collectMultiqcMetrics([
+                [ 'plddt', out.plddt ],
+                [ 'msa',   out.msa ],
+                [ 'ptm',   out.ptms ],
+                [ 'iptm',  out.iptms ]
+            ])
+        )
+    }
 
-    ch_multiqc_metrics = collectMultiqcMetrics('colabfold2', [
-        [ 'plddt', ch_batch.plddt ],
-        [ 'msa',   ch_batch.msa ],
-        [ 'ptm',   ch_batch.ptms ],
-        [ 'iptm',  ch_batch.iptms ]
-    ])
+    // Mix the per-backend channels; inject instead of the spread operator,
+    // which the Nextflow linter cannot parse. Optional emits can be empty
+    // per backend; inject on an empty list yields Channel.empty().
+    def ch_batch = [
+        top_ranked_structure: combined.top_ranked_structure.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
+        structures          : combined.structures.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
+        structures_pdb      : combined.structures_pdb.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
+        msa                 : combined.msa.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
+        pae                 : combined.pae.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
+        ptms                : combined.ptms.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
+        iptms               : combined.iptms.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
+        ipsaes              : combined.ipsaes.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
+        chainwise_iptms     : combined.chainwise_iptms.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
+        chainwise_ipsaes    : combined.chainwise_ipsaes.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
+        confidence          : combined.confidence.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
+        plddt               : combined.plddt.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
+        scores              : combined.scores.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
+        raw                 : combined.raw.inject(Channel.empty()) { acc, ch -> acc.mix(ch) }
+    ]
+    ch_top_ranked_structure = ch_batch.top_ranked_structure
+    ch_structures = ch_batch.structures_pdb.mix(ch_batch.structures)
 
     emit:
     top_ranked_pdb  = ch_top_ranked_structure
     pdb             = ch_structures
-    msa             = ch_msa
-    pae             = ch_pae
-    ptm             = ch_ptm
-    iptm            = ch_iptm
-    ipsae           = ch_ipsae
-    chainwise_iptm  = ch_chainwise_iptm
-    chainwise_ipsae = ch_chainwise_ipsae
-    confidence      = ch_confidence
-    plddt           = ch_plddt
+    msa             = ch_batch.msa
+    pae             = ch_batch.pae
+    ptm             = ch_batch.ptms
+    iptm            = ch_batch.iptms
+    ipsae           = ch_batch.ipsaes
+    chainwise_iptm  = ch_batch.chainwise_iptms
+    chainwise_ipsae = ch_batch.chainwise_ipsaes
+    confidence      = ch_batch.confidence
+    plddt           = ch_batch.plddt
     multiqc_metrics = ch_multiqc_metrics
 }
