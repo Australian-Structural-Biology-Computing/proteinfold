@@ -89,7 +89,16 @@ workflow PROTEINFOLD {
         error("ColabFold2 backend '${model_type}' is not wired to an inference process. Wired backends: ${COLABFOLD2_BACKENDS.keySet().join(', ')}.")
     }
 
+    ch_byo_msa = ch_samplesheet
+        .filter { meta, input -> meta.msa }
+        .map { meta, input ->
+            def clean_meta = meta.clone()
+            def msa = clean_meta.remove('msa')
+            [clean_meta, msa]
+        }
+
     ch_samplesheet
+        .filter { meta, input -> !meta.msa }
         .map { meta, input ->
             def extension = input.extension.toLowerCase()
             if (!(extension in ['fa', 'faa', 'fasta', 'json'])) {
@@ -168,14 +177,14 @@ workflow PROTEINFOLD {
     def af2_backend = model_type == 'auto' || model_type.startsWith('alphafold2') || model_type.startsWith('deepfold')
     if (af2_backend && msa_tool != 'msa_server') {
         ALPHAFOLD3_JSON_TO_COLABFOLD_A3M(ch_msa_input)
-        ch_inference_input = ALPHAFOLD3_JSON_TO_COLABFOLD_A3M.out.a3m
+        ch_inference_input = ALPHAFOLD3_JSON_TO_COLABFOLD_A3M.out.a3m.mix(ch_byo_msa)
     } else if (af2_backend) {
         // Server mode: let colabfold_batch run the server search itself; JSON
         // inputs are reduced to their protein chains first.
         ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA(ch_input_by_ext.json)
-        ch_inference_input = ch_input_by_ext.fasta.mix(ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA.out.query_fasta)
+        ch_inference_input = ch_input_by_ext.fasta.mix(ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA.out.query_fasta).mix(ch_byo_msa)
     } else {
-        ch_inference_input = ch_msa_input
+        ch_inference_input = ch_msa_input.mix(ch_byo_msa)
     }
 
     if (backend_process == 'ALPHAFOLD2') {
