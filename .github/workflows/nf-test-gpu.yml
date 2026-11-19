@@ -7,6 +7,7 @@ on:
       - "conf/test_nostub.config"
       - "modules/local/colabfold2_inference/**"
       - "tests/fixtures/**"
+      - "tests/scientific/**"
   release:
     types: [published]
   workflow_dispatch:
@@ -45,7 +46,7 @@ jobs:
         uses: ./.github/actions/get-shards
         env:
           NFT_VER: ${{ env.NFT_VER }}
-          SKIP_SCIENTIFIC: "true"
+          SKIP_SCIENTIFIC: "false"
         with:
           tags: "gpu"
           max_shards: 2
