@@ -97,6 +97,36 @@ nextflow_pipeline {
         }
     }
 
+    test("samplesheet MSA bypasses MSA generation") {
+        tag "msa-byo"
+
+        setup {
+            def fasta = file("$outputDir/byo_msa.fasta")
+            fasta.text = ">byo_msa\nMKTAY\n"
+            def msa = file("$outputDir/byo_msa.a3m")
+            msa.text = "#5\t1\n>101\nMKTAY\n>102\nMKTAiY\n"
+            def samplesheet = file("$outputDir/byo_msa_samplesheet.csv")
+            samplesheet.text = "id,fasta,msa\nbyo_msa,${fasta},${msa}\n"
+        }
+        when {
+            params {
+                outdir = "$outputDir/results"
+                input = "$outputDir/byo_msa_samplesheet.csv"
+                mode = 'alphafold3'
+                msa_tool = 'alphafold2_msa'
+            }
+        }
+
+        then {
+            assert workflow.success
+            def names = workflow.trace.succeeded().collect { it.name }
+            assert !names.any { it.contains('MMSEQS_COLABFOLDSEARCH') }
+            assert !names.any { it.contains('RUN_ALPHAFOLD2_MSA') }
+            assert !names.any { it.contains('RUN_ALPHAFOLD3_DATAPIPELINE') }
+            assert names.any { it.contains('COLABFOLD2_INFERENCE') || it.contains('ALPHAFOLD3') }
+        }
+    }
+
     test("--use_msa_server bypasses local MSA generation") {
         tag "msa-server"
 
@@ -104,6 +134,7 @@ nextflow_pipeline {
             params {
                 outdir          = "$outputDir"
                 mode            = 'alphafold3'
+                msa_tool        = 'alphafold2_msa'
                 use_msa_server  = true
             }
         }
