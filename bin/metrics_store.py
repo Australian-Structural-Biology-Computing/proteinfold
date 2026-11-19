@@ -89,7 +89,12 @@ class ArrayStoreWriter:
     def add(self, key, array):
         buffer = io.BytesIO()
         np.lib.format.write_array(buffer, np.asanyarray(array), allow_pickle=False)
-        self._zip.writestr(f"{key}.npy", buffer.getvalue())
+        # Fixed member timestamp so identical content produces identical
+        # bytes (zip default stamps the wall clock, which would make the
+        # stores unstable for snapshot md5s and cache keys).
+        info = zipfile.ZipInfo(f"{key}.npy", date_time=(1980, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_DEFLATED
+        self._zip.writestr(info, buffer.getvalue())
 
     def close(self):
         self._zip.close()

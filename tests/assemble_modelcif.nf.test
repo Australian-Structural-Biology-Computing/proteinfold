@@ -114,7 +114,7 @@ nextflow_process {
                 if (expectEmbeddedPAE) {
                     assert mmcif.contains("PAE")
                 } else {
-                    assert (mmcif =~ /\S+\.tsv[^\n]*file other other/).find()
+                    assert (mmcif =~ /\S+\.npz[^\n]*file other other/).find()
                 }
             },
 
@@ -148,12 +148,15 @@ nextflow_process {
             def outputFile = path(process.out.modelcif[0][1])
             assert outputFile.text.contains('_ma_qa_metric')
             assert outputFile.text.contains('_ma_protocol_step')
-            (0..1).each { rank ->
-                def relativePath = "pae/test_${rank}_pae.tsv"
-                assert outputFile.text.contains("model ${relativePath} file other other")
-                assert java.nio.file.Files.isRegularFile(outputFile.parent.resolve(relativePath))
-            }
-            assert process.out.pae[0].size() == 2
+            // One packed PAE store per sample; every rank's model
+            // associates it as its PAE source instead of per-rank TSVs.
+            def packedPath = "pae/test_pae.npz"
+            assert outputFile.text.contains("model ${packedPath} file other other")
+            assert java.nio.file.Files.isRegularFile(outputFile.parent.resolve(packedPath))
+            // nf-test unwraps single-file emits to the bare path
+            def paeFiles = [process.out.pae[0]].flatten()
+            assert paeFiles.size() == 1
+            assert paeFiles[0].toString().contains('pae/test_pae.npz')
             assert path(process.out.versions[0]).getFileName().toString() == 'versions.yml'
             assert outputFile.text.contains('nf-core/proteinfold')
             assert outputFile.text.contains('2.3.2')

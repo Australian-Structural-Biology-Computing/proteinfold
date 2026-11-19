@@ -217,6 +217,10 @@ def _map_pae_files_to_ranks(pae_files, num_structs):
     there is exactly one model."""
     if num_structs == 1 and len(pae_files) == 1:
         return {0: pae_files[0]}
+    packed = [p for p in pae_files if str(p).endswith('.npz')]
+    if len(packed) == 1 and len(pae_files) == 1:
+        # One packed store covers every rank of its sample.
+        return {rank: pae_files[0] for rank in range(num_structs)}
     pae_by_rank = {}
     for pae_file in pae_files:
         rank = _rank_from_pae_filename(pae_file)
@@ -526,9 +530,19 @@ def build_modelcif(
     if 'pae' not in missing_metrics:
         pae_by_rank = _map_pae_files_to_ranks(pae_files, len(biopy_structs))
         if pae_embed:
-            pae_matrices = {
-                rank: _read_pae_tsv(path) for rank, path in pae_by_rank.items()
-            }
+            packed_path = next(
+                (p for p in pae_by_rank.values() if str(p).endswith('.npz')), None
+            )
+            if packed_path is not None:
+                members = metrics_store.read_arrays(packed_path)
+                pae_matrices = {
+                    rank: [list(map(float, row)) for row in members[f'rank_{rank}']]
+                    for rank in pae_by_rank
+                }
+            else:
+                pae_matrices = {
+                    rank: _read_pae_tsv(path) for rank, path in pae_by_rank.items()
+                }
     if 'msa' not in missing_metrics:
         msa_num_seqs, msa_length = _read_msa_stats(msa_file)
 
@@ -888,7 +902,7 @@ def build_modelcif(
                 f'Predicted aligned error matrix (rank_{rank})',
                 details=('ESMFold predicted aligned error matrix from the inference output'
                          if prog.lower() == 'esmfold' else
-                         'Predicted aligned error (PAE) values for this rank, exported as TSV by extract_metrics.py'),
+                         'Predicted aligned error (PAE) matrix for this rank, from the packed inference metric store'),
             )
             system.data.append(pae_data)
             associated_files.append(
@@ -1000,13 +1014,19 @@ def _parsed_metrics_for_sample(sample_id, scalars_path, arrays_path):
     with metrics_store.ArrayStore(arrays_path) as store:
         for position, rank in enumerate(store.ranks(sample_id, 'plddt')):
             plddt_by_rank[f'rank_{position}'] = [float(v) for v in store.get(sample_id, rank, 'plddt')]
-        for position, rank in enumerate(store.ranks(sample_id, 'pae')):
-            matrix = store.get(sample_id, rank, 'pae')
-            pae_path = f'pae/{sample_id}_{position}_pae.tsv'
-            with open(pae_path, 'w') as fh:
-                for row in matrix:
-                    fh.write('\t'.join(f'{float(v):.4f}' for v in row) + '\n')
-            pae_files.append(pae_path)
+        pae_ranks = store.ranks(sample_id, 'pae')
+        if pae_ranks:
+            # Export the sample's PAE matrices as one packed store per
+            # sample (rank-keyed members) rather than instantiating one
+            # TSV per rank; the packed file stays the associated PAE
+            # artefact of every model it covers.
+            packed_path = f'pae/{sample_id}_pae.npz'
+            metrics_store.write_arrays(
+                packed_path,
+                {f'rank_{position}': store.get(sample_id, rank, 'pae')
+                 for position, rank in enumerate(pae_ranks)},
+            )
+            pae_files.append(packed_path)
 
     return structs, plddt_by_rank, ptm_by_rank, iptm_by_rank, chainwise_iptm, chainwise_ipsae, pae_files
 
