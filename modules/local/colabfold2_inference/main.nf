@@ -51,7 +51,7 @@ process COLABFOLD2_INFERENCE {
     }
     def require_msa_output = input_files.any { name -> name ==~ /(?i).*\.(fa|faa|fasta)$/ }
     // The alphafold2 backends write PDB structures; the AF3-family writes mmCIF.
-    def structure_ext = (model_type == 'auto' || model_type.startsWith('alphafold2') || model_type.startsWith('deepfold')) ? 'pdb' : 'cif'
+    def structure_ext = (model_type == 'auto' || model_type.startsWith('alphafold2')) ? 'pdb' : 'cif'
     def shell_quote = { name -> "'" + name.replace("'", "'\\''") + "'" }
     def quoted_input_files = input_files.collect(shell_quote).join(' ')
 
@@ -172,7 +172,7 @@ process COLABFOLD2_INFERENCE {
     """
 
     stub:
-    def structure_ext = (model_type == 'auto' || model_type.startsWith('alphafold2') || model_type.startsWith('deepfold')) ? 'pdb' : 'cif'
+    def structure_ext = (model_type == 'auto' || model_type.startsWith('alphafold2')) ? 'pdb' : 'cif'
     """
     mkdir raw
     touch "${meta.id}_colabfold2.${structure_ext}"

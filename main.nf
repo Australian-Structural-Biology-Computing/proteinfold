@@ -112,6 +112,9 @@ workflow NFCORE_PROTEINFOLD {
     if (!params.use_msa_server && !msa_tools.contains(msa_tool)) {
         error("Unknown --msa_tool '${msa_tool}'. Choose one of: ${msa_tools.join(', ')} or set --use_msa_server.")
     }
+    if (params.use_msa_server && params.msa_tool && params.msa_tool.toLowerCase() != 'colabfold_search') {
+        log.warn "--use_msa_server overrides --msa_tool '${params.msa_tool}': colabfold_batch searches the ColabFold webserver and no local MSA databases are prepared."
+    }
 
     ch_af2_params       = channel.empty()
     ch_af2_bfd          = channel.empty()

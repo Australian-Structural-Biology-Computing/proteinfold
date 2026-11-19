@@ -107,7 +107,7 @@ workflow PREPARE_COLABFOLD2_DBS {
     def af2Variants = null
     if (colabfold2_model == 'auto') {
         af2Variants = ['alphafold2_ptm', 'alphafold2_multimer_v3']
-    } else if (colabfold2_model.startsWith('alphafold2') || colabfold2_model.startsWith('deepfold')) {
+    } else if (colabfold2_model.startsWith('alphafold2')) {
         af2Variants = [colabfold2_model]
     }
 
