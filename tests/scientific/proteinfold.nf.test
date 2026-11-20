@@ -9,17 +9,21 @@ nextflow_pipeline {
     tag "proteinfold"
     profile "test_full_proteinfold,gpu"
 
+    // Every backend runs with the global default kernel configuration
+    // (colabfold2_kernel_backend = 'auto': no fused-kernel flags, upstream
+    // out-of-the-box behaviour) on the H200; per-backend overrides would be
+    // a global parameter and cannot differ within one pipeline invocation.
     def backends = [
         [mode: 'alphafold2', extension: '.pdb'],
         [mode: 'alphafold3'],
-        [mode: 'boltz2', kernel: 'cuda_legacy'],
-        [mode: 'protenix2', kernel: 'cuda_legacy'],
-        [mode: 'chai1', kernel: 'cuda_legacy'],
-        [mode: 'intellifold2', kernel: 'cuda_legacy'],
-        [mode: 'opendde', kernel: 'cuda_legacy'],
-        [mode: 'openfold3', kernel: 'cuda_legacy'],
-        [mode: 'openbind0', kernel: 'cuda_legacy'],
-        [mode: 'rosettafold3', kernel: 'cuda_legacy'],
+        [mode: 'boltz2'],
+        [mode: 'protenix2'],
+        [mode: 'chai1'],
+        [mode: 'intellifold2'],
+        [mode: 'opendde'],
+        [mode: 'openfold3'],
+        [mode: 'openbind0'],
+        [mode: 'rosettafold3'],
         [mode: 'esmfold2', model: 'msa'],
         [mode: 'esmfold2', model: 'lm300m', structure_only: true],
         [mode: 'esmfold2', model: 'lm600m', structure_only: true]
@@ -39,7 +43,6 @@ nextflow_pipeline {
                     colabfold_db = testDB
                     colabfold2_params_path = System.getenv('PROTEINFOLD_CF2_CACHE')
                     esmfold2_model = backend.model ?: 'msa'
-                    colabfold2_kernel_backend = backend.kernel ?: 'auto'
                 }
             }
 
