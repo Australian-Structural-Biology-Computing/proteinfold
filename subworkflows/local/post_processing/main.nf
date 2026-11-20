@@ -11,7 +11,6 @@ include { methodsDescriptionText } from '../utils_nfcore_proteinfold_pipeline'
 
 include { GENERATE_REPORT           } from '../../../modules/local/generate_report'
 include { GENERATE_MULTIQC_CONTENTS } from '../../../modules/local/generate_multiqc_contents'
-include { FOLDSEEK_EASYSEARCH       } from '../../../modules/nf-core/foldseek/easysearch/main'
 include { MULTIQC                   } from '../../../modules/nf-core/multiqc/main'
 include { MODELCIF_ASSEMBLE         } from '../../../modules/local/assemble_modelcif/main'
 include { MODELCIF_VALIDATE         } from '../../../modules/local/modelcif_validate/main'
@@ -23,9 +22,6 @@ workflow POST_PROCESSING {
     skip_visualisation
     ch_report_input
     ch_report_template
-    skip_foldseek
-    foldseek_db
-    foldseek_db_path
     skip_multiqc
     outdir
     ch_multiqc_rep
@@ -34,7 +30,6 @@ workflow POST_PROCESSING {
     multiqc_logo
     ch_multiqc_methods_description
     ch_software_versions
-    ch_top_ranked_model
     ch_modelcif
     write_modelcif
     modelcif_binary
@@ -62,19 +57,6 @@ workflow POST_PROCESSING {
         GENERATE_REPORT(
             ch_report_input,
             ch_report_template
-        )
-    }
-
-    if (!skip_foldseek) {
-        ch_foldseek_db = channel.value([
-            [
-                id: foldseek_db,
-            ],
-            file(foldseek_db_path, checkIfExists: true)
-        ])
-        FOLDSEEK_EASYSEARCH(
-            ch_top_ranked_model,
-            ch_foldseek_db
         )
     }
 

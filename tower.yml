@@ -5,7 +5,5 @@ reports:
     display: "Auto-created samplesheet with collated metadata and FASTQ paths"
   "*_colabfold2_report.html":
     display: "COLABFOLD2 - Predicted structures"
-  "*_colabfold2_foldseek.html":
-    display: "COLABFOLD2 - Foldseek output"
   "*_comparison_report.html":
     display: "Structure comparison"
