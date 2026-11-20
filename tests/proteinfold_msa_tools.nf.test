@@ -31,7 +31,6 @@ nextflow_pipeline {
             when {
                 params {
                     outdir        = "$outputDir"
-                    mode          = 'alphafold3'
                     msa_tool      = tool.msa_tool
                     alphafold2_db = "$projectDir/assets/dummy_db_dir"
                     alphafold3_db = "$projectDir/assets/dummy_db_dir"
@@ -48,7 +47,7 @@ nextflow_pipeline {
                         "expected adaptor ${tool.adaptor} to run for --msa_tool ${tool.msa_tool}"
                 }
                 // The MSA module output must reach the colabfold2 inference backend.
-                assert names.any { it.contains('COLABFOLD2_INFERENCE') || it.contains('ALPHAFOLD3') }
+                assert names.any { it.contains('OPENDDE') }
                 assert file("${params.outdir}/multiqc/multiqc_report.html").exists()
                 def stable_name = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
                 def stable_path = getAllFilesFromDir(params.outdir, ignoreFile: 'tests/.nftignore')
@@ -69,7 +68,6 @@ nextflow_pipeline {
         when {
             params {
                 outdir        = "$outputDir"
-                mode          = 'alphafold3'
                 msa_tool      = 'alphafold2_msa'
                 alphafold2_db = "$projectDir/assets/dummy_db_dir"
                 alphafold3_db = "$projectDir/assets/dummy_db_dir"
@@ -84,7 +82,7 @@ nextflow_pipeline {
                 "expected protein chains to be extracted from the AlphaFold3 JSON"
             assert names.any { it.contains('MERGE_ALPHAFOLD3_MSA') } :
                 "expected the original AlphaFold3 JSON to be repopulated with the generated MSAs"
-            assert names.any { it.contains('COLABFOLD2_INFERENCE') || it.contains('ALPHAFOLD3') }
+            assert names.any { it.contains('OPENDDE') }
             assert file("${params.outdir}/multiqc/multiqc_report.html").exists()
             def stable_name = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
             def stable_path = getAllFilesFromDir(params.outdir, ignoreFile: 'tests/.nftignore')
@@ -112,7 +110,6 @@ nextflow_pipeline {
             params {
                 outdir = "$outputDir/results"
                 input = "$outputDir/byo_msa_samplesheet.csv"
-                mode = 'alphafold3'
                 msa_tool = 'alphafold2_msa'
             }
         }
@@ -123,7 +120,7 @@ nextflow_pipeline {
             assert !names.any { it.contains('MMSEQS_COLABFOLDSEARCH') }
             assert !names.any { it.contains('RUN_ALPHAFOLD2_MSA') }
             assert !names.any { it.contains('RUN_ALPHAFOLD3_DATAPIPELINE') }
-            assert names.any { it.contains('COLABFOLD2_INFERENCE') || it.contains('ALPHAFOLD3') }
+            assert names.any { it.contains('OPENDDE') }
         }
     }
 
@@ -133,7 +130,6 @@ nextflow_pipeline {
         when {
             params {
                 outdir          = "$outputDir"
-                mode            = 'alphafold3'
                 msa_tool        = 'alphafold2_msa'
                 use_msa_server  = true
             }
@@ -145,7 +141,7 @@ nextflow_pipeline {
             assert !names.any { it.contains('MMSEQS_COLABFOLDSEARCH') }
             assert !names.any { it.contains('RUN_ALPHAFOLD2_MSA') }
             assert !names.any { it.contains('RUN_ALPHAFOLD3_DATAPIPELINE') }
-            assert names.any { it.contains('COLABFOLD2_INFERENCE') || it.contains('ALPHAFOLD3') }
+            assert names.any { it.contains('OPENDDE') }
             assert file("${params.outdir}/multiqc/multiqc_report.html").exists()
             def stable_name = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
             def stable_path = getAllFilesFromDir(params.outdir, ignoreFile: 'tests/.nftignore')

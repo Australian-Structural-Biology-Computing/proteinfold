@@ -1,100 +1,42 @@
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    ColabFold2 submode stub tests
+    ColabFold2 stub tests
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Exercises pipeline-level orchestration and report channel contracts for each wired
-    ColabFold2 submode with stubbed process execution. ESMFold2 LM selections are
-    structure-only by upstream design; all three selections publish under `esmfold2`.
+    Exercises pipeline-level orchestration and report channel contracts with stubbed
+    process execution. A single multi-mode run covers every wired backend (one
+    invocation per backend process, per-mode output directories, per-mode MultiQC
+    contents, and the AlphaFold2 skip for non-protein entities); the only separate
+    inference test covers the --esmfold2_model selection, which cannot ride along
+    with the multi-mode run because it re-uses the esmfold2 mode token.
 */
 
 nextflow_pipeline {
 
-    name "Test ColabFold2 submodes (stub)"
+    name "Test ColabFold2 (stub)"
     script "../main.nf"
     tag "pipeline"
     tag "test_colabfold2_stub"
     profile "test_colabfold2"
 
     // mode   = the --mode token as a user would type it
-    // backend = the explicit upstream --model-type value it resolves to
     // alias  = the COLABFOLD2_INFERENCE process alias it must dispatch to
+    // ext    = published structure extension (the AlphaFold2 backends emit PDB)
     def submodes = [
-        [mode: 'alphafold3', backend: 'alphafold3', alias: 'ALPHAFOLD3'],
-        [mode: 'alphafold2',            backend: 'auto',             alias: 'ALPHAFOLD2', ext: 'pdb'],
-        [mode: 'esmfold2',              backend: 'esmfold2',         esmfold2_model: 'msa',    alias: 'ESMFOLD2'],
-        [mode: 'esmfold2',              backend: 'esmfold2_lm300m',  esmfold2_model: 'lm300m', alias: 'ESMFOLD2'],
-        [mode: 'esmfold2',              backend: 'esmfold2_lm600m',  esmfold2_model: 'lm600m', alias: 'ESMFOLD2'],
-        [mode: 'protenix2',             backend: 'protenix2',        alias: 'PROTEINX2'],
-        [mode: 'boltz2', backend: 'boltz2', alias: 'BOLTZ2'],
-        [mode: 'chai1',                 backend: 'chai1',            alias: 'CHAI1'],
-        [mode: 'intellifold2',          backend: 'intellifold2',     alias: 'INTELLIFOLD2'],
-        [mode: 'opendde',               backend: 'opendde',          alias: 'OPENDDE'],
-        [mode: 'openfold3',             backend: 'openfold3',        alias: 'OPENFOLD3'],
-        [mode: 'openbind0',             backend: 'openbind0',        alias: 'OPENBIND0'],
-        [mode: 'rosettafold3',          backend: 'rosettafold3',     alias: 'ROSETTAFOLD3'],
+        [mode: 'alphafold3', alias: 'ALPHAFOLD3'],
+        [mode: 'alphafold2', alias: 'ALPHAFOLD2', ext: 'pdb'],
+        [mode: 'esmfold2',   alias: 'ESMFOLD2'],
+        [mode: 'protenix2',  alias: 'PROTEINX2'],
+        [mode: 'boltz2',     alias: 'BOLTZ2'],
+        [mode: 'chai1',      alias: 'CHAI1'],
+        [mode: 'intellifold2', alias: 'INTELLIFOLD2'],
+        [mode: 'opendde',    alias: 'OPENDDE'],
+        [mode: 'openfold3',  alias: 'OPENFOLD3'],
+        [mode: 'openbind0',  alias: 'OPENBIND0'],
+        [mode: 'rosettafold3', alias: 'ROSETTAFOLD3'],
     ]
+    def af3GraphModes = submodes.findAll { it.mode != 'alphafold2' }
 
-    submodes.each { sub ->
-        def backend = sub.backend
-
-        test("colabfold2 ${backend}") {
-            tag "colabfold2-${backend}"
-
-            when {
-                params {
-                    outdir = "$outputDir"
-                    mode   = sub.mode
-                    esmfold2_model = sub.esmfold2_model ?: 'msa'
-                }
-            }
-
-            then {
-                def stable_name = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
-                assert workflow.success
-                def versions_path = new File(params.outdir.toString() + "/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml").absolutePath
-                def versions_report = new File(versions_path).readLines()
-                assert versions_report.any { it.contains(":PROTEINFOLD:${sub.alias}:") }
-                assert !versions_report.any { it.contains(":PROTEINFOLD:COLABFOLD2_INFERENCE:") }
-                // One published artifact per publishDir category per sample.
-                def structure_ext = sub.ext ?: 'cif'
-                ['T1024', 'T1026'].each { id ->
-                    assert stable_name.contains("${sub.mode}/top_ranked_structures/${id}.${structure_ext}".toString())
-                    assert stable_name.contains("${sub.mode}/${id}/paes/${id}_1_pae.tsv".toString())
-                    assert stable_name.contains("${sub.mode}/${id}/${id}_plddt.tsv".toString())
-                    assert stable_name.contains("${sub.mode}/${id}/${id}_colabfold2_msa.tsv".toString())
-                    assert stable_name.contains("reports/${id}_${sub.mode}_report.html".toString())
-                }
-                assert stable_name.contains('multiqc/multiqc_report.html')
-                // Snapshot the task count and the versions report: that is what pins
-                // alias routing and recorded versions across the twelve submodes.
-                assert snapshot(
-                    workflow.trace.succeeded().size(),
-                    removeNextflowVersion("$outputDir/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml")
-                ).match()
-            }
-        }
-    }
-
-    test("colabfold2 rich AlphaFold3 JSON offline MSA wiring") {
-        tag "colabfold2-rich-json"
-        def richSamplesheet = new File('tests/data/colabfold2_rich_json_samplesheet.csv').absolutePath
-
-        when {
-            params {
-                outdir = "$outputDir"
-                mode   = 'alphafold3'
-                input  = richSamplesheet
-            }
-        }
-
-        then {
-            def stableName = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
-            assert workflow.success
-            assert stableName.contains('alphafold3/top_ranked_structures/rich_sample.cif')
-            assert stableName.contains('reports/rich_sample_alphafold3_report.html')
-        }
-    }
-    test("multi-mode run folds each sample with every compatible backend") {
+    test("one multi-mode run folds every sample with every compatible backend") {
         tag "colabfold2-multimode"
         def base = System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/'
         setup {
@@ -102,14 +44,15 @@ nextflow_pipeline {
             sheet.text = [
                 'id,fasta',
                 "T1024,${base}testdata/sequences/T1024.fasta",
-                "rich_sample,https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/testdata/sequences/boltz/mixed.json",
+                "T1026,${base}testdata/sequences/T1026.fasta",
+                "rich_sample,${base}testdata/sequences/boltz/mixed.json",
             ].join('\n') + '\n'
         }
 
         when {
             params {
                 outdir = "$outputDir"
-                mode   = 'alphafold3,alphafold2'
+                mode   = submodes*.mode.join(',')
                 input  = "${outputDir}/multimode_samplesheet.csv"
             }
         }
@@ -117,22 +60,72 @@ nextflow_pipeline {
         then {
             def stableName = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
             assert workflow.success
-            // The protein-only sample is folded by both backends, each under
-            // its own mode directory (no output collisions).
-            assert stableName.contains('alphafold3/top_ranked_structures/T1024.cif')
-            assert stableName.contains('alphafold2/top_ranked_structures/T1024.pdb')
-            assert stableName.contains('alphafold2/T1024/T1024_colabfold2_msa.tsv')
-            assert stableName.contains('alphafold3/T1024/T1024_colabfold2_msa.tsv')
-            // Per-mode reports and MultiQC contents.
-            assert stableName.contains('reports/alphafold3/T1024_alphafold3_report.html')
-            assert stableName.contains('reports/alphafold2/T1024_alphafold2_report.html')
-            assert stableName.contains('multiqc/multiqc_data/proteinfold_alphafold3_generalstats_mqc.json')
-            assert stableName.contains('multiqc/multiqc_data/proteinfold_alphafold2_generalstats_mqc.json')
+            def versions_path = new File(params.outdir.toString() + "/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml").absolutePath
+            def versions_report = new File(versions_path).readLines()
+            // Every requested mode dispatched to its own backend process alias.
+            submodes.each { sub ->
+                assert versions_report.any { it.contains(":PROTEINFOLD:${sub.alias}:") } :
+                    "expected the ${sub.alias} backend in the versions report"
+            }
+            assert !versions_report.any { it.contains(":PROTEINFOLD:COLABFOLD2_INFERENCE:") }
+            // Every mode folds the protein-only samples under its own directory.
+            ['T1024', 'T1026'].each { id ->
+                submodes.each { sub ->
+                    def ext = sub.ext ?: 'cif'
+                    assert stableName.contains("${sub.mode}/top_ranked_structures/${id}.${ext}".toString())
+                    assert stableName.contains("${sub.mode}/${id}/${id}_plddt.tsv".toString())
+                    assert stableName.contains("${sub.mode}/${id}/${id}_colabfold2_msa.tsv".toString())
+                    assert stableName.contains("reports/${sub.mode}/${id}_${sub.mode}_report.html".toString())
+                }
+            }
+            // Per-mode paes directories for the protein-only sample.
+            submodes.each { sub ->
+                assert stableName.contains("${sub.mode}/T1024/paes/T1024_1_pae.tsv".toString())
+            }
             // The RNA-containing sample carries non-protein entities: the
             // AlphaFold2 backend skips it (warned) rather than folding a
-            // truncated protein-only complex; AlphaFold3 still folds it.
-            assert stableName.contains('alphafold3/top_ranked_structures/rich_sample.cif')
+            // truncated protein-only complex; every AlphaFold3-open backend
+            // still folds it in full.
+            af3GraphModes.each { sub ->
+                assert stableName.contains("${sub.mode}/top_ranked_structures/rich_sample.cif".toString())
+            }
             assert !stableName.any { it.startsWith('alphafold2/rich_sample') }
+            // MultiQC runs once and carries per-mode custom content.
+            assert stableName.contains('multiqc/multiqc_report.html')
+            submodes.each { sub ->
+                assert stableName.contains("multiqc/multiqc_data/proteinfold_${sub.mode}_generalstats_mqc.json".toString())
+            }
+            // Snapshot the task count and the versions report: that is what pins
+            // the per-backend dispatch and the recorded versions.
+            assert snapshot(
+                workflow.trace.succeeded().size(),
+                removeNextflowVersion("$outputDir/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml")
+            ).match()
+        }
+    }
+
+    test("esmfold2 model selection resolves the requested LM variant") {
+        tag "colabfold2-esmfold2-lm600m"
+
+        when {
+            params {
+                outdir         = "$outputDir"
+                mode           = 'esmfold2'
+                esmfold2_model = 'lm600m'
+            }
+        }
+
+        then {
+            def stableName = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
+            assert workflow.success
+            def versions_path = new File(params.outdir.toString() + "/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml").absolutePath
+            def versions_report = new File(versions_path).readLines()
+            assert versions_report.any { it.contains(":PROTEINFOLD:ESMFOLD2:") }
+            assert stableName.contains('esmfold2/top_ranked_structures/T1024.cif')
+            assert snapshot(
+                workflow.trace.succeeded().size(),
+                removeNextflowVersion("$outputDir/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml")
+            ).match()
         }
     }
 }

@@ -40,7 +40,7 @@ nextflow_pipeline {
             assert searches.size() == 1
             assert searches[0].name.contains('batch_miss')
             assert !searches[0].name.contains('batch_hit')
-            assert workflow.trace.succeeded().count { it.name.contains('COLABFOLD2_INFERENCE') || it.name.contains('ALPHAFOLD3') } == 2
+            assert workflow.trace.succeeded().count { it.name.contains('OPENDDE') } == 2
         }
     }
 
@@ -76,7 +76,7 @@ nextflow_pipeline {
             assert workflow.success
             assert workflow.trace.succeeded().count { it.name.contains('MSA_CACHE_LOOKUP') } == 2
             assert workflow.trace.succeeded().count { it.name.contains('MMSEQS_COLABFOLDSEARCH') } == 0
-            assert workflow.trace.succeeded().count { it.name.contains('COLABFOLD2_INFERENCE') || it.name.contains('ALPHAFOLD3') } == 2
+            assert workflow.trace.succeeded().count { it.name.contains('OPENDDE') } == 2
         }
     }
 
