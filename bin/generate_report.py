@@ -488,20 +488,21 @@ def build_pair_score_matrices(score_maps):
 print("Starting...")
 
 version = "1.0.0"
-# Display names for every --mode token the pipeline accepts; unknown
-# tokens fall back to the token itself in programName (see below).
+# Display names keyed by the shorthand mode tokens the pipeline passes as
+# --type (the same tokens baked into the report file names); unknown tokens
+# fall back to the token itself in programName (see below).
 model_name = {
-    "alphafold2": "AlphaFold2",
-    "alphafold3": "AlphaFold3",
-    "boltz2": "Boltz2",
+    "af2": "AlphaFold2",
+    "af3": "AlphaFold3",
+    "bz2": "Boltz2",
     "chai1": "Chai1",
-    "esmfold2": "ESMFold2",
-    "intellifold2": "IntelliFold2",
-    "openbind0": "OpenBind0",
-    "opendde": "OpenDDE",
-    "openfold3": "OpenFold3",
-    "protenix2": "Protenix2",
-    "rosettafold3": "RosettaFold3",
+    "esm2": "ESMFold2",
+    "if2": "IntelliFold2",
+    "ob0": "OpenBind0",
+    "odde": "OpenDDE",
+    "of3": "OpenFold3",
+    "px2": "Protenix2",
+    "rf3": "RosettaFold3",
 }
 
 parser = argparse.ArgumentParser()
@@ -521,7 +522,7 @@ parser.add_argument("--output_dir", dest="output_dir")
 parser.add_argument("--html_template", dest="html_template")
 parser.add_argument("--version", action="version", version=f"{version}")
 parser.set_defaults(output_dir="")
-parser.set_defaults(in_type="alphafold3")
+parser.set_defaults(in_type="af3")
 parser.set_defaults(name="")
 args = parser.parse_args()
 

@@ -12,8 +12,8 @@ process FOLDSEEK_EASYSEARCH {
     tuple val(meta_db), path(db)
 
     output:
-    tuple val(meta), path("${meta.id}.m8"), emit: aln, optional: true
-    tuple val(meta), path("${meta.id}_${meta.model.toLowerCase()}_foldseek.html"), emit: report, optional: true
+    tuple val(meta), path("${meta.id}_${meta.mode_short ?: meta.model ?: meta.id}.m8"), emit: aln, optional: true
+    tuple val(meta), path("${meta.id}_${(meta.mode_short ?: meta.model ?: '').toLowerCase()}_foldseek.html"), emit: report, optional: true
     path "versions.yml"                   , emit: versions
 
     when:
@@ -22,9 +22,9 @@ process FOLDSEEK_EASYSEARCH {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-    def output_file = "${prefix}.m8"
+    def output_file = "${meta.id}_${meta.mode_short ?: meta.model ?: meta.id}.m8"
     if (args.contains("--format-mode 3")){
-        output_file = "${meta.id}_${meta.model.toLowerCase()}_foldseek.html"
+        output_file = "${meta.id}_${(meta.mode_short ?: meta.model ?: '').toLowerCase()}_foldseek.html"
     }
     """
     foldseek \\
