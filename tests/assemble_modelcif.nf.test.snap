@@ -8,10 +8,12 @@
                             {
                                 "id": "test_cw",
                                 "model": "alphafold2",
+                                "mode_short": "af2",
+                                "msa_short": "mmseqs",
                                 "msa_tool": "jackhmmer"
                             }
                         ],
-                        "test_cw_alphafold2.mmcif:md5,fa736ce2ba992f5df93280eb1f72c2be"
+                        "test_cw_af2_mmseqs.mmcif:md5,fa736ce2ba992f5df93280eb1f72c2be"
                     ]
                 ],
                 "1": [
@@ -26,10 +28,12 @@
                             {
                                 "id": "test_cw",
                                 "model": "alphafold2",
+                                "mode_short": "af2",
+                                "msa_short": "mmseqs",
                                 "msa_tool": "jackhmmer"
                             }
                         ],
-                        "test_cw_alphafold2.mmcif:md5,fa736ce2ba992f5df93280eb1f72c2be"
+                        "test_cw_af2_mmseqs.mmcif:md5,fa736ce2ba992f5df93280eb1f72c2be"
                     ]
                 ],
                 "pae": [
@@ -40,9 +44,9 @@
                 ]
             }
         ],
-        "timestamp": "2026-11-18T20:41:40.602349877",
+        "timestamp": "2026-11-21T00:49:27.961465474",
         "meta": {
-            "nf-test": "0.9.2",
+            "nf-test": "0.9.4",
             "nextflow": "25.10.4"
         }
     },
@@ -55,10 +59,12 @@
                             {
                                 "id": "test_tpl",
                                 "model": "alphafold2",
+                                "mode_short": "af2",
+                                "msa_short": "mmseqs",
                                 "msa_tool": "jackhmmer"
                             }
                         ],
-                        "test_tpl_alphafold2.mmcif:md5,038c34932c349ca0ba3f18c73f498e61"
+                        "test_tpl_af2_mmseqs.mmcif:md5,038c34932c349ca0ba3f18c73f498e61"
                     ]
                 ],
                 "1": [
@@ -73,10 +79,12 @@
                             {
                                 "id": "test_tpl",
                                 "model": "alphafold2",
+                                "mode_short": "af2",
+                                "msa_short": "mmseqs",
                                 "msa_tool": "jackhmmer"
                             }
                         ],
-                        "test_tpl_alphafold2.mmcif:md5,038c34932c349ca0ba3f18c73f498e61"
+                        "test_tpl_af2_mmseqs.mmcif:md5,038c34932c349ca0ba3f18c73f498e61"
                     ]
                 ],
                 "pae": [
@@ -87,9 +95,9 @@
                 ]
             }
         ],
-        "timestamp": "2026-11-18T20:41:46.531120282",
+        "timestamp": "2026-11-21T00:49:35.254202323",
         "meta": {
-            "nf-test": "0.9.2",
+            "nf-test": "0.9.4",
             "nextflow": "25.10.4"
         }
     },
@@ -102,10 +110,12 @@
                             {
                                 "id": "test",
                                 "model": "alphafold2",
+                                "mode_short": "af2",
+                                "msa_short": "mmseqs",
                                 "msa_tool": "jackhmmer"
                             }
                         ],
-                        "test_alphafold2.mmcif:md5,1f7db330d21dadc7e896f212dda8e08f"
+                        "test_af2_mmseqs.mmcif:md5,1f7db330d21dadc7e896f212dda8e08f"
                     ]
                 ],
                 "1": [
@@ -120,10 +130,12 @@
                             {
                                 "id": "test",
                                 "model": "alphafold2",
+                                "mode_short": "af2",
+                                "msa_short": "mmseqs",
                                 "msa_tool": "jackhmmer"
                             }
                         ],
-                        "test_alphafold2.mmcif:md5,1f7db330d21dadc7e896f212dda8e08f"
+                        "test_af2_mmseqs.mmcif:md5,1f7db330d21dadc7e896f212dda8e08f"
                     ]
                 ],
                 "pae": [
@@ -134,7 +146,7 @@
                 ]
             }
         ],
-        "timestamp": "2026-11-19T17:20:21.861691029",
+        "timestamp": "2026-11-21T00:48:27.940170716",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -149,10 +161,12 @@
                             {
                                 "id": "test_embed",
                                 "model": "alphafold2",
+                                "mode_short": "af2",
+                                "msa_short": "mmseqs",
                                 "msa_tool": "jackhmmer"
                             }
                         ],
-                        "test_embed_alphafold2.mmcif:md5,d3b47375207f83e3d46e8e60757233e4"
+                        "test_embed_af2_mmseqs.mmcif:md5,d3b47375207f83e3d46e8e60757233e4"
                     ]
                 ],
                 "1": [
@@ -167,10 +181,12 @@
                             {
                                 "id": "test_embed",
                                 "model": "alphafold2",
+                                "mode_short": "af2",
+                                "msa_short": "mmseqs",
                                 "msa_tool": "jackhmmer"
                             }
                         ],
-                        "test_embed_alphafold2.mmcif:md5,d3b47375207f83e3d46e8e60757233e4"
+                        "test_embed_af2_mmseqs.mmcif:md5,d3b47375207f83e3d46e8e60757233e4"
                     ]
                 ],
                 "pae": [
@@ -181,7 +197,7 @@
                 ]
             }
         ],
-        "timestamp": "2026-11-19T17:20:27.848502143",
+        "timestamp": "2026-11-21T00:48:35.027953656",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -196,10 +212,12 @@
                             {
                                 "id": "test_seed",
                                 "model": "alphafold2",
+                                "mode_short": "af2",
+                                "msa_short": "mmseqs",
                                 "msa_tool": "jackhmmer"
                             }
                         ],
-                        "test_seed_alphafold2.mmcif:md5,5c40995d4a507fe10800b5e9c0965f38"
+                        "test_seed_af2_mmseqs.mmcif:md5,5c40995d4a507fe10800b5e9c0965f38"
                     ]
                 ],
                 "1": [
@@ -214,10 +232,12 @@
                             {
                                 "id": "test_seed",
                                 "model": "alphafold2",
+                                "mode_short": "af2",
+                                "msa_short": "mmseqs",
                                 "msa_tool": "jackhmmer"
                             }
                         ],
-                        "test_seed_alphafold2.mmcif:md5,5c40995d4a507fe10800b5e9c0965f38"
+                        "test_seed_af2_mmseqs.mmcif:md5,5c40995d4a507fe10800b5e9c0965f38"
                     ]
                 ],
                 "pae": [
@@ -228,9 +248,9 @@
                 ]
             }
         ],
-        "timestamp": "2026-11-18T20:41:35.046575272",
+        "timestamp": "2026-11-21T00:49:20.358553728",
         "meta": {
-            "nf-test": "0.9.2",
+            "nf-test": "0.9.4",
             "nextflow": "25.10.4"
         }
     },
@@ -243,10 +263,12 @@
                             {
                                 "id": "test_multi_default",
                                 "model": "alphafold2",
+                                "mode_short": "af2",
+                                "msa_short": "mmseqs",
                                 "msa_tool": "jackhmmer"
                             }
                         ],
-                        "test_multi_default_alphafold2.mmcif:md5,f5132951998ba0b38a806a7ba868b2a5"
+                        "test_multi_default_af2_mmseqs.mmcif:md5,f5132951998ba0b38a806a7ba868b2a5"
                     ]
                 ],
                 "1": [
@@ -261,10 +283,12 @@
                             {
                                 "id": "test_multi_default",
                                 "model": "alphafold2",
+                                "mode_short": "af2",
+                                "msa_short": "mmseqs",
                                 "msa_tool": "jackhmmer"
                             }
                         ],
-                        "test_multi_default_alphafold2.mmcif:md5,f5132951998ba0b38a806a7ba868b2a5"
+                        "test_multi_default_af2_mmseqs.mmcif:md5,f5132951998ba0b38a806a7ba868b2a5"
                     ]
                 ],
                 "pae": [
@@ -275,7 +299,7 @@
                 ]
             }
         ],
-        "timestamp": "2026-11-19T17:20:45.475508876",
+        "timestamp": "2026-11-21T00:48:58.241775522",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -290,10 +314,12 @@
                             {
                                 "id": "test_multi",
                                 "model": "alphafold2",
+                                "mode_short": "af2",
+                                "msa_short": "mmseqs",
                                 "msa_tool": "jackhmmer"
                             }
                         ],
-                        "test_multi_alphafold2.mmcif:md5,e13c771d340a37d54783d186006e4651"
+                        "test_multi_af2_mmseqs.mmcif:md5,e13c771d340a37d54783d186006e4651"
                     ]
                 ],
                 "1": [
@@ -308,10 +334,12 @@
                             {
                                 "id": "test_multi",
                                 "model": "alphafold2",
+                                "mode_short": "af2",
+                                "msa_short": "mmseqs",
                                 "msa_tool": "jackhmmer"
                             }
                         ],
-                        "test_multi_alphafold2.mmcif:md5,e13c771d340a37d54783d186006e4651"
+                        "test_multi_af2_mmseqs.mmcif:md5,e13c771d340a37d54783d186006e4651"
                     ]
                 ],
                 "pae": [
@@ -322,7 +350,7 @@
                 ]
             }
         ],
-        "timestamp": "2026-11-19T17:20:51.596768907",
+        "timestamp": "2026-11-21T00:49:05.633355399",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -337,10 +365,12 @@
                             {
                                 "id": "test_scale",
                                 "model": "alphafold2",
+                                "mode_short": "af2",
+                                "msa_short": "mmseqs",
                                 "msa_tool": "jackhmmer"
                             }
                         ],
-                        "test_scale_alphafold2.mmcif:md5,76d198342203826136c9feaef908270b"
+                        "test_scale_af2_mmseqs.mmcif:md5,76d198342203826136c9feaef908270b"
                     ]
                 ],
                 "1": [
@@ -355,10 +385,12 @@
                             {
                                 "id": "test_scale",
                                 "model": "alphafold2",
+                                "mode_short": "af2",
+                                "msa_short": "mmseqs",
                                 "msa_tool": "jackhmmer"
                             }
                         ],
-                        "test_scale_alphafold2.mmcif:md5,76d198342203826136c9feaef908270b"
+                        "test_scale_af2_mmseqs.mmcif:md5,76d198342203826136c9feaef908270b"
                     ]
                 ],
                 "pae": [
@@ -369,9 +401,9 @@
                 ]
             }
         ],
-        "timestamp": "2026-11-18T20:41:29.497037698",
+        "timestamp": "2026-11-21T00:49:12.996116399",
         "meta": {
-            "nf-test": "0.9.2",
+            "nf-test": "0.9.4",
             "nextflow": "25.10.4"
         }
     },
@@ -384,10 +416,12 @@
                             {
                                 "id": "test_binary",
                                 "model": "alphafold2",
+                                "mode_short": "af2",
+                                "msa_short": "mmseqs",
                                 "msa_tool": "jackhmmer"
                             }
                         ],
-                        "test_binary_alphafold2.bcif:md5,b6e70fc57f9a1f680e13c4fcb0b3b8ff"
+                        "test_binary_af2_mmseqs.bcif:md5,b6e70fc57f9a1f680e13c4fcb0b3b8ff"
                     ]
                 ],
                 "1": [
@@ -402,10 +436,12 @@
                             {
                                 "id": "test_binary",
                                 "model": "alphafold2",
+                                "mode_short": "af2",
+                                "msa_short": "mmseqs",
                                 "msa_tool": "jackhmmer"
                             }
                         ],
-                        "test_binary_alphafold2.bcif:md5,b6e70fc57f9a1f680e13c4fcb0b3b8ff"
+                        "test_binary_af2_mmseqs.bcif:md5,b6e70fc57f9a1f680e13c4fcb0b3b8ff"
                     ]
                 ],
                 "pae": [
@@ -416,7 +452,7 @@
                 ]
             }
         ],
-        "timestamp": "2026-11-19T17:20:39.54962969",
+        "timestamp": "2026-11-21T00:48:50.602341157",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"

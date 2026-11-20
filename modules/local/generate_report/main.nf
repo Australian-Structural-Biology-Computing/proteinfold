@@ -10,7 +10,7 @@ process GENERATE_REPORT_BATCH {
         'community.wave.seqera.io/library/biopython_matplotlib_pip_plotly:35975fa0fc54b2d3' }"
 
     input:
-    tuple val(batch_meta), path(structures), path(msa_files), path(metrics_stores), val(manifest)
+    tuple val(batch_meta), path(structures), path(msa_files), path(metrics_stores), val(manifest), val(struct_ext)
     path(template)
 
     output:

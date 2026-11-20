@@ -508,7 +508,7 @@ def render_sample_report(name, in_type, struct_files, msa_path, scalar_records, 
     lddt_data, lddt_averages = pdb_to_lddt(struct_files, generate_tsv)
 
     generate_output_images(
-        msa_path, lddt_data, name, output_dir, in_type, generate_tsv, struct_files,
+        msa_path, lddt_data, name, output_dir, file_tag, generate_tsv, struct_files,
         pae_matrix=pae_matrix
     )
 

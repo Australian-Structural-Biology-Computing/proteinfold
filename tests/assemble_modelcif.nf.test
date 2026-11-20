@@ -67,7 +67,7 @@ nextflow_process {
 
         def structs = (0..structCount - 1).collect { "file('${outputDir}/${sampleId}_rank_${it}.cif', checkIfExists: true)" }.join(', ')
         def stores = "file('${outputDir}/${sampleId}_metrics.jsonl.gz', checkIfExists: true), file('${outputDir}/${sampleId}_metrics.npz', checkIfExists: true)"
-        "[[[id: '${sampleId}', model: 'alphafold2', msa_tool: 'jackhmmer']], [${structs}], [file('${outputDir}/${sampleId}.a3m', checkIfExists: true)], [${stores}], '${sampleId}\\t${sampleId}_metrics.jsonl.gz\\t${sampleId}_metrics.npz']"
+        "[[[id: '${sampleId}', model: 'alphafold2', mode_short: 'af2', msa_short: 'mmseqs', msa_tool: 'jackhmmer']], [${structs}], [file('${outputDir}/${sampleId}.a3m', checkIfExists: true)], [${stores}], '${sampleId}\\t${sampleId}_metrics.jsonl.gz\\t${sampleId}_metrics.npz\\taf2_mmseqs', 'cif']"
     }
 
     def versionsInputCode = {
@@ -137,8 +137,7 @@ nextflow_process {
                 """
                 input[0] = ${inputs}
                 input[1] = ${versionsInputCode()}
-                input[2] = 'cif'
-                input[3] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
+                input[2] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
                 """
             }
         }
@@ -172,8 +171,7 @@ nextflow_process {
                 """
                 input[0] = ${inputs}
                 input[1] = ${versionsInputCode()}
-                input[2] = 'cif'
-                input[3] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
+                input[2] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
                 """
             }
         }
@@ -197,8 +195,7 @@ nextflow_process {
                 """
                 input[0] = ${inputs}
                 input[1] = ${versionsInputCode()}
-                input[2] = 'cif'
-                input[3] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
+                input[2] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
                 """
             }
         }
@@ -217,8 +214,7 @@ nextflow_process {
                 """
                 input[0] = ${inputs}
                 input[1] = ${versionsInputCode()}
-                input[2] = 'cif'
-                input[3] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
+                input[2] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
                 """
             }
         }
@@ -237,8 +233,7 @@ nextflow_process {
                 """
                 input[0] = ${inputs}
                 input[1] = ${versionsInputCode()}
-                input[2] = 'cif'
-                input[3] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
+                input[2] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
                 """
             }
         }
@@ -267,8 +262,7 @@ nextflow_process {
                 """
                 input[0] = ${inputs}
                 input[1] = ${versionsInputCode()}
-                input[2] = 'cif'
-                input[3] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
+                input[2] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
                 """
             }
         }
@@ -299,8 +293,7 @@ nextflow_process {
                 """
                 input[0] = ${inputs}
                 input[1] = ${versionsInputCode()}
-                input[2] = 'cif'
-                input[3] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
+                input[2] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
                 """
             }
         }
@@ -325,8 +318,7 @@ nextflow_process {
                 """
                 input[0] = ${inputs}
                 input[1] = ${versionsInputCode()}
-                input[2] = 'cif'
-                input[3] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
+                input[2] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
                 """
             }
         }
@@ -351,8 +343,7 @@ nextflow_process {
                 """
                 input[0] = ${inputs}
                 input[1] = ${versionsInputCode()}
-                input[2] = 'cif'
-                input[3] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
+                input[2] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
                 """
             }
         }
@@ -375,8 +366,7 @@ nextflow_process {
                 """
                 input[0] = ${inputs}
                 input[1] = ${versionsInputCode()}
-                input[2] = 'cif'
-                input[3] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
+                input[2] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
                 """
             }
         }

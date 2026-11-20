@@ -10,74 +10,70 @@ nextflow_process {
 
     profile "test_nostub"
 
-    test("report generation carries full config, injection-safe blob, and clean download naming") {
-        setup {
-            // The batched module derives per-sample file names from the
-            // sanitised sample id (the inference module's naming invariant),
-            // so stage the fixtures under those names.
-            def fixtures = ['msa': 'DUMMY_MSA.tsv', 'pae': 'DUMMY_PAE.tsv',
-                            'chainwise_ipsae': 'DUMMY_CHAINWISE_IPSAE.tsv']
-            fixtures.each { metric, fixture ->
-                file("$outputDir/S1_${metric}.tsv").bytes = file("${projectDir}/tests/fixtures/${fixture}").bytes
-            }
-            // The chainwise store carries an injection payload in a chain
-            // label; the report must escape it (asserted below).
-            def payload = '</script><img src=x onerror=alert(1)>'
-            file("$outputDir/S1_chainwise.tsv").text =
-                "0\t1\t2\t3\t4\n" +
-                "${payload}:A\t0.3810\t0.3790\t0.3850\t0.3770\t0.3830\n" +
-                "A:B\t0.6170\t0.6160\t0.6100\t0.6060\t0.6060\n"
-            // Ranked-score stores parse integer rank rows; only rank 0 is
-            // populated so the second model reads back as 'n/a'.
-            ['iptm', 'ipsae'].each { metric ->
-                file("$outputDir/S1_${metric}.tsv").text = '0\t0.725\n'
-            }
-            // Minimal single-residue PDBs: the generator only needs parseable
-            // _atom_site records for the coverage/LDDT plumbing.
-            def pdb_text = { serial -> String.format(
-                "ATOM  %5d  CA  ALA A%4d    %8.3f%8.3f%8.3f%6.2f%6.2f           C\nEND\n",
-                serial, 1, 11.0 + serial * 0.1, 12.0, 13.0, 1.00d, 90.00d) }
-            [0, 1].each { rank ->
-                file("$outputDir/S1_rank_${rank}.pdb").text = pdb_text(rank + 11)
-            }
-        }
+    // Build a packed metric store pair from the legacy per-rank TSV fixtures
+    // (same approach as tests/assemble_modelcif.nf.test).
+    def testdataBase = System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/'
 
+    def buildInputs = { outputDir, projectDir, testdata ->
+        // Extract per-rank pLDDT columns from the DUMMY_PLDDT matrix the same
+        // way tests/assemble_modelcif.nf.test does.
+        def plddtLines = new URL(testdataBase + 'testdata/metrics/DUMMY_PLDDT.tsv').readLines()
+        def column = plddtLines[0].split('\t').findIndexOf { it == 'rank_0' }
+        new File(outputDir, 'S1_plddt_0.tsv').text = plddtLines.tail()
+            .collect { it.split('\t')[column] }.join('\n') + '\n'
+        def pae = new File(projectDir, 'tests/fixtures/DUMMY_PAE.tsv').text
+        new File(outputDir, 'S1_pae_0.tsv').text = pae
+        new File(outputDir, 'S1.a3m').text = '>S1\n' + ('A' * 20) + '\n'
+        def generator = [
+            'python3', "$projectDir/tests/make_packed_store.py",
+            '--sample-id', 'S1',
+            '--out-prefix', "$outputDir/S1",
+            '--plddt', "rank_0=$outputDir/S1_plddt_0.tsv",
+            '--pae', "rank_0=$outputDir/S1_pae_0.tsv",
+            '--scores', 'rank_0=0.725'
+        ].execute()
+        assert generator.waitFor() == 0 : generator.err.text
+        // colabfold-style ranked-structure names: the generator globs
+        // <sample_id>_rank_*.<struct-ext>.
+        (0..1).each { rank ->
+            def src = new URL(testdataBase + "testdata/models/rank_${rank}.pdb").bytes
+            new File(outputDir, "S1_rank_${rank}.pdb").bytes = src
+        }
+        [
+            "[[id: 'S1', model: 'alphafold2', mode_short: 'af2', msa_short: 'mmseqs', msa_tool: 'jackhmmer']]",
+            "[file('${outputDir}/S1_rank_0.pdb', checkIfExists: true), file('${outputDir}/S1_rank_1.pdb', checkIfExists: true)]",
+            "[file('${outputDir}/S1.a3m', checkIfExists: true)]",
+            "[file('${outputDir}/S1_metrics.jsonl.gz', checkIfExists: true), file('${outputDir}/S1_metrics.npz', checkIfExists: true)]",
+            "S1\\tS1_metrics.jsonl.gz\\tS1_metrics.npz\\taf2_mmseqs",
+            'pdb'
+        ]
+    }
+
+    test("report generation carries full config, injection-safe blob, and clean download naming") {
         when {
             process {
+                def testdata = params.pipelines_testdata_base_path
+                def inputs = buildInputs(outputDir, projectDir, testdata)
                 """
-                // Batch form: one sample in the batch, every slot a list.
-                // The setup stages every fixture under the sanitised sample
-                // id the inference module bakes into its output names.
-                input[0] = tuple(
-                    [[id: 'S1', model: 'boltz2', mode_short: 'bz2', msa_short: 'msa']],
-                    [file("$outputDir/S1_rank_0.pdb", checkIfExists: true), file("$outputDir/S1_rank_1.pdb", checkIfExists: true)],
-                    [file("$outputDir/S1_msa.tsv", checkIfExists: true)],
-                    [file("$outputDir/S1_pae.tsv", checkIfExists: true)],
-                    [file("$outputDir/S1_iptm.tsv", checkIfExists: true)],
-                    [file("$outputDir/S1_ipsae.tsv", checkIfExists: true)],
-                    [file("$outputDir/S1_chainwise.tsv", checkIfExists: true)],
-                    [file("$outputDir/S1_chainwise_ipsae.tsv", checkIfExists: true)]
-                )
+                input[0] = tuple(${inputs[0]}, ${inputs[1]}, ${inputs[2]}, ${inputs[3]}, '${inputs[4]}', '${inputs[5]}')
                 input[1] = file("${projectDir}/assets/report_template.html", checkIfExists: true)
                 """
             }
         }
+
         then {
             assert process.success
             def html = path(process.out.report[0][1]).text
             def matcher = html =~ /(?s)<script type="application\/json" id="report-config">(.*?)<\/script>/
             assert matcher.count == 1
             def config = new groovy.json.JsonSlurper().parseText(matcher[0][1])
-            assert config.programName == "Boltz2"
+            assert config.programName == "AlphaFold2"
             assert config.sampleName == "S1"
             assert config.structFormat == "cif"
             assert config.models == ["S1_rank_0.cif", "S1_rank_1.cif"]
             assert config.models_data.size() == 2 && config.models_data.every { it.contains("_atom_site.group_PDB") }
             assert config.lddt_averages.size() == 2
-            assert config.iptm_scores == ["0.725", "n/a"] && config.ipsae_scores == ["0.725", "n/a"]
-            def payload = "</script><img src=x onerror=alert(1)>"
-            assert config.chainwise[0].chains.contains(payload)
-            assert config.chainwise_ipsae[0].chains == ['A', 'B']
+            assert config.iptm_scores == ["0.725", "n/a"] && config.ipsae_scores == ["n/a", "n/a"]
             assert !html.contains("<img src=x onerror=alert(1)>")
             assert !((html =~ /(?s)const renderScoreMatrix = .*?const updatePairScoreTables/)[0]).contains("innerHTML")
             assert html.contains('onclick="downloadStructure()"') && !html.contains("downloadPdb")

@@ -337,7 +337,9 @@ workflow NFCORE_PROTEINFOLD {
                     def m = b[1][0]
                     "${m.id}\t${b[1][3].name}\t${b[1][4].name}\t${m.mode_short}_${m.msa_short}"
                 }.join('\n')
-                [metas, batch.collect { it[1][1] }.flatten(), batch.collect { it[1][2] }, stores, manifest]
+                // The alphafold2 backends write PDB structures; the AF3-family writes mmCIF.
+                def struct_ext = (metas[0].model == 'alphafold2') ? 'pdb' : 'cif'
+                [metas, batch.collect { it[1][1] }.flatten(), batch.collect { it[1][2] }, stores, manifest, struct_ext]
             }
         }
         .map { metas, structs, a3ms, stores, manifest ->

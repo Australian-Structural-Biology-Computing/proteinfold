@@ -6,7 +6,7 @@ process MODELCIF_ASSEMBLE_BATCH {
     container 'ghcr.io/keiran-rowell-unsw/proteinfold-modelcif:1.7'
 
     input:
-    tuple val(batch_meta), path(structures), path(msa_files), path(metrics_stores), val(manifest)
+    tuple val(batch_meta), path(structures), path(msa_files), path(metrics_stores), val(manifest), val(struct_ext)
     path(versions_yml, stageAs: 'versions_input/versions.yml')
     path(software_details)
 
@@ -25,9 +25,7 @@ process MODELCIF_ASSEMBLE_BATCH {
     // colabfold2_inference for why).
     def args = task.ext.args ?: ''
     def batch_head = batch_meta instanceof Collection ? batch_meta[0] : batch_meta
-    def model = batch_head.mode_short ?: batch_head.model
-    // The alphafold2 backends write PDB structures; the AF3-family writes mmCIF.
-    def struct_ext = (model == 'alphafold2') ? 'pdb' : 'cif'
+    def model = batch_head.model
     def msa_tool = batch_head.msa_tool ?: 'None'
     """
 cat > sample_manifest.tsv <<BATCH_MANIFEST
