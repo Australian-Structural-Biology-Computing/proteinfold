@@ -46,9 +46,5 @@ process MULTIQC {
     mkdir multiqc_plots
     touch multiqc_plots/.stub
     touch multiqc_report.html
-    # Custom content files are real staged inputs in stub runs; mirror what
-    # MultiQC does with them (they land in multiqc_data).
-    cp */*_mqc.json multiqc_data/ 2>/dev/null || true
-    cp *_mqc.json multiqc_data/ 2>/dev/null || true
     """
 }
