@@ -96,7 +96,7 @@
             </ul>
             <ul
               id="chain-legend"
-              class="hidden min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1"
+              class="hidden min-w-0 flex-1 flex flex-wrap items-center gap-x-3 gap-y-1"
               aria-label="Chain colour legend"
             ></ul>
             <div
@@ -431,16 +431,17 @@
 
   // Shared chain palette: the 3D viewer (chain colouring mode) and the
   // matrix axis bands use the same colours, so a chain reads as the same
-  // colour everywhere. Rose is reserved for ligand lanes.
+  // colour everywhere. Rose is reserved for ligand lanes. The h/s/l parts
+  // derive the per-atom heteroatom shades from the chain colour.
   const CHAIN_COLORS = [
-    { band: "#93c5fd", text: "#1e3a8a", hex: 0x93c5fd }, // blue
-    { band: "#6ee7b7", text: "#064e3b", hex: 0x6ee7b7 }, // green
-    { band: "#d8b4fe", text: "#6b21a8", hex: 0xd8b4fe }, // purple
-    { band: "#fcd34d", text: "#92400e", hex: 0xfcd34d }, // amber
-    { band: "#67e8f9", text: "#155e75", hex: 0x67e8f9 }, // cyan
-    { band: "#a5b4fc", text: "#3730a3", hex: 0xa5b4fc }, // indigo
-    { band: "#5eead4", text: "#115e59", hex: 0x5eead4 }, // teal
-    { band: "#fdba74", text: "#9a3412", hex: 0xfdba74 }, // orange
+    { band: "#93c5fd", text: "#1e3a8a", hex: 0x93c5fd, h: 212, s: 0.96, l: 0.78 }, // blue
+    { band: "#6ee7b7", text: "#064e3b", hex: 0x6ee7b7, h: 156, s: 0.72, l: 0.67 }, // green
+    { band: "#d8b4fe", text: "#6b21a8", hex: 0xd8b4fe, h: 269, s: 0.97, l: 0.85 }, // purple
+    { band: "#fcd34d", text: "#92400e", hex: 0xfcd34d, h: 46, s: 0.97, l: 0.65 }, // amber
+    { band: "#67e8f9", text: "#155e75", hex: 0x67e8f9, h: 187, s: 0.92, l: 0.69 }, // cyan
+    { band: "#a5b4fc", text: "#3730a3", hex: 0xa5b4fc, h: 230, s: 0.94, l: 0.82 }, // indigo
+    { band: "#5eead4", text: "#115e59", hex: 0x5eead4, h: 171, s: 0.77, l: 0.64 }, // teal
+    { band: "#fdba74", text: "#9a3412", hex: 0xfdba74, h: 31, s: 0.97, l: 0.72 }, // orange
   ];
 
   // Chains are coloured by order of first appearance so the viewer and the
@@ -621,19 +622,38 @@
 
   const CHAIN_THEME_NAME = "chain-element";
 
-  // CPK/Jmol element colours for the non-carbon atoms; carbon takes the
-  // chain colour instead, mirroring Molstar's default element-symbol look
-  // (chain-coloured carbons plus distinct heteroatom colours).
-  const ELEMENT_COLORS = {
-    H: 0xffffff, HE: 0xd9ffff, LI: 0xcc80ff, BE: 0xc2ff00, B: 0xffb5b5,
-    N: 0x3050f8, O: 0xff0d0d, F: 0x90e050, NE: 0xb3e3f5, NA: 0xab5cf2,
-    MG: 0x8aff00, AL: 0xbfa6a6, SI: 0xf0c8a0, P: 0xff8000, S: 0xffd123,
-    CL: 0x1ff01f, AR: 0x80d1e3, K: 0x8f40d4, CA: 0x3dff00, TI: 0xbfc2c7,
-    V: 0xa6a6ab, CR: 0xa6a6ab, MN: 0x9c7ac7, FE: 0xe06633, CO: 0xf090a0,
-    NI: 0x50d050, CU: 0xc88033, ZN: 0x7d80b0, GA: 0xc28f8f, GE: 0x668f8f,
-    AS: 0xbd80e3, SE: 0xffa100, BR: 0xa62929, KR: 0x5cb8d1, I: 0x940094,
-    MO: 0x54b540, AG: 0xc0c0c0, CD: 0xffd98f, SN: 0x668080, BA: 0x00c900,
-    PT: 0xd0d0e0, AU: 0xffd123, HG: 0xb8b8d0, PB: 0x575961,
+  // Non-carbon atoms keep their atom-type identity but stay within the
+  // chain's colour family: each element is a lightness/hue variant of the
+  // chain colour instead of a global CPK colour, so the chain still reads
+  // as one colour in the viewer.
+  const ATOM_SHADES = {
+    N: { dh: 0, ds: 1.0, dl: -0.2 },
+    O: { dh: 12, ds: 1.0, dl: -0.1 },
+    S: { dh: -14, ds: 0.8, dl: -0.16 },
+    P: { dh: 28, ds: 0.9, dl: -0.14 },
+    H: { dh: 0, ds: 0.35, dl: 0.1 },
+    DEFAULT: { dh: 0, ds: 0.65, dl: -0.12 },
+  };
+
+  const hslToHex = (h, s, l) => {
+    const hue = ((h % 360) + 360) % 360;
+    const a = s * Math.min(l, 1 - l);
+    const f = (k) => {
+      const k2 = (k + hue / 30) % 12;
+      const c = l - a * Math.max(-1, Math.min(k2 - 3, 9 * k2 - 3, 1));
+      return Math.round(255 * c);
+    };
+    return (f(0) << 16) | (f(8) << 8) | f(4);
+  };
+
+  const chainAtomColour = (chainIx, symbol) => {
+    const base = CHAIN_COLORS[chainIx % CHAIN_COLORS.length];
+    const shade = ATOM_SHADES[symbol] || ATOM_SHADES.DEFAULT;
+    return hslToHex(
+      base.h + shade.dh,
+      Math.min(1, base.s * shade.ds),
+      Math.min(0.95, Math.max(0.15, base.l + shade.dl)),
+    );
   };
 
   const registerChainTheme = (plugin) => {
@@ -668,13 +688,12 @@
               location.aUnit.elements[location.aIndex],
             ));
           }
-          // Carbons carry the chain colour (shared with the legend chips and
-          // the matrix axis bands); every other element gets its CPK colour
-          if (symbol && symbol.toUpperCase() !== "C") {
-            return ELEMENT_COLORS[symbol.toUpperCase()] || 0x9ca3af;
-          }
           const ix = chainId !== null ? CHAIN_COLOR_INDEX.get(chainId) : undefined;
-          return ix === undefined ? 0x9ca3af : CHAIN_COLORS[ix].hex;
+          if (ix === undefined) return 0x9ca3af;
+          // Carbons carry the chain colour (shared with the legend chips and
+          // the matrix axis bands); other elements get shades of it
+          if (!symbol || symbol.toUpperCase() === "C") return CHAIN_COLORS[ix].hex;
+          return chainAtomColour(ix, symbol.toUpperCase());
         };
         return {
           factory: provider.factory,
@@ -1925,27 +1944,6 @@
         label.className = "text-xs font-medium";
         label.style.color = text;
         label.textContent = `Chain ${seg.chain}`;
-        chip.appendChild(swatch);
-        chip.appendChild(label);
-        chainLegend.appendChild(chip);
-      });
-      // Chain mode colours carbons by chain and heteroatoms by element
-      // (Molstar's typical look); decode the common heteroatoms too
-      const elementChips = [
-        ["N", "#3050f8"],
-        ["O", "#ff0d0d"],
-        ["S", "#ffd123"],
-        ["P", "#ff8000"],
-      ];
-      elementChips.forEach(([symbol, colour]) => {
-        const chip = document.createElement("li");
-        chip.className = "flex items-center gap-1.5";
-        const swatch = document.createElement("span");
-        swatch.className = "inline-block h-3 w-3 rounded-sm border border-black/10";
-        swatch.style.background = colour;
-        const label = document.createElement("span");
-        label.className = "text-xs text-gray-600";
-        label.textContent = symbol;
         chip.appendChild(swatch);
         chip.appendChild(label);
         chainLegend.appendChild(chip);
