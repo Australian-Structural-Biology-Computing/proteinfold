@@ -36,6 +36,7 @@ nextflow_process {
                 ]
                 input[1] = file('db/*')
                 input[2] = file('uniref30/*')
+                input[3] = ''
                 """
             }
         }

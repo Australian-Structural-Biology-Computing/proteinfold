@@ -55,9 +55,10 @@ workflow MSA_COLABFOLD_SEARCH {
     }
 
     ch_generated_json = null
-    if (MsaCache.directory(params)) {
+    def cache_dir = MsaCache.directory(params) ?: ''
+    if (cache_dir) {
         // Cache lookups return the AF3-format MSA JSON directly.
-        MSA_CACHE_LOOKUP(ch_search_input)
+        MSA_CACHE_LOOKUP(ch_search_input, cache_dir)
         MSA_CACHE_LOOKUP.out.branch { meta, csv, result ->
             hit: result.resolve('hit.json').exists()
             miss: true
@@ -72,7 +73,8 @@ workflow MSA_COLABFOLD_SEARCH {
         MMSEQS_COLABFOLDSEARCH (
             ch_search_input,
             ch_colabfold_db,
-            ch_uniref30
+            ch_uniref30,
+            cache_dir
         )
         ch_generated_json = MMSEQS_COLABFOLDSEARCH.out.json
     } else {
@@ -88,7 +90,7 @@ workflow MSA_COLABFOLD_SEARCH {
                     [batch.collect { item -> item[1] }, batch.collect { item -> item[2] }]
                 }
             }
-        MMSEQS_COLABFOLDSEARCH_BATCH(ch_batches, ch_colabfold_db, ch_uniref30)
+        MMSEQS_COLABFOLDSEARCH_BATCH(ch_batches, ch_colabfold_db, ch_uniref30, cache_dir)
         ch_generated_json = MMSEQS_COLABFOLDSEARCH_BATCH.out.json
             .flatMap { batch_meta, files ->
                 def batch_files = files instanceof List ? files : [files]
