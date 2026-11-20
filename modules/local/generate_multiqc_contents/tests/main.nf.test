@@ -16,11 +16,17 @@ nextflow_process {
         when {
             process {
                 """
+                // The MSA metric keeps the extractor's _colabfold2 marker in
+                // its file name; stage the fixture under the real name.
+                def msaFixture = file(params.pipelines_testdata_base_path + 'testdata/metrics/S2_boltz_msa.tsv', checkIfExists: true)
+                def msaStaged = file("${outputDir}/S2_colabfold2_msa.tsv")
+                msaStaged.bytes = msaFixture.bytes
+
                 input[0] = [
                     [ model: 'boltz' ],
                     [
                         file(params.pipelines_testdata_base_path + 'testdata/metrics/S2_plddt.tsv', checkIfExists: true),
-                        file(params.pipelines_testdata_base_path + 'testdata/metrics/S2_boltz_msa.tsv', checkIfExists: true),
+                        file("${outputDir}/S2_colabfold2_msa.tsv", checkIfExists: true),
                         file(params.pipelines_testdata_base_path + 'testdata/metrics/S2_ptm.tsv', checkIfExists: true),
                         file(params.pipelines_testdata_base_path + 'testdata/metrics/S2_iptm.tsv', checkIfExists: true),
                         file(params.pipelines_testdata_base_path + 'testdata/metrics/S2_0_pae.tsv', checkIfExists: true),
