@@ -1,6 +1,6 @@
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    ColabFold2 stub tests
+    proteinfold stub tests
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     Exercises pipeline-level orchestration and report channel contracts with stubbed
     process execution. A single multi-mode run covers every wired backend (one
@@ -12,11 +12,11 @@
 
 nextflow_pipeline {
 
-    name "Test ColabFold2 (stub)"
+    name "Test proteinfold (stub)"
     script "../main.nf"
     tag "pipeline"
-    tag "test_colabfold2_stub"
-    profile "test_colabfold2"
+    tag "test_proteinfold_stub"
+    profile "test_proteinfold"
 
     // mode   = the --mode token as a user would type it
     // alias  = the COLABFOLD2_INFERENCE process alias it must dispatch to
@@ -37,7 +37,7 @@ nextflow_pipeline {
     def af3GraphModes = submodes.findAll { it.mode != 'alphafold2' }
 
     test("one multi-mode run folds every sample with every compatible backend") {
-        tag "colabfold2-multimode"
+        tag "proteinfold-multimode"
         def base = System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/'
         setup {
             def sheet = new File("${outputDir}/multimode_samplesheet.csv")
@@ -105,7 +105,7 @@ nextflow_pipeline {
     }
 
     test("esmfold2 model selection resolves the requested LM variant") {
-        tag "colabfold2-esmfold2-lm600m"
+        tag "proteinfold-esmfold2-lm600m"
 
         when {
             params {

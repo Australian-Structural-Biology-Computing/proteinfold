@@ -13,7 +13,7 @@ nextflow_pipeline {
     script "../main.nf"
     tag "pipeline"
     tag "test_proteinfold_msa_tools"
-    profile "test_colabfold2"
+    profile "test_proteinfold"
 
     // msa_tool    = the --msa_tool value under test
     // msaProcess  = the MSA-generation process that must run
@@ -63,7 +63,7 @@ nextflow_pipeline {
 
     test("--msa_tool alphafold2_msa repopulates AlphaFold3 JSON input") {
         tag "msa-alphafold2_msa-json"
-        def richSamplesheet = new File('tests/data/colabfold2_rich_json_samplesheet.csv').absolutePath
+        def richSamplesheet = new File('tests/data/rich_json_samplesheet.csv').absolutePath
 
         when {
             params {
