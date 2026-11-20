@@ -619,31 +619,59 @@
     plugin.representation.structure.themes.colorThemeRegistry.add(provider);
   };
 
-  const CHAIN_THEME_NAME = "chain-palette";
+  const CHAIN_THEME_NAME = "chain-element";
+
+  // CPK/Jmol element colours for the non-carbon atoms; carbon takes the
+  // chain colour instead, mirroring Molstar's default element-symbol look
+  // (chain-coloured carbons plus distinct heteroatom colours).
+  const ELEMENT_COLORS = {
+    H: 0xffffff, HE: 0xd9ffff, LI: 0xcc80ff, BE: 0xc2ff00, B: 0xffb5b5,
+    N: 0x3050f8, O: 0xff0d0d, F: 0x90e050, NE: 0xb3e3f5, NA: 0xab5cf2,
+    MG: 0x8aff00, AL: 0xbfa6a6, SI: 0xf0c8a0, P: 0xff8000, S: 0xffd123,
+    CL: 0x1ff01f, AR: 0x80d1e3, K: 0x8f40d4, CA: 0x3dff00, TI: 0xbfc2c7,
+    V: 0xa6a6ab, CR: 0xa6a6ab, MN: 0x9c7ac7, FE: 0xe06633, CO: 0xf090a0,
+    NI: 0x50d050, CU: 0xc88033, ZN: 0x7d80b0, GA: 0xc28f8f, GE: 0x668f8f,
+    AS: 0xbd80e3, SE: 0xffa100, BR: 0xa62929, KR: 0x5cb8d1, I: 0x940094,
+    MO: 0x54b540, AG: 0xc0c0c0, CD: 0xffd98f, SN: 0x668080, BA: 0x00c900,
+    PT: 0xd0d0e0, AU: 0xffd123, HG: 0xb8b8d0, PB: 0x575961,
+  };
 
   const registerChainTheme = (plugin) => {
     const { StructureProperties } = molstar.lib.structure;
     // StructureProperties only reads location.unit/location.element, so a
     // bond location can be duck-typed from its a-unit and element index
-    const chainOf = (unit, element) => {
-      if (!unit) return null;
+    const atomOf = (unit, element) => {
+      if (!unit) return { chain: null, symbol: null };
+      const loc = { unit, element };
       try {
-        return StructureProperties.chain.auth_asym_id({ unit, element });
+        return {
+          chain: StructureProperties.chain.auth_asym_id(loc),
+          symbol: StructureProperties.atom.type_symbol(loc),
+        };
       } catch (e) {
-        return null;
+        return { chain: null, symbol: null };
       }
     };
     const provider = {
       name: CHAIN_THEME_NAME,
-      label: "Chain",
+      label: "Chain / element",
       category: "Miscellaneous",
       factory: (ctx, props) => {
         const color = (location) => {
           let chainId = null;
+          let symbol = null;
           if (location && location.kind === "element-location") {
-            chainId = chainOf(location.unit, location.element);
+            ({ chain: chainId, symbol } = atomOf(location.unit, location.element));
           } else if (location && location.kind === "bond-location") {
-            chainId = chainOf(location.aUnit, location.aUnit.elements[location.aIndex]);
+            ({ chain: chainId, symbol } = atomOf(
+              location.aUnit,
+              location.aUnit.elements[location.aIndex],
+            ));
+          }
+          // Carbons carry the chain colour (shared with the legend chips and
+          // the matrix axis bands); every other element gets its CPK colour
+          if (symbol && symbol.toUpperCase() !== "C") {
+            return ELEMENT_COLORS[symbol.toUpperCase()] || 0x9ca3af;
           }
           const ix = chainId !== null ? CHAIN_COLOR_INDEX.get(chainId) : undefined;
           return ix === undefined ? 0x9ca3af : CHAIN_COLORS[ix].hex;
@@ -1897,6 +1925,27 @@
         label.className = "text-xs font-medium";
         label.style.color = text;
         label.textContent = `Chain ${seg.chain}`;
+        chip.appendChild(swatch);
+        chip.appendChild(label);
+        chainLegend.appendChild(chip);
+      });
+      // Chain mode colours carbons by chain and heteroatoms by element
+      // (Molstar's typical look); decode the common heteroatoms too
+      const elementChips = [
+        ["N", "#3050f8"],
+        ["O", "#ff0d0d"],
+        ["S", "#ffd123"],
+        ["P", "#ff8000"],
+      ];
+      elementChips.forEach(([symbol, colour]) => {
+        const chip = document.createElement("li");
+        chip.className = "flex items-center gap-1.5";
+        const swatch = document.createElement("span");
+        swatch.className = "inline-block h-3 w-3 rounded-sm border border-black/10";
+        swatch.style.background = colour;
+        const label = document.createElement("span");
+        label.className = "text-xs text-gray-600";
+        label.textContent = symbol;
         chip.appendChild(swatch);
         chip.appendChild(label);
         chainLegend.appendChild(chip);
