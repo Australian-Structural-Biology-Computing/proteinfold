@@ -163,8 +163,8 @@ The report shows the top-ranked structure in a Molstar viewer beside the Predict
 Additional PAE features:
 
 - **Ligand lanes:** non-protein tokens (ligands, cofactors, ions) are grouped into fixed-width lanes on both PAE axes and marked with a rose band, so small molecules remain visible and selectable next to the per-residue polymer lanes. Hovering a ligand lane names the ligand and its PAE to the selected residue.
-- **Off-diagonal selection:** dragging a rectangle that spans two different chain blocks selects both the aligned (row) block and the scored (column) block; a single-cell click selects the residue pair.
-- **Chainwise score overlay:** when chainwise ipSAE or ipTM values are available, a `PAE | ipSAE | ipTM` toggle above the matrix switches the block colouring from the PAE heatmap to the interface score of each chain pair (same-chain blocks are grey, unreported pairs near-white). The tooltips switch accordingly and the fallback chainwise tables only appear when no PAE matrix is available.
+- **Off-diagonal selection:** dragging a rectangle that spans two different chain blocks selects both the aligned (row) block and the scored (column) block — drawn as a horizontal band across the selected rows crossing a vertical band down the selected columns; a single-cell click selects the residue pair. Selections made from the structure or the MSA draw both bands through each selected residue.
+- **Chainwise score overlay:** when chainwise ipSAE or ipTM values are available, a `PAE | ipSAE | ipTM` toggle above the matrix switches the block colouring from the PAE heatmap to the interface score of each chain pair (same-chain blocks are grey, unreported pairs near-white), with the score value printed on each reported block. The tooltips switch accordingly and the fallback chainwise tables only appear when no PAE matrix is available.
 
 ##### Sequence coverage
 

@@ -1070,6 +1070,14 @@
           // scoreColor returns an [r, g, b] array, which fillStyle rejects
           ctx.fillStyle = Array.isArray(color) ? `rgb(${color[0]},${color[1]},${color[2]})` : color;
           ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+          if (value !== undefined && value !== null && value !== "") {
+            // Report the number on the block itself
+            ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+            ctx.font = "bold 13px system-ui, sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(value, (x0 + x1) / 2, (y0 + y1) / 2);
+          }
         }
       }
       ctx.strokeStyle = "#d1d5db";
@@ -1085,7 +1093,11 @@
       tooltip,
       hover: null,
       drag: null,
-      highlight: [],
+      // Selection highlight split by provenance: rows draw as horizontal
+      // bands, columns as vertical bands
+      highlightRows: [],
+      highlightCols: [],
+      pendingSplit: null,
       get mode() {
         return mode;
       },
@@ -1149,13 +1161,19 @@
         if (sameCell) {
           const indices = this.singleCellIndices(anchor);
           const sorted = [...indices].sort((a, b) => a - b);
-          if (sameIndexSet(hub.selection, sorted)) hub.clear(this.id);
-          else hub.set(indices, this.id);
+          if (sameIndexSet(hub.selection, sorted)) {
+            this.pendingSplit = { rows: [], cols: [] };
+            hub.clear(this.id);
+          } else {
+            this.pendingSplit = { rows: [anchor.row], cols: [anchor.col] };
+            hub.set(indices, this.id);
+          }
         } else {
           // Off-diagonal drags select both the row and the column ranges:
           // the residues of the aligned block and of the scored block
           const rows = indicesFromRange(anchor.row, current.row);
           const cols = indicesFromRange(anchor.col, current.col);
+          this.pendingSplit = { rows, cols };
           hub.set([...rows, ...cols], this.id);
         }
       },
@@ -1168,9 +1186,19 @@
         scores = next;
       },
 
-      setHighlight(indices) {
+      setHighlight(indices, source) {
         if (!linked) return;
-        this.highlight = indices;
+        if (source === this.id && this.pendingSplit) {
+          // Own selection: keep the row/column split so the PAE can draw a
+          // horizontal band for the aligned block and a vertical one for the
+          // scored block instead of guessing from the flat index list
+          this.highlightRows = this.pendingSplit.rows;
+          this.highlightCols = this.pendingSplit.cols;
+          this.pendingSplit = null;
+        } else {
+          this.highlightRows = indices;
+          this.highlightCols = indices;
+        }
         this.draw();
       },
 
@@ -1267,12 +1295,17 @@
         ctx.fillText("Aligned residue", 0, 0);
         ctx.restore();
 
-        // Cross-highlight from other views: translucent orange row/col bands
-        if (this.highlight.length) {
+        // Cross-highlight: horizontal bands for selected rows (aligned
+        // residues), vertical bands for selected columns (scored residues);
+        // their intersection emphasises the selected block itself
+        if (this.highlightRows.length || this.highlightCols.length) {
           ctx.fillStyle = "rgba(234, 88, 12, 0.22)";
-          this.highlight.forEach((ix) => {
+          this.highlightRows.forEach((ix) => {
             if (ix < 0 || ix >= n) return;
-            ctx.fillRect(lanes.pos(ix), plot.y + ix * plot.cell, lanes.widths[ix], plot.cell);
+            ctx.fillRect(plot.x, plot.y + ix * plot.cell, plot.side, plot.cell);
+          });
+          this.highlightCols.forEach((ix) => {
+            if (ix < 0 || ix >= n) return;
             ctx.fillRect(lanes.pos(ix), plot.y, lanes.widths[ix], plot.side);
           });
         }
