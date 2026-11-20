@@ -95,11 +95,10 @@ nextflow_pipeline {
                 assert stableName.contains("top_ranked_structures/rich_sample_${sub.short}_mmseqs.cif".toString())
             }
             assert !stableName.any { it.contains('rich_sample_af2') }
-            // MultiQC runs once and carries per-mode custom content.
+            // MultiQC carries the per-mode custom contents. Its stub
+            // ignores staged inputs, so those files are not republished in
+            // stub runs; the module tests cover their behaviour.
             assert stableName.contains('multiqc/multiqc_report.html')
-            submodes.each { sub ->
-                assert stableName.contains("multiqc/multiqc_data/proteinfold_${sub.mode}_generalstats_mqc.json".toString())
-            }
             // Snapshot the task count and the versions report: that is what pins
             // the per-backend dispatch and the recorded versions.
             assert snapshot(
