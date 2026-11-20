@@ -11,28 +11,48 @@ workflow BENCHMARK {
     ch_references            // channel: [val(id), path(reference)] of the reference structures
     colabfold2_public_mode   // val: the selected ColabFold2 backend mode, or null
     benchmark_models         // val: normalized method names expected to emit predictions
+    benchmark_strict         // val: abort the run when a referenced sample/method produces no benchmark
 
     main:
+    // The pipeline config supplies a Boolean, but callers and tests may pass a CLI-style String, so
+    // coerce an omitted or null value to false.
+    def strict_benchmark = benchmark_strict instanceof Boolean
+        ? benchmark_strict
+        : Boolean.parseBoolean(benchmark_strict?.toString() ?: 'false')
+
     ch_normalized_predictions = ch_predictions.map { meta, structure ->
         def benchmark_meta = meta.clone()
         if (benchmark_meta.model == 'colabfold2') benchmark_meta.model = colabfold2_public_mode
         [benchmark_meta, structure]
     }
 
-    ch_benchmark_predictions = ch_normalized_predictions.map { meta, structure ->
-        [meta.id, meta, structure]
-    }
-    BENCHMARK_STRUCTURE(
-        ch_benchmark_predictions
-            .combine(ch_references, by: 0)
-            .map { id, meta, structures, reference ->
-                def files = structures instanceof List ? structures : [structures]
-                if (files.size() != 1) {
-                    error("Benchmarking requires one predicted structure per sample and method: ${id}, ${meta.model}")
-                }
-                [meta, files[0], reference]
+    // Keep only predictions for samples that declare a reference: combine pairs each reference
+    // with every prediction of that sample and drops unreferenced samples, so they never reach
+    // benchmarking and cannot trip its cardinality checks.
+    ch_referenced_predictions = ch_normalized_predictions
+        .map { meta, structure -> tuple(meta.id, meta, structure) }
+        .combine(ch_references, by: 0)
+        .map { _id, meta, structure, reference -> tuple(meta, structure, reference) }
+
+    // Aggregate by (sample, method) so repeated emissions of the same pair collapse into a single
+    // list and are detected here, rather than each launching its own BENCHMARK_STRUCTURE task and
+    // silently colliding on the same published benchmark/<model>/<id>.json path.
+    ch_grouped_predictions = ch_referenced_predictions
+        .map { meta, structure, reference -> tuple([meta.id, meta.model], meta, [structure], [reference]) }
+        .groupTuple()
+        .map { key, metas, structures, references ->
+            def first_meta = metas[0]
+            if (metas.any { it != first_meta }) {
+                error("Benchmarking received conflicting metadata for the same sample and method: ${key}")
             }
-    )
+            def files = structures.flatten()
+            if (files.size() != 1) {
+                error("Benchmarking requires one predicted structure per sample and method: ${key[0]}, ${key[1]}")
+            }
+            tuple(first_meta, files[0], references[0])
+        }
+
+    BENCHMARK_STRUCTURE(ch_grouped_predictions)
 
     ch_expected_benchmark_pairs = ch_references
         .combine(channel.fromList(benchmark_models.unique()))
@@ -41,8 +61,8 @@ workflow BENCHMARK {
         }
         .unique()
 
-    ch_observed_benchmark_pairs = ch_normalized_predictions
-        .map { meta, _structure ->
+    ch_observed_benchmark_pairs = ch_grouped_predictions
+        .map { meta, _structure, _reference ->
             tuple([meta.id, meta.model], true)
         }
         .unique()
@@ -57,11 +77,44 @@ workflow BENCHMARK {
             tuple(id, model)
         }
 
-    ch_missing_benchmark_pairs.subscribe { id, model ->
-        log.warn("Benchmark skipped: sample '${id}', method '${model}' produced no top-ranked structure.")
+    if (!strict_benchmark) {
+        ch_missing_benchmark_pairs.subscribe { id, model ->
+            log.warn("Benchmark skipped: sample '${id}', method '${model}' produced no top-ranked structure.")
+        }
+    }
+
+    // Persist the benchmark matrix gaps as durable output next to the published scores rather than
+    // console warnings only, so an incomplete run can be detected from the results directory after
+    // the fact. Nothing is written when every referenced prediction is present.
+    ch_missing_report = ch_missing_benchmark_pairs
+        .map { id, model -> "${id}\t${model}" }
+        .collect()
+        .filter { rows -> rows }
+        .map { rows -> ([ 'sample\tmethod' ] + rows).join('\n') + '\n' }
+        .collectFile(
+            storeDir: "${params.outdir}/benchmark",
+            name: 'benchmark_missing.tsv',
+            newLine: false
+        )
+
+    if (strict_benchmark) {
+        // collect() releases a single emission once all missing pairs are known, so the run aborts
+        // deterministically with the complete gap list instead of racing per-pair errors.
+        ch_missing_benchmark_pairs
+            .map { id, model -> "${id}\t${model}" }
+            .collect()
+            .subscribe { rows ->
+                if (rows) {
+                    error(
+                        'Strict benchmarking enabled: no top-ranked structure for the following referenced sample and method pairs: ' +
+                        "${rows.join(', ')}. Set --benchmark_strict false to treat missing benchmarks as warnings."
+                    )
+                }
+            }
     }
 
     emit:
-    scores = BENCHMARK_STRUCTURE.out.scores
-    missing = ch_missing_benchmark_pairs
+    scores         = BENCHMARK_STRUCTURE.out.scores
+    missing        = ch_missing_benchmark_pairs
+    missing_report = ch_missing_report
 }
