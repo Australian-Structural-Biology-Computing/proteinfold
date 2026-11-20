@@ -4,28 +4,29 @@ nextflow_pipeline {
     script "../main.nf"
     tag "pipeline"
     tag "test_proteinfold_inference_batching"
-    profile "test_colabfold2"
+    profile "test_proteinfold"
 
     test("runs batched inference") {
         when {
             params {
                 outdir = "$outputDir"
+                mode = 'alphafold3'
                 inference_batch_size = 2
             }
         }
 
         then {
             assert workflow.success
-            def batches = workflow.trace.succeeded().findAll { it.name.contains('COLABFOLD2_INFERENCE_BATCH') }
+            def batches = workflow.trace.succeeded().findAll { it.name.contains('ALPHAFOLD3_BATCH') }
             assert batches.size() == 1
             assert batches[0].name.contains('batch_T1024_T1026')
             // no per-sample inference task was run
             assert workflow.trace.succeeded().count { it.name ==~ /.*:ALPHAFOLD3 \(.*/ } == 0
             // outputs are split back per sample and published flat
-            assert file("${params.outdir}/alphafold3/top_ranked_structures/T1024.cif").exists()
-            assert file("${params.outdir}/alphafold3/top_ranked_structures/T1026.cif").exists()
-            assert file("${params.outdir}/alphafold3/T1024_plddt.tsv").exists()
-            assert file("${params.outdir}/alphafold3/T1026_confidence.tsv").exists()
+            assert file("${params.outdir}/top_ranked_structures/T1024_af3_mmseqs.cif").exists()
+            assert file("${params.outdir}/top_ranked_structures/T1026_af3_mmseqs.cif").exists()
+            assert file("${params.outdir}/metrics/T1024_af3_mmseqs_plddt.tsv").exists()
+            assert file("${params.outdir}/metrics/T1026_af3_mmseqs_confidence.tsv").exists()
             def stable_name = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
             def stable_path = getAllFilesFromDir(params.outdir, ignoreFile: 'tests/.nftignore')
             assert snapshot(
@@ -42,18 +43,19 @@ nextflow_pipeline {
             params {
                 outdir = "$outputDir"
                 input = 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/proteinfold/testdata/samplesheet/v2.0/colabfold_batching_samplesheet.csv'
+                mode = 'alphafold3'
                 inference_batch_size = 2
             }
         }
 
         then {
             assert workflow.success
-            def batches = workflow.trace.succeeded().findAll { it.name.contains('COLABFOLD2_INFERENCE_BATCH') }
+            def batches = workflow.trace.succeeded().findAll { it.name.contains('ALPHAFOLD3_BATCH') }
             assert batches.size() == 2
             assert batches.any { it.name.contains('batch_T1024_T1026') }
             assert batches.any { it.name.contains('batch_T1027') }
-            assert file("${params.outdir}/alphafold3/top_ranked_structures/T1027.cif").exists()
-            assert file("${params.outdir}/alphafold3/T1027_iptm.tsv").exists()
+            assert file("${params.outdir}/top_ranked_structures/T1027_af3_mmseqs.cif").exists()
+            assert file("${params.outdir}/metrics/T1027_af3_mmseqs_iptm.tsv").exists()
         }
     }
 
@@ -62,13 +64,14 @@ nextflow_pipeline {
             params {
                 outdir = "$outputDir"
                 input = 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/proteinfold/testdata/samplesheet/v2.0/colabfold_batching_samplesheet.csv'
+                mode = 'alphafold3'
                 inference_batch_size = -1
             }
         }
 
         then {
             assert workflow.success
-            def batches = workflow.trace.succeeded().findAll { it.name.contains('COLABFOLD2_INFERENCE_BATCH') }
+            def batches = workflow.trace.succeeded().findAll { it.name.contains('ALPHAFOLD3_BATCH') }
             assert batches.size() == 1
             assert batches[0].name.contains('batch_T1024_T1026_T1027')
         }
