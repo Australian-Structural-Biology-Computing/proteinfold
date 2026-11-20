@@ -35,6 +35,13 @@ output:
       description: |
         Structure of: [val(meta), path(benchmark.json)]
         Benchmarking scores of each predicted structure against its reference
+  - summary:
+      type: channel
+      description: |
+        Structure of: [path(benchmark_summary.csv)]
+        CSV summary containing the sample, mode, lDDT, and TM-score for every completed benchmark.
+        The file is emitted once per run when at least one prediction is benchmarked and is written
+        to `${params.outdir}/benchmark/benchmark_summary.csv`.
   - missing:
       type: channel
       description: |

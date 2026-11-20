@@ -23,6 +23,6 @@ process BENCHMARK_STRUCTURE {
 
     stub:
     """
-    echo '{}' > benchmark.json
+    echo '{"lddt": 1.0, "tm_score": 1.0}' > benchmark.json
     """
 }

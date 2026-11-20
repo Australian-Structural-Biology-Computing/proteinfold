@@ -28,6 +28,10 @@ nextflow_pipeline {
             assert workflow.trace.succeeded().count { it.name.contains('BENCHMARK_STRUCTURE') } == 1
             assert file("${params.outdir}/benchmark/esmfold/first.json").exists()
             assert !file("${params.outdir}/benchmark/esmfold/second.json").exists()
+            def summary = file("${params.outdir}/benchmark/benchmark_summary.csv")
+            assert summary.exists()
+            assert summary.readLines()[0] == 'sample,mode,lddt,tm_score'
+            assert summary.readLines()[1].startsWith('first,esmfold,')
         }
     }
 

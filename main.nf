@@ -628,6 +628,7 @@ workflow NFCORE_PROTEINFOLD {
     emit:
     multiqc_report           = POST_PROCESSING.out.multiqc_report
     benchmark_scores         = BENCHMARK.out.scores
+    benchmark_summary        = BENCHMARK.out.summary
     benchmark_missing        = BENCHMARK.out.missing
     benchmark_missing_report = BENCHMARK.out.missing_report
 }

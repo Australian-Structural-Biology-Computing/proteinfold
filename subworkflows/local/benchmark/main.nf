@@ -54,6 +54,34 @@ workflow BENCHMARK {
 
     BENCHMARK_STRUCTURE(ch_grouped_predictions)
 
+    // Collate the per-sample JSON outputs into a deterministic, user-facing table so benchmark
+    // scores can be compared across modes without parsing each OpenStructure result separately.
+    ch_summary = BENCHMARK_STRUCTURE.out.scores
+        .map { meta, score ->
+            def result = new groovy.json.JsonSlurper().parse(score.toFile())
+            tuple(meta.id, meta.model, result.lddt, result.tm_score)
+        }
+        .collect(flat: false)
+        .filter { rows -> rows }
+        .map { rows ->
+            def csv_cell = { value ->
+                def text = value?.toString() ?: ''
+                text.contains(',') || text.contains('"') || text.contains('\n') || text.contains('\r')
+                    ? '"' + text.replace('"', '""') + '"'
+                    : text
+            }
+            def sorted_rows = rows.sort { left, right ->
+                (left[0].toString() <=> right[0].toString()) ?: (left[1].toString() <=> right[1].toString())
+            }
+            def csv_rows = sorted_rows.collect { row -> row.collect(csv_cell).join(',') }
+            ([ 'sample,mode,lddt,tm_score' ] + csv_rows).join('\n') + '\n'
+        }
+        .collectFile(
+            storeDir: "${params.outdir}/benchmark",
+            name: 'benchmark_summary.csv',
+            newLine: false
+        )
+
     ch_expected_benchmark_pairs = ch_references
         .combine(channel.fromList(benchmark_models.unique()))
         .map { id, _reference, model ->
@@ -115,6 +143,7 @@ workflow BENCHMARK {
 
     emit:
     scores         = BENCHMARK_STRUCTURE.out.scores
+    summary        = ch_summary
     missing        = ch_missing_benchmark_pairs
     missing_report = ch_missing_report
 }
