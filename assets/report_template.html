@@ -1030,9 +1030,12 @@
       if (!lanes) return;
       const size = Math.max(1, Math.ceil(lanes.total));
       // Pass 1: warp token columns into lane columns (rows stay tokens)
+      // The canvas is already lane-sized on both axes: after pass 2 the
+      // warped rows span `size` pixels, and anything shorter would clip the
+      // ligand tail and stretch the blit
       laneCanvas = document.createElement("canvas");
       laneCanvas.width = size;
-      laneCanvas.height = n;
+      laneCanvas.height = size;
       const lctx = laneCanvas.getContext("2d");
       lctx.imageSmoothingEnabled = false;
       for (let ix = 0; ix < n; ix++) {
@@ -1041,7 +1044,7 @@
       // Pass 2: warp the remaining token rows into lane rows
       const intermediate = document.createElement("canvas");
       intermediate.width = size;
-      intermediate.height = n;
+      intermediate.height = size;
       intermediate.getContext("2d").drawImage(laneCanvas, 0, 0);
       for (let ix = 0; ix < n; ix++) {
         lctx.drawImage(intermediate, 0, ix, size, 1, 0, lanes.starts[ix], size, Math.max(lanes.widths[ix], 0.02));
@@ -1290,16 +1293,6 @@
             },
             true,
           );
-          drawLigandRuns(
-            ctx,
-            plot,
-            {
-              count: n,
-              pos: (ix) => plot.y + lanes.starts[ix],
-              end: (ix) => plot.y + lanes.starts[ix] + lanes.widths[ix],
-            },
-            false,
-          );
         }
         drawChainBands(
           ctx,
@@ -1314,6 +1307,20 @@
           },
           (ix) => RESIDUES[ix][1],
         );
+        // The rose ligand lanes must be drawn after the chain bands on each
+        // axis, otherwise the chain colour paints over them
+        if (mode === "pae") {
+          drawLigandRuns(
+            ctx,
+            plot,
+            {
+              count: n,
+              pos: (ix) => plot.y + lanes.starts[ix],
+              end: (ix) => plot.y + lanes.starts[ix] + lanes.widths[ix],
+            },
+            false,
+          );
+        }
 
         ctx.fillStyle = "#374151";
         ctx.font = "12px system-ui, sans-serif";
