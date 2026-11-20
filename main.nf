@@ -46,7 +46,6 @@ workflow NFCORE_PROTEINFOLD {
     ch_samplesheet       = samplesheet
     ch_multiqc           = channel.empty()
     ch_report_input      = channel.empty()
-    ch_top_ranked_model  = channel.empty()
     modelcif_software_details = file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
     def ch_software_versions = channel.topic('versions')
         .unique()
@@ -296,8 +295,6 @@ workflow NFCORE_PROTEINFOLD {
             .join(PROTEINFOLD.out.chainwise_iptm)
             .join(PROTEINFOLD.out.chainwise_ipsae)
     )
-    ch_top_ranked_model = ch_top_ranked_model.mix(PROTEINFOLD.out.top_ranked_pdb)
-
     //
     // POST PROCESSING: generate visualisation reports
     //
@@ -339,9 +336,6 @@ workflow NFCORE_PROTEINFOLD {
         params.skip_visualisation,
         ch_report_input,
         ch_report_template,
-        params.skip_foldseek,
-        params.foldseek_db,
-        params.foldseek_db_path,
         params.skip_multiqc,
         params.outdir,
         ch_multiqc,
@@ -350,7 +344,6 @@ workflow NFCORE_PROTEINFOLD {
         params.multiqc_logo,
         ch_multiqc_methods_description,
         ch_software_versions,
-        ch_top_ranked_model,
         ch_modelcif,
         params.write_modelcif,
         params.modelcif_binary,

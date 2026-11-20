@@ -16,7 +16,7 @@ See main [README.md](https://github.com/nf-core/proteinfold/blob/master/README.m
 
 The directories listed below will be created in the output directory after the pipeline has finished. All paths are relative to the top-level results directory.
 
-Exact subdirectories depend on the selected mode. A run will typically contain top-level directories such as `<MODE>/` (the selected `--mode` token, e.g. `alphafold3/`), `multiqc/`, `reports/`, and `pipeline_info/`.
+Exact subdirectories depend on the selected mode. A run will typically contain top-level directories such as `top_ranked_structures/`, `metrics/`, `multiqc/`, `reports/`, and `pipeline_info/`.
 
 ### Prediction outputs (all modes)
 
@@ -172,19 +172,6 @@ The report exports include key visualisations such as sequence coverage, predict
 </details>
 
 ### Foldseek structural similarity search
-
-If Foldseek is enabled (`--skip_foldseek false`), results are written to:
-
-<details markdown="1">
-<summary>Output files</summary>
-
-- `foldseek_easysearch/`
-  - `<SEQUENCE NAME>_<MODE>_foldseek.html` (default output format)
-  - `<SEQUENCE NAME>_<MODE>_<MSA>.m8` (tabular output when `--foldseek_easysearch_arg` does not include `--format-mode 3`)
-
-</details>
-
-Foldseek runs on top-ranked structures from each selected mode and sequence. By default, the pipeline uses `--format-mode 3` and publishes HTML reports.
 
 ### MultiQC report
 

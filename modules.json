@@ -11,12 +11,6 @@
                         "installed_by": ["modules"],
                         "patch": "modules/nf-core/aria2/aria2.diff"
                     },
-                    "foldseek/easysearch": {
-                        "branch": "master",
-                        "git_sha": "a02efd7783000a416d5d2f1b2bc86b8d41b9f439",
-                        "installed_by": ["modules"],
-                        "patch": "modules/nf-core/foldseek/easysearch/foldseek-easysearch.diff"
-                    },
                     "gunzip": {
                         "branch": "master",
                         "git_sha": "5c460c5a4736974abde2843294f35307ee2b0e5e",
