@@ -640,7 +640,7 @@
     const a = s * Math.min(l, 1 - l);
     const f = (k) => {
       const k2 = (k + hue / 30) % 12;
-      const c = l - a * Math.max(-1, Math.min(k2 - 3, 9 * k2 - 3, 1));
+      const c = l - a * Math.max(-1, Math.min(k2 - 3, 9 - k2, 1));
       return Math.round(255 * c);
     };
     return (f(0) << 16) | (f(8) << 8) | f(4);
