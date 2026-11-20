@@ -62,12 +62,12 @@ def classify_metric(filename):
     return None
 
 
-def sample_id_from_fn(filename, model_key):
+def sample_id_from_fn(filename):
     """Derive the sample id from a routed metric file name.
 
-    Strips the metric suffix and, for MSA files, the prediction-mode infix the
-    extractors bake into ``<id>_<mode>_msa.tsv``. The result is the sample id
-    shared by every metric of one prediction.
+    Strips the metric suffix from ``<id>_<mode>_<metric>.tsv``; the result is
+    the per-prediction sample id (sample plus mode shorthand) shared by every
+    metric of one prediction, so modes never collide in merged MultiQC reports.
     """
     stem = filename[:-4] if filename.lower().endswith(".tsv") else filename
     for suffix in ROUTED_SUFFIXES:
@@ -76,10 +76,6 @@ def sample_id_from_fn(filename, model_key):
             break
     else:
         return None
-    if filename.endswith("_msa.tsv"):
-        infix = f"_{model_key}"
-        if stem.endswith(infix):
-            stem = stem[: -len(infix)]
     return stem
 
 
@@ -303,7 +299,7 @@ def main(argv=None):
                 "it stays in the detailed GENERATE_REPORT viewer and produces no bulk rows"
             )
             continue
-        sample_id = sample_id_from_fn(filepath.name, model_key)
+        sample_id = sample_id_from_fn(filepath.name)
         if not sample_id:
             warn(f"Could not derive a sample id from {filepath.name}; skipping")
             continue

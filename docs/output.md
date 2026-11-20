@@ -20,40 +20,31 @@ Exact subdirectories depend on the selected mode. A run will typically contain t
 
 ### Prediction outputs (all modes)
 
-User-facing outputs are largely consistent across modes.
-
-<details markdown="1">
-<summary>Common output patterns</summary>
-
-- `<MODE>/top_ranked_structures/<SEQUENCE NAME>.{pdb,cif}` (format depends on the selected mode)
-- `<MODE>/<SEQUENCE NAME>/<SEQUENCE NAME>_plddt.tsv`
-- `<MODE>/<SEQUENCE NAME>/paes/<SEQUENCE NAME>_<RANK>_pae.tsv` (when available)
-- `<MODE>/<SEQUENCE NAME>/<SEQUENCE NAME>_<MODE>_msa.tsv` (mode-specific MSA summary)
-- `<MODE>/<SEQUENCE NAME>/<SEQUENCE NAME>_{ptm,iptm,ipsae}.tsv` and chainwise summaries (where applicable)
-
-</details>
-
-### ColabFold2
-
-ColabFold2 outputs are published directly under the selected public mode token, for example `alphafold3/<SEQUENCE NAME>/`, `boltz2/<SEQUENCE NAME>/`, or `opendde/<SEQUENCE NAME>/`. All three ESMFold2 model selections publish under `esmfold2/<SEQUENCE NAME>/`.
+The output directory stays flat: every result file carries a short mode tag
+(`<MODE>`) in its name instead of living in a per-mode directory, so multiple
+prediction modes can write into the same tree without colliding. The shorthands
+are `af2` (alphafold2), `af3` (alphafold3), `bz2` (boltz2), `chai1`, `esm2`
+(esmfold2), `if2` (intellifold2), `odde` (opendde), `of3` (openfold3), `ob0`
+(openbind0), `px2` (protenix2) and `rf3` (rosettafold3). All three ESMFold2
+model selections publish under the `esm2` tag.
 
 <details markdown="1">
 <summary>Output files</summary>
 
-- `<MODE>/` (the selected public mode token)
-  - `top_ranked_structures/<SEQUENCE NAME>.cif` (`.pdb` for the `alphafold2` modes) (top-ranked structure per input)
-  - `<SEQUENCE NAME>/<SEQUENCE NAME>_plddt.tsv`
-  - `<SEQUENCE NAME>/<SEQUENCE NAME>_{confidence,ptm,iptm,ipsae,chainwise_iptm,chainwise_ipsae}.tsv`
-  - `<SEQUENCE NAME>/<SEQUENCE NAME>_colabfold2_msa.tsv`
-  - `<SEQUENCE NAME>/paes/<SEQUENCE NAME>_1_pae.tsv` (rank-1 only; published when the backend emits a PAE)
-  - `<SEQUENCE NAME>/raw/` (published when `--save_intermediates` is enabled)
+- `top_ranked_structures/<SEQUENCE NAME>_<MODE>.{cif,pdb}` (`.pdb` for the `alphafold2` modes) (top-ranked structure per input and mode)
+- `metrics/<SEQUENCE NAME>_<MODE>_<METRIC>.tsv` with `<METRIC>` one of
+  `plddt`, `confidence`, `ptm`, `iptm`, `ipsae`, `chainwise_iptm`, `chainwise_ipsae`, `msa`
+  (per-prediction MSA depth summary)
+- `metrics/<SEQUENCE NAME>_<MODE>_<RANK>_pae.tsv` (rank-1 only; published when the backend emits a PAE)
+- `reports/<SEQUENCE NAME>_<MODE>_report.html` (report per sequence and mode)
+- `raw/` (published when `--save_intermediates` is enabled; file names embed the backend model type)
 
 </details>
 
 > [!NOTE]
 > Select the ESMFold2 language-model variants with `--mode esmfold2 --esmfold2_model lm300m` or `--mode esmfold2 --esmfold2_model lm600m`. Confidence output depends on the checkpoint and runtime: pLDDT may contain finite scores or `n/a`, PAE may contain finite scores or `NaN`, and unavailable summary metrics remain empty.
 
-### pLDDT (`{meta.id}_plddt.tsv`)
+### pLDDT (`<SEQUENCE NAME>_<MODE>_plddt.tsv`)
 
 Confidence values per residue, rounded to 2 decimal places. Each ranked result gets its own column (for all-atom modules, atomic token confidences are processed to a naive mean value across the residue).
 
@@ -69,7 +60,7 @@ Positions	rank_0	rank_1	rank_2	rank_3	rank_4
 ...
 ```
 
-### MSA (`{meta.id}_{meta.mode}_msa.tsv`)
+### MSA (`<SEQUENCE NAME>_<MODE>_msa.tsv`)
 
 The amino acid characters are converted to integers `0-19`, unknown as 20, **integer `21`** represents the gap character.
 
@@ -84,7 +75,7 @@ The amino acid characters are converted to integers `0-19`, unknown as 20, **int
 
 This allows easy sequence indentity calculation when processing as a `numpy` array.
 
-### (i)pTM (`{meta.id}_[i]ptm.tsv`)
+### (i)pTM (`<SEQUENCE NAME>_<MODE>_[i]ptm.tsv`)
 
 (i)pTM scores, rounded to 3 decimal places, listed by the rank number (currently unsorted - to reflect models and seeds where appropriate).
 
@@ -116,7 +107,7 @@ This allows easy sequence indentity calculation when processing as a `numpy` arr
 8 0.595
 ```
 
-### chain-wise (i)pTM (`{meta.id}_chainwise_[i]ptm.tsv`)
+### chain-wise (i)pTM (`<SEQUENCE NAME>_<MODE>_chainwise_[i]ptm.tsv`)
 
 Chain-wise iPTM values, rounded to 4 decimal places, with chain-pair lettering as the row (`X:Y`) and rank number as the column. Where available, self-scores are included as `X:X`.
 
@@ -134,7 +125,7 @@ In the HTML reports, chainwise iPTM and ipSAE are displayed as chain-by-chain ma
 - **Default cutoffs used when deriving:** when `extract_metrics.py` derives iPTM/ipSAE it invokes `ipsae.py` with a PAE cutoff of `10` and a distance cutoff of `15` (these are currently hard-coded in the extraction step). If you require different thresholds, compute iPTM/ipSAE externally or update the extraction call accordingly.
 - **Third-party attribution:** the `ipsae.py` utility bundled in `bin/` is derived from the IPSAE project by the Dunbrack Lab (https://github.com/DunbrackLab/IPSAE/). The original script includes an MIT-style header; keep that header intact if the file is redistributed. Please consult the IPSAE repository for full details and citation information.
 
-### PAE (`{meta.id}_{rank_number}_pae.tsv`)
+### PAE (`<SEQUENCE NAME>_<MODE>_<RANK>_pae.tsv`)
 
 Predicted alignment error of residues `j` aligned by residue `i`, rounded to 4 decimal places.
 The row number gives you the index of residue `i` and the column value within the row gives the index of residue `j` for the 2D PAE matrix.
@@ -172,7 +163,7 @@ The report exports include key visualisations such as sequence coverage, predict
 <summary>Output files</summary>
 
 - `reports/`
-  - `<SEQUENCE NAME>_<MODE>_report.html` (report per sequence)
+  - `<SEQUENCE NAME>_<MODE>_report.html` (report per sequence and mode; `<MODE>` is the shorthand tag)
 
 </details>
 
@@ -185,7 +176,7 @@ If Foldseek is enabled (`--skip_foldseek false`), results are written to:
 
 - `foldseek_easysearch/`
   - `<SEQUENCE NAME>_<MODE>_foldseek.html` (default output format)
-  - `<SEQUENCE NAME>.m8` (tabular output when `--foldseek_easysearch_arg` does not include `--format-mode 3`)
+  - `<SEQUENCE NAME>_<MODE>.m8` (tabular output when `--foldseek_easysearch_arg` does not include `--format-mode 3`)
 
 </details>
 
@@ -225,15 +216,15 @@ Results generated by MultiQC collate QC metrics from the selected structure-pred
 
 Depending on the selected options, additional top-level directories may be present, for example:
 
-- `msa/<MSA TOOL>/` (raw MSA search results such as `<SEQUENCE NAME>.a3m` and AlphaFold3-format JSON files; published by the `colabfold_search` tool)
+- `msa/` (raw MSA results; file names carry an MSA-tool shorthand — `mmseqs` for `colabfold_search`, `af2msa`/`af3msa` for the data-pipeline tools, e.g. `<SEQUENCE NAME>_mmseqs.a3m` and `<SEQUENCE NAME>_mmseqs.json`)
 
 ### `--save_intermediates`
 
-If `--save_intermediates` is enabled, extra raw intermediate files are published in mode-specific `raw/` directories.
+If `--save_intermediates` is enabled, extra raw intermediate files are published under a flat `raw/` directory.
 
 Examples include:
 
-- `<MODE>/<SEQUENCE NAME>/raw/` for the selected ColabFold2 mode (e.g. `alphafold3/<SEQUENCE NAME>/raw/` or `alphafold2/<SEQUENCE NAME>/raw/`)
+- `raw/` for every selected ColabFold2 mode (the file names embed the backend model type, e.g. `<SEQUENCE NAME>_rank_001_alphafold3_seed_000_sample_0.cif`)
 
 These raw outputs are intended for advanced debugging, reproducibility and method-specific downstream analyses. For detailed, canonical tool-specific native output specifications, see:
 

@@ -173,6 +173,21 @@ workflow PROTEINFOLD {
     // they cannot fold non-protein entities. Every other mode runs the
     // AlphaFold3-open graph and accepts full AlphaFold3 JSON inputs,
     // including nucleic-acid and ligand entities (esmfold2 included).
+    // Shorthand tokens baked into published file names, keeping the output
+    // directory flat (no per-mode nesting).
+    def MODE_SHORTS = [
+        alphafold2: 'af2',
+        alphafold3: 'af3',
+        boltz2    : 'bz2',
+        chai1     : 'chai1',
+        esmfold2  : 'esm2',
+        intellifold2: 'if2',
+        opendde   : 'odde',
+        openfold3 : 'of3',
+        openbind0 : 'ob0',
+        protenix2 : 'px2',
+        rosettafold3: 'rf3',
+    ]
     def af2_specs = mode_specs.findAll { it.model_type == 'auto' || it.model_type.startsWith('alphafold2') }
     def af3_specs = mode_specs.findAll { !(it.model_type == 'auto' || it.model_type.startsWith('alphafold2')) }
 
@@ -250,6 +265,7 @@ workflow PROTEINFOLD {
                 .map { meta, input, dir ->
                     def tagged = meta.clone()
                     tagged.model = spec.public_mode
+                    tagged.mode_short = MODE_SHORTS[spec.public_mode]
                     tuple(tagged, input, spec.model_type, spec.use_esm, dir)
                 }
         )
