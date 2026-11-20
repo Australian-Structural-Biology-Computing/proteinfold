@@ -65,9 +65,11 @@ def classify_metric(filename):
 def sample_id_from_fn(filename):
     """Derive the sample id from a routed metric file name.
 
-    Strips the metric suffix from ``<id>_<mode>_<metric>.tsv``; the result is
-    the per-prediction sample id (sample plus mode shorthand) shared by every
-    metric of one prediction, so modes never collide in merged MultiQC reports.
+    Strips the metric suffix from ``<id>_<metric>.tsv``. The MSA metrics keep
+    the extractor's ``_colabfold2`` marker (``<id>_colabfold2_msa.tsv``), so
+    that infix is stripped as well; the result is the sample id shared by
+    every metric of one prediction, keeping all of a prediction's values in
+    one MultiQC row per mode.
     """
     stem = filename[:-4] if filename.lower().endswith(".tsv") else filename
     for suffix in ROUTED_SUFFIXES:
@@ -76,6 +78,8 @@ def sample_id_from_fn(filename):
             break
     else:
         return None
+    if filename.endswith("_msa.tsv") and stem.endswith("_colabfold2"):
+        stem = stem[: -len("_colabfold2")]
     return stem
 
 
