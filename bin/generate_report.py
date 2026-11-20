@@ -507,6 +507,7 @@ model_name = {
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--type", dest="in_type")
+parser.add_argument("--tag", dest="file_tag", default=None, help="File-name tag; defaults to --type")
 parser.add_argument(
     "--generate_tsv", choices=["y", "n"], default="n", dest="generate_tsv"
 )
@@ -525,11 +526,12 @@ parser.set_defaults(output_dir="")
 parser.set_defaults(in_type="af3")
 parser.set_defaults(name="")
 args = parser.parse_args()
+file_tag = args.file_tag or args.in_type
 
 lddt_data, lddt_averages = pdb_to_lddt(args.pdb, args.generate_tsv)
 
 generate_output_images(
-    args.msa, lddt_data, args.name, args.output_dir, args.in_type, args.generate_tsv, args.pdb
+    args.msa, lddt_data, args.name, args.output_dir, file_tag, args.generate_tsv, args.pdb
 )
 
 print("generating html report...")
@@ -589,7 +591,7 @@ proteinfold_template = proteinfold_template.replace(
 )
 
 if not is_missing_input(args.msa):
-    image_path = f"{args.output_dir}/{args.name}_{args.in_type}_seq_coverage.png"
+    image_path = f"{args.output_dir}/{args.name}_{file_tag}_seq_coverage.png"
     with open(image_path, "rb") as in_file:
         data_uri = f"data:image/png;base64,{base64.b64encode(in_file.read()).decode('utf-8')}"
         proteinfold_template = proteinfold_template.replace(
@@ -624,6 +626,6 @@ else:
     proteinfold_template = re.sub(pattern, "", proteinfold_template, flags=re.DOTALL)
 
 with open(
-    f"{args.output_dir}/{args.name}_{args.in_type.lower()}_report.html", "w"
+    f"{args.output_dir}/{args.name}_{file_tag.lower()}_report.html", "w"
 ) as out_file:
     out_file.write(proteinfold_template)

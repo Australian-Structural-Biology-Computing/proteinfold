@@ -258,6 +258,12 @@ def main() -> None:
         "and PAE scores according to the checkpoint and runtime version.",
     )
     parser.add_argument(
+        "--msa-tag",
+        default="mmseqs",
+        help="MSA-tool shorthand baked into the published file names "
+        "(mmseqs, af2msa, af3msa, server, byo).",
+    )
+    parser.add_argument(
         "--require-pae",
         action="store_true",
         help="Require one PAE matrix per input. Some prediction modes do not emit PAE.",
@@ -269,7 +275,7 @@ def main() -> None:
     # Flat layout: predictions are identified by the mode shorthand in file
     # names rather than a per-mode directory.
     short = MODE_SHORTS.get(args.mode, args.mode)
-    suffix = f"_{short}"
+    suffix = f"_{short}_{args.msa_tag}"
     metrics_dir = args.outdir / "metrics"
     structures = sorted((args.outdir / "top_ranked_structures").glob(f"*{suffix}{args.extension}"))
     assert structures, f"{args.display_name} produced no {args.extension} structures"

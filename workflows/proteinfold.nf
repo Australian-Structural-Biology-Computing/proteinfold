@@ -87,6 +87,7 @@ workflow PROTEINFOLD {
         .map { meta, input ->
             def clean_meta = meta.clone()
             def msa = clean_meta.remove('msa')
+            clean_meta.msa_short = 'byo'
             [clean_meta, msa]
         }
 
@@ -111,7 +112,11 @@ workflow PROTEINFOLD {
 
     if (msa_tool == 'msa_server') {
         // colabfold_batch performs the MSA search against the webserver itself.
-        ch_msa_input = ch_input_by_ext.fasta.mix(ch_input_by_ext.json)
+        ch_msa_input = ch_input_by_ext.fasta.mix(ch_input_by_ext.json).map { meta, input ->
+            def tagged = meta.clone()
+            tagged.msa_short = 'server'
+            [tagged, input]
+        }
     } else if (msa_tool == 'colabfold_search') {
         MSA_COLABFOLD_SEARCH(
             ch_input_by_ext.fasta,
@@ -120,7 +125,11 @@ workflow PROTEINFOLD {
             ch_colabfold_db,
             ch_uniref30
         )
-        ch_msa_input = MSA_COLABFOLD_SEARCH.out.msa_json
+        ch_msa_input = MSA_COLABFOLD_SEARCH.out.msa_json.map { meta, input ->
+            def tagged = meta.clone()
+            tagged.msa_short = 'mmseqs'
+            [tagged, input]
+        }
     } else if (msa_tool == 'alphafold2_msa') {
         MSA_ALPHAFOLD2(
             ch_input_by_ext.fasta,
@@ -140,7 +149,11 @@ workflow PROTEINFOLD {
             ch_af2_pdb_seqres,
             ch_af2_uniprot
         )
-        ch_msa_input = MSA_ALPHAFOLD2.out.msa_json
+        ch_msa_input = MSA_ALPHAFOLD2.out.msa_json.map { meta, input ->
+            def tagged = meta.clone()
+            tagged.msa_short = 'af2msa'
+            [tagged, input]
+        }
     } else if (msa_tool == 'alphafold3_msa') {
         MSA_ALPHAFOLD3(
             ch_input_by_ext.fasta,
@@ -155,7 +168,11 @@ workflow PROTEINFOLD {
             ch_af3_rfam,
             ch_af3_rnacentral
         )
-        ch_msa_input = MSA_ALPHAFOLD3.out.msa_json
+        ch_msa_input = MSA_ALPHAFOLD3.out.msa_json.map { meta, input ->
+            def tagged = meta.clone()
+            tagged.msa_short = 'af3msa'
+            [tagged, input]
+        }
     } else {
         error("Unknown --msa_tool '${msa_tool}'. Choose one of: colabfold_search, alphafold2_msa, alphafold3_msa, or set --use_msa_server.")
     }
@@ -203,7 +220,14 @@ workflow PROTEINFOLD {
             // Server mode: colabfold_batch runs the webserver search itself;
             // JSON inputs are reduced to their protein chains first.
             ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA(ch_input_by_ext.json)
-            ch_af2_inference_input = ch_input_by_ext.fasta.mix(ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA.out.query_fasta).mix(ch_byo_msa)
+            ch_af2_inference_input = ch_input_by_ext.fasta
+                .mix(ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA.out.query_fasta)
+                .map { meta, input ->
+                    def tagged = meta.clone()
+                    tagged.msa_short = 'server'
+                    [tagged, input]
+                }
+                .mix(ch_byo_msa)
         } else {
             // Convert the MSA JSON into ColabFold a3m queries. Samples whose
             // JSON cannot serve the AF2 graph (non-protein entities, no

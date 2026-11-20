@@ -53,6 +53,7 @@ nextflow_pipeline {
                     '--mode', backend.mode,
                     '--display-name', "proteinfold ${backend.mode}${backend.model ? ' ' + backend.model : ''}",
                     '--extension', backend.extension ?: '.cif',
+                    '--msa-tag', 'mmseqs',
                     '--outdir', params.outdir.toString(),
                     '--samplesheet', params.input.toString(),
                     '--require-pae'
