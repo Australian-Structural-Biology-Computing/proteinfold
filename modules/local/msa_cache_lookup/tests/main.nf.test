@@ -13,6 +13,7 @@ nextflow_process {
             process {
                 """
                 input[0] = [[id: 'sample'], file(projectDir + '/modules/local/msa_cache_lookup/tests/query.fasta', checkIfExists: true)]
+                input[1] = params.msa_cache_dir
                 """
             }
         }
@@ -41,6 +42,7 @@ nextflow_process {
                 def helper = file(projectDir + '/bin/msa_cache.py')
                 assert ['python3', helper.toString(), 'store', fasta.toString(), 'revision', 'sha256:test-image', '--db-load-mode 1', cacheDir.toString(), payload.toString(), a3mPayload.toString()].execute().waitFor() == 0
                 input[0] = [[id: 'sample'], fasta]
+                input[1] = params.msa_cache_dir
                 """
             }
         }
@@ -88,6 +90,7 @@ nextflow_process {
                     archive.closeEntry()
                 }
                 input[0] = [[id: 'sample'], fasta]
+                input[1] = params.msa_cache_dir
                 """
             }
         }
@@ -120,6 +123,7 @@ nextflow_process {
                 assert ['python3', helper.toString(), 'store', fasta.toString(), 'revision', 'sha256:test-image', '', cacheDir.toString(), payload.toString(), a3mPayload.toString()].execute().waitFor() == 0
                 cacheDir.listFiles().find { it.name.endsWith('.zip') }.text = '{"sequences":[]}'
                 input[0] = [[id: 'sample'], fasta]
+                input[1] = params.msa_cache_dir
                 """
             }
         }

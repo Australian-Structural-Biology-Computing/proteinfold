@@ -9,6 +9,7 @@ process MMSEQS_COLABFOLDSEARCH {
     tuple val(meta), path(fasta)
     path ('db/*')
     path ('uniref30/*')
+    val cache_dir
 
     output:
     tuple val(meta), path("**.a3m"), emit: a3m
@@ -25,10 +26,10 @@ process MMSEQS_COLABFOLDSEARCH {
         error("Local MMSEQS_COLABFOLDSEARCH module does not support Conda. Please use Docker / Singularity / Podman instead.")
     }
     def args = task.ext.args ?: ''
-    def cache_dir = MsaCache.directory(params) ?: ''
+    def dir = cache_dir ?: ''
     def cache_id = task.ext.msa_cache_id ?: ''
     def tool_id = task.ext.msa_cache_tool_id ?: ''
-    def quotedDir = "'${cache_dir.toString().replace("'", "'\\''")}'"
+    def quotedDir = "'${dir.toString().replace("'", "'\\''")}'"
     def quotedId = "'${cache_id.toString().replace("'", "'\\''")}'"
     def quotedToolId = "'${tool_id.toString().replace("'", "'\\''")}'"
     def quotedArgs = "'${args.toString().replace("'", "'\\''")}'"
@@ -132,6 +133,7 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
     tuple val(batch_meta), path(fastas)
     path ('db/*')
     path ('uniref30/*')
+    val cache_dir
 
     output:
     tuple val(batch_meta), path("results/*.a3m"), emit: a3m
@@ -147,10 +149,10 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
         error("Local MMSEQS_COLABFOLDSEARCH_BATCH module does not support Conda. Please use Docker / Singularity / Podman instead.")
     }
     def args = task.ext.args ?: ''
-    def cache_dir = MsaCache.directory(params) ?: ''
+    def dir = cache_dir ?: ''
     def cache_id = task.ext.msa_cache_id ?: ''
     def tool_id = task.ext.msa_cache_tool_id ?: ''
-    def quotedDir = "'${cache_dir.toString().replace("'", "'\\''")}'"
+    def quotedDir = "'${dir.toString().replace("'", "'\\''")}'"
     def quotedId = "'${cache_id.toString().replace("'", "'\\''")}'"
     def quotedToolId = "'${tool_id.toString().replace("'", "'\\''")}'"
     def quotedArgs = "'${args.toString().replace("'", "'\\''")}'"

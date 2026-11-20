@@ -8,18 +8,19 @@ process MSA_CACHE_LOOKUP {
 
     input:
     tuple val(meta), path(fasta)
+    val cache_dir
 
     output:
     tuple val(meta), path(fasta), path('cache_result')
 
     script:
-    def cache_dir = MsaCache.directory(params) ?: ''
+    def dir = cache_dir ?: ''
     def cache_id = params.msa_cache_id ?: ''
     def tool_id = params.msa_cache_tool_id ?: ''
     def args = task.ext.args ?: ''
     def artifact = task.ext.msa_cache_artifact ?: 'af3_json'
     def extension = artifact == 'a3m' ? 'a3m' : 'json'
-    def quotedDir = "'${cache_dir.toString().replace("'", "'\\''")}'"
+    def quotedDir = "'${dir.toString().replace("'", "'\\''")}'"
     def quotedId = "'${cache_id.toString().replace("'", "'\\''")}'"
     def quotedToolId = "'${tool_id.toString().replace("'", "'\\''")}'"
     def quotedArgs = "'${args.toString().replace("'", "'\\''")}'"
@@ -32,13 +33,13 @@ process MSA_CACHE_LOOKUP {
     """
 
     stub:
-    def cache_dir = MsaCache.directory(params) ?: ''
+    def dir = cache_dir ?: ''
     def cache_id = params.msa_cache_id ?: ''
     def tool_id = params.msa_cache_tool_id ?: ''
     def args = task.ext.args ?: ''
     def artifact = task.ext.msa_cache_artifact ?: 'af3_json'
     def extension = artifact == 'a3m' ? 'a3m' : 'json'
-    def quotedDir = "'${cache_dir.toString().replace("'", "'\\''")}'"
+    def quotedDir = "'${dir.toString().replace("'", "'\\''")}'"
     def quotedId = "'${cache_id.toString().replace("'", "'\\''")}'"
     def quotedToolId = "'${tool_id.toString().replace("'", "'\\''")}'"
     def quotedArgs = "'${args.toString().replace("'", "'\\''")}'"
