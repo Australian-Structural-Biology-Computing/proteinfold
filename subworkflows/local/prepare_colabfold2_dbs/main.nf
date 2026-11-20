@@ -63,6 +63,26 @@ process DOWNLOAD_COLABFOLD2_AF2_WEIGHTS {
     """
 }
 
+// ColabFold's AlphaFold2 parameter cache: <root>/params holds the npz
+// files plus the success markers its own downloader writes and skips on.
+def af2CacheReady(root, variant) {
+    def markers = [
+        'alphafold2_ptm'        : ['download_finished.txt', 'alphafold_params'],
+        'alphafold2'            : ['download_finished.txt', 'alphafold_params'],
+        'alphafold2_multimer_v3': ['download_complexes_multimer_v3_finished.txt', 'alphafold_multimer_params'],
+        'alphafold2_multimer_v2': ['download_complexes_multimer_v2_finished.txt', 'alphafold_multimer_params'],
+        'alphafold2_multimer_v1': ['download_complexes_multimer_v1_finished.txt', 'alphafold_multimer_params'],
+    ]
+    def entry = markers[variant]
+    if (entry == null) {
+        return false
+    }
+    def params_dir = new File(root.toString(), 'params')
+    def marker = new File(params_dir, entry[0])
+    def npz_present = params_dir.listFiles()?.any { it.name.startsWith(entry[1]) && it.name.endsWith('.npz') }
+    return marker.isFile() && npz_present
+}
+
 workflow PREPARE_COLABFOLD2_DBS {
     take:
     colabfold2_params_path
@@ -122,6 +142,15 @@ workflow PREPARE_COLABFOLD2_DBS {
         } else if (workflow.stubRun) {
             af2Models.each { model ->
                 ch_params_specs = ch_params_specs.mix(channel.value([model, file('assets/dummy_db_dir', type: 'dir', checkIfExists: true)]))
+            }
+        } else if (localModels && af2Variants.every { variant -> af2CacheReady(localModels, variant) }) {
+            // Reuse a complete implicit cache: colabfold's own success
+            // markers (the same ones its downloader skips on) plus the
+            // parameter files gate the reuse, exactly like the AF3-family
+            // branch above.
+            file("${localModels}/params", type: 'dir', checkIfExists: true)
+            af2Models.each { model ->
+                ch_params_specs = ch_params_specs.mix(channel.value([model, file(localModels, type: 'dir', checkIfExists: true)]))
             }
         } else {
             DOWNLOAD_COLABFOLD2_AF2_WEIGHTS(af2Variants.unique())

@@ -55,18 +55,25 @@ If `--colabfold2_params_path` is not set and no weights cache is available under
 <summary>Directory structure</summary>
 
 ```
-<colabfold2_params_path>/params/af3/
-├── libcifpp/
-│   └── components.cif
-├── esmc_300m|esmc_600m/
-│   └── <variant>.bin.zst
-└── <model>[-int8]/
-    ├── <model>.bin.zst
-    ├── <model>.lm.npz
-    └── download_<model>_<precision>_finished.txt
+<colabfold2_params_path>/params/
+├── alphafold_params*.npz                               (alphafold2 / alphafold2_ptm)
+├── alphafold_multimer_params*.npz                      (alphafold2_multimer_v3)
+├── download_finished.txt                               (alphafold2_ptm marker)
+├── download_complexes_multimer_v3_finished.txt         (alphafold2_multimer_v3 marker)
+└── af3/
+    ├── libcifpp/
+    │   └── components.cif
+    ├── esmc_300m|esmc_600m/
+    │   └── <variant>.bin.zst
+    └── <model>[-int8]/
+        ├── <model>.bin.zst
+        ├── <model>.lm.npz
+        └── download_<model>_<precision>_finished.txt
 ```
 
-The `alphafold2` modes use ColabFold's own AlphaFold2 parameter layout instead (`<colabfold2_params_path>/params/` with the `alphafold_params_*.npz` files written by `colabfold.download.download_alphafold_params`).
+The `alphafold2` modes use ColabFold's own AlphaFold2 parameter layout: `<root>/params/` with the `alphafold_params_*.npz` files and success markers written by `colabfold.download.download_alphafold_params` (the same markers its downloader skips on). When only `--db`/`--colabfold_db` is given, the implicit `<colabfold_db>/colabfold2_models` cache is checked for those markers too, for the AlphaFold2 parameter sets exactly as for the AlphaFold3-family weights — a complete cache avoids the download entirely; a partial one triggers a fresh task-local download of everything.
+
+Downloaded weights are consumed directly from the task work directory and are not published into the run outputs.
 
 Chai1 and Boltz2 use revision-qualified completion markers instead: `download_chai1_<precision>_r3_finished.txt` and `download_boltz2_<precision>_r1_finished.txt`.
 
