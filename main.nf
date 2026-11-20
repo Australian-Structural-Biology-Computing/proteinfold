@@ -36,6 +36,7 @@ include { PIPELINE_COMPLETION              } from './subworkflows/local/utils_nf
 include { modelcifInput                    } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { modelcifDummyMetric              } from './subworkflows/local/utils_nfcore_proteinfold_pipeline'
 include { POST_PROCESSING                  } from './subworkflows/local/post_processing'
+include { BENCHMARK                        } from './subworkflows/local/benchmark'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -53,7 +54,14 @@ workflow NFCORE_PROTEINFOLD {
     samplesheet  // channel: samplesheet read in from --input
 
     main:
-    ch_samplesheet       = samplesheet
+    ch_references = samplesheet
+        .filter { meta, fasta -> meta.reference }
+        .map { meta, fasta -> [meta.id, meta.reference] }
+    ch_samplesheet = samplesheet.map { meta, fasta ->
+        def prediction_meta = meta.clone()
+        prediction_meta.remove('reference')
+        [prediction_meta, fasta]
+    }
     ch_multiqc           = channel.empty()
     ch_report_input      = channel.empty()
     ch_top_ranked_model  = channel.empty()
@@ -558,6 +566,17 @@ workflow NFCORE_PROTEINFOLD {
     //
     // POST PROCESSING: generate visualisation reports
     //
+    // Called unconditionally: predictions for samples without a reference are dropped inside the
+    // subworkflow, and every reference-declaring sample must reach the single-chain checks in
+    // bin/benchmark_structure.py.
+    BENCHMARK(
+        ch_top_ranked_model,
+        ch_references,
+        colabfold2_public_mode,
+        requested_modes.collect { it.trim() },
+        params.benchmark_strict
+    )
+
     ch_multiqc_config        = channel.fromPath("$projectDir/assets/multiqc_config.yml", checkIfExists: true).first()
     ch_multiqc_custom_config = params.multiqc_config ? channel.fromPath( params.multiqc_config, checkIfExists: true ).first()  : channel.empty()
     ch_multiqc_logo          = params.multiqc_logo   ? channel.fromPath( params.multiqc_logo ).first()    : channel.empty()
@@ -607,7 +626,11 @@ workflow NFCORE_PROTEINFOLD {
     )
 
     emit:
-    multiqc_report = POST_PROCESSING.out.multiqc_report
+    multiqc_report           = POST_PROCESSING.out.multiqc_report
+    benchmark_scores         = BENCHMARK.out.scores
+    benchmark_summary        = BENCHMARK.out.summary
+    benchmark_missing        = BENCHMARK.out.missing
+    benchmark_missing_report = BENCHMARK.out.missing_report
 }
 
 /*

@@ -36,6 +36,10 @@ User-facing outputs are largely consistent across modes.
 
 </details>
 
+### Benchmarking
+
+For each sample with a `reference` samplesheet entry, `benchmark/<MODE>/<SEQUENCE NAME>.json` contains the OpenStructure comparison of the top-ranked prediction with the reference. The `lddt` and `tm_score` fields are scores between 0 and 1; the JSON also records chain mappings, sequence alignments, settings, and the OpenStructure version. lDDT uses OpenStructure's default stereochemical checks. TM-score uses OpenStructure's built-in US-align implementation. `benchmark/benchmark_summary.csv` provides the sample, mode, lDDT, and TM-score for every completed comparison in one table. If a selected method emits no top-ranked structure for a referenced sample, no benchmark JSON is created and the pipeline logs a warning after the prediction channels close.
+
 ### ColabFold2
 
 ColabFold2 outputs are published directly under the selected public mode token, for example `colabfold2-alphafold3/<SEQUENCE NAME>/`, `colabfold2-boltz2/<SEQUENCE NAME>/`, or `opendde/<SEQUENCE NAME>/`. All three ESMFold2 model selections publish under `esmfold2/<SEQUENCE NAME>/`.

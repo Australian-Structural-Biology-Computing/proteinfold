@@ -1,0 +1,20 @@
+{
+    "benchmarks only samples with references": {
+        "content": [
+            {
+                "NFCORE_PROTEINFOLD:BENCHMARK:BENCHMARK_STRUCTURE:openstructure": null,
+                "NFCORE_PROTEINFOLD:ESMFOLD:RUN_ESMFOLD:biopython": 1.87,
+                "NFCORE_PROTEINFOLD:ESMFOLD:RUN_ESMFOLD:esm-fold": null,
+                "NFCORE_PROTEINFOLD:ESMFOLD:RUN_ESMFOLD:numpy": "2.5.1",
+                "NFCORE_PROTEINFOLD:ESMFOLD:RUN_ESMFOLD:openfold": null,
+                "NFCORE_PROTEINFOLD:ESMFOLD:RUN_ESMFOLD:python": "3.13.11",
+                "NFCORE_PROTEINFOLD:ESMFOLD:RUN_ESMFOLD:pytorch": "unknown"
+            }
+        ],
+        "timestamp": "2026-11-20T16:04:21.934815529",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.6"
+        }
+    }
+}

@@ -123,6 +123,12 @@ ${colors.purple}  nf-core/proteinfold ${workflow.manifest.version}${colors.reset
             // If meta.id is missing or empty, meta.sequence is used as the identifier.
             def identifier = meta.id ? meta.id : meta.sequence
             def normalized_meta = [id: identifier]
+            if (meta.reference) {
+                if (params.split_fasta) {
+                    error("The 'reference' samplesheet column cannot be used with --split_fasta.")
+                }
+                normalized_meta.reference = meta.reference
+            }
             if (msa) {
                 if (!params.mode.toLowerCase().split(',').collect { it.trim() }.contains('colabfold')) {
                     error("The 'msa' samplesheet column is currently supported only with --mode colabfold.")
