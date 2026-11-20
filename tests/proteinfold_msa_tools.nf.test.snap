@@ -3,34 +3,37 @@
         "content": [
             5,
             [
-                "alphafold3",
-                "alphafold3/top_ranked_structures",
-                "alphafold3/top_ranked_structures/T1024.cif",
-                "alphafold3/top_ranked_structures/T1026.cif",
                 "multiqc",
                 "multiqc/multiqc_data",
                 "multiqc/multiqc_data/.stub",
+                "multiqc/multiqc_data/proteinfold_opendde_generalstats_mqc.json",
+                "multiqc/multiqc_data/proteinfold_opendde_plddt_lineplot_mqc.json",
                 "multiqc/multiqc_plots",
                 "multiqc/multiqc_plots/.stub",
                 "multiqc/multiqc_report.html",
                 "pipeline_info",
                 "pipeline_info/nf_core_proteinfold_software_mqc_versions.yml",
                 "reports",
-                "reports/T1024_colabfold2_report.html",
-                "reports/T1026_colabfold2_report.html"
+                "reports/T1024_odde_server_report.html",
+                "reports/T1026_odde_server_report.html",
+                "top_ranked_structures",
+                "top_ranked_structures/T1024_odde_server.cif",
+                "top_ranked_structures/T1026_odde_server.cif"
             ],
             [
-                "T1024.cif:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026.cif:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "proteinfold_opendde_generalstats_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "proteinfold_opendde_plddt_lineplot_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_colabfold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_colabfold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
+                "T1024_odde_server_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026_odde_server_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1024_odde_server.cif:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026_odde_server.cif:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-18T20:35:21.896676579",
+        "timestamp": "2026-11-21T01:06:42.939648722",
         "meta": {
-            "nf-test": "0.9.2",
+            "nf-test": "0.9.4",
             "nextflow": "25.10.4"
         }
     },
@@ -38,10 +41,6 @@
         "content": [
             10,
             [
-                "alphafold3",
-                "alphafold3/top_ranked_structures",
-                "alphafold3/top_ranked_structures/T1024.cif",
-                "alphafold3/top_ranked_structures/T1026.cif",
                 "msa",
                 "msa/T1024_mmseqs.a3m",
                 "msa/T1024_mmseqs.json",
@@ -50,14 +49,19 @@
                 "multiqc",
                 "multiqc/multiqc_data",
                 "multiqc/multiqc_data/.stub",
+                "multiqc/multiqc_data/proteinfold_opendde_generalstats_mqc.json",
+                "multiqc/multiqc_data/proteinfold_opendde_plddt_lineplot_mqc.json",
                 "multiqc/multiqc_plots",
                 "multiqc/multiqc_plots/.stub",
                 "multiqc/multiqc_report.html",
                 "pipeline_info",
                 "pipeline_info/nf_core_proteinfold_software_mqc_versions.yml",
                 "reports",
-                "reports/T1024_colabfold2_report.html",
-                "reports/T1026_colabfold2_report.html"
+                "reports/T1024_odde_mmseqs_report.html",
+                "reports/T1026_odde_mmseqs_report.html",
+                "top_ranked_structures",
+                "top_ranked_structures/T1024_odde_mmseqs.cif",
+                "top_ranked_structures/T1026_odde_mmseqs.cif"
             ],
             [
                 "T1024_odde_mmseqs_1_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -83,9 +87,13 @@
                 "T1026_mmseqs.a3m:md5,2d5bea1d28ffa33dc01f46541bedc592",
                 "T1026_mmseqs.json:md5,da95d1d89a8dec9b6eaa666b64c74d66",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "proteinfold_opendde_generalstats_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "proteinfold_opendde_plddt_lineplot_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_colabfold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_colabfold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
+                "T1024_odde_mmseqs_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026_odde_mmseqs_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1024_odde_mmseqs.cif:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026_odde_mmseqs.cif:md5,d41d8cd98f00b204e9800998ecf8427e"
             ],
             {
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "3.12.16",
@@ -110,50 +118,52 @@
         "content": [
             9,
             [
-                "alphafold3",
-                "alphafold3/top_ranked_structures",
-                "alphafold3/top_ranked_structures/T1024.cif",
-                "alphafold3/top_ranked_structures/T1026.cif",
                 "msa",
-                "msa/alphafold2_msa",
-                "msa/alphafold2_msa/T1024",
-                "msa/alphafold2_msa/T1026",
+                "msa/T1024_af2msa",
+                "msa/T1026_af2msa",
                 "multiqc",
                 "multiqc/multiqc_data",
                 "multiqc/multiqc_data/.stub",
+                "multiqc/multiqc_data/proteinfold_opendde_generalstats_mqc.json",
+                "multiqc/multiqc_data/proteinfold_opendde_plddt_lineplot_mqc.json",
                 "multiqc/multiqc_plots",
                 "multiqc/multiqc_plots/.stub",
                 "multiqc/multiqc_report.html",
                 "pipeline_info",
                 "pipeline_info/nf_core_proteinfold_software_mqc_versions.yml",
                 "reports",
-                "reports/T1024_colabfold2_report.html",
-                "reports/T1026_colabfold2_report.html"
+                "reports/T1024_odde_af2msa_report.html",
+                "reports/T1026_odde_af2msa_report.html",
+                "top_ranked_structures",
+                "top_ranked_structures/T1024_odde_af2msa.cif",
+                "top_ranked_structures/T1026_odde_af2msa.cif"
             ],
             [
-                "T1024.cif:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026.cif:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "proteinfold_opendde_generalstats_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "proteinfold_opendde_plddt_lineplot_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_colabfold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_colabfold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
+                "T1024_odde_af2msa_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026_odde_af2msa_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1024_odde_af2msa.cif:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026_odde_af2msa.cif:md5,d41d8cd98f00b204e9800998ecf8427e"
             ],
             {
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "3.12.16",
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "3.12.16",
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT_BATCH:generate_report.py": "3.12.7",
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT_BATCH:python": "3.12.7",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:alphafold3_colabfold": "3.1.18",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:colabfold": "1.6.3",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:colabfold_commit": "e9e8bd0b8b6c26f9865808070342d0d785dada2e",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:jax": "0.11.2",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:alphafold2": "c77e5d2a8961d1a353632c462914ff0a32a950f6",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:biopython": 1.79,
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:numpy": "1.24.3",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:python": "3.11.17"
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:python": "3.11.17",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:alphafold3_colabfold": "3.1.18",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:colabfold": "1.6.3",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:colabfold_commit": "e9e8bd0b8b6c26f9865808070342d0d785dada2e",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-19T16:40:53.153290732",
+        "timestamp": "2026-11-21T01:05:18.702016952",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -163,45 +173,47 @@
         "content": [
             8,
             [
-                "alphafold3",
-                "alphafold3/top_ranked_structures",
-                "alphafold3/top_ranked_structures/rich_sample.cif",
                 "msa",
-                "msa/alphafold2_msa",
-                "msa/alphafold2_msa/rich_sample",
+                "msa/rich_sample_af2msa",
                 "multiqc",
                 "multiqc/multiqc_data",
                 "multiqc/multiqc_data/.stub",
+                "multiqc/multiqc_data/proteinfold_opendde_generalstats_mqc.json",
+                "multiqc/multiqc_data/proteinfold_opendde_plddt_lineplot_mqc.json",
                 "multiqc/multiqc_plots",
                 "multiqc/multiqc_plots/.stub",
                 "multiqc/multiqc_report.html",
                 "pipeline_info",
                 "pipeline_info/nf_core_proteinfold_software_mqc_versions.yml",
                 "reports",
-                "reports/rich_sample_colabfold2_report.html"
+                "reports/rich_sample_odde_af2msa_report.html",
+                "top_ranked_structures",
+                "top_ranked_structures/rich_sample_odde_af2msa.cif"
             ],
             [
-                "rich_sample.cif:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "proteinfold_opendde_generalstats_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "proteinfold_opendde_plddt_lineplot_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "rich_sample_colabfold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
+                "rich_sample_odde_af2msa_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "rich_sample_odde_af2msa.cif:md5,d41d8cd98f00b204e9800998ecf8427e"
             ],
             {
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "3.12.16",
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "3.12.16",
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT_BATCH:generate_report.py": "3.12.7",
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT_BATCH:python": "3.12.7",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:alphafold3_colabfold": "3.1.18",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:colabfold": "1.6.3",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:colabfold_commit": "e9e8bd0b8b6c26f9865808070342d0d785dada2e",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:jax": "0.11.2",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:alphafold2": "c77e5d2a8961d1a353632c462914ff0a32a950f6",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:biopython": 1.79,
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:numpy": "1.24.3",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:python": "3.11.17"
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:python": "3.11.17",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:alphafold3_colabfold": "3.1.18",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:colabfold": "1.6.3",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:colabfold_commit": "e9e8bd0b8b6c26f9865808070342d0d785dada2e",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-19T16:41:27.64605488",
+        "timestamp": "2026-11-21T01:06:01.773768072",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -211,45 +223,47 @@
         "content": [
             11,
             [
-                "alphafold3",
-                "alphafold3/top_ranked_structures",
-                "alphafold3/top_ranked_structures/T1024.cif",
-                "alphafold3/top_ranked_structures/T1026.cif",
                 "fasta",
                 "fasta/T1024.json",
                 "fasta/T1026.json",
                 "msa",
-                "msa/alphafold3_msa",
-                "msa/alphafold3_msa/T1024",
-                "msa/alphafold3_msa/T1024/T1024_data.json",
-                "msa/alphafold3_msa/T1026",
-                "msa/alphafold3_msa/T1026/T1026_data.json",
+                "msa/T1024_af3msa",
+                "msa/T1024_af3msa/T1024_data.json",
+                "msa/T1026_af3msa",
+                "msa/T1026_af3msa/T1026_data.json",
                 "multiqc",
                 "multiqc/multiqc_data",
                 "multiqc/multiqc_data/.stub",
+                "multiqc/multiqc_data/proteinfold_opendde_generalstats_mqc.json",
+                "multiqc/multiqc_data/proteinfold_opendde_plddt_lineplot_mqc.json",
                 "multiqc/multiqc_plots",
                 "multiqc/multiqc_plots/.stub",
                 "multiqc/multiqc_report.html",
                 "pipeline_info",
                 "pipeline_info/nf_core_proteinfold_software_mqc_versions.yml",
                 "reports",
-                "reports/T1024_colabfold2_report.html",
-                "reports/T1026_colabfold2_report.html",
+                "reports/T1024_odde_af3msa_report.html",
+                "reports/T1026_odde_af3msa_report.html",
+                "top_ranked_structures",
+                "top_ranked_structures/T1024_odde_af3msa.cif",
+                "top_ranked_structures/T1026_odde_af3msa.cif",
                 "validate",
                 "validate/T1024.json",
                 "validate/T1026.json"
             ],
             [
-                "T1024.cif:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026.cif:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_data.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_data.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "proteinfold_opendde_generalstats_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "proteinfold_opendde_plddt_lineplot_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_colabfold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_colabfold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1024_odde_af3msa_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026_odde_af3msa_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1024_odde_af3msa.cif:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026_odde_af3msa.cif:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026.json:md5,d41d8cd98f00b204e9800998ecf8427e"
             ],
@@ -258,13 +272,13 @@
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "3.12.16",
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT_BATCH:generate_report.py": "3.12.7",
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT_BATCH:python": "3.12.7",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:alphafold3_colabfold": "3.1.18",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:colabfold": "1.6.3",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:colabfold_commit": "e9e8bd0b8b6c26f9865808070342d0d785dada2e",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD3:jax": "0.11.2"
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:alphafold3_colabfold": "3.1.18",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:colabfold": "1.6.3",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:colabfold_commit": "e9e8bd0b8b6c26f9865808070342d0d785dada2e",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-19T16:41:10.971305748",
+        "timestamp": "2026-11-21T01:05:41.515880183",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"

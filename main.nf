@@ -322,28 +322,31 @@ workflow NFCORE_PROTEINFOLD {
             (batch_metas instanceof List ? batch_metas : [batch_metas]).collect { [it, scalars, arrays] }
         }
 
+    // One batch per public mode: report / ModelCIF tasks stage that mode's
+    // structures, a3m and packed stores only, so same-sample files from
+    // different modes never collide in one task.
     ch_packed_batches = PROTEINFOLD.out.pdb
         .join(PROTEINFOLD.out.msa)
         .join(ch_metrics_per_sample)
-        .map { meta, structs, a3m, scalars, arrays -> [meta.id, [meta, structs, a3m, scalars, arrays]] }
-        .collect(flat: false)
-        .flatMap { rows ->
-            def sorted = rows.sort { a, b -> a[0] <=> b[0] }
+        .map { meta, structs, a3m, scalars, arrays -> [meta.model, [meta, structs, a3m, scalars, arrays]] }
+        .groupTuple()
+        .flatMap { model, rows ->
+            def sorted = rows.sort { a, b -> (a[0].id as String) <=> (b[0].id as String) }
             def effective = report_batch == -1 ? Math.max(1, sorted.size()) : report_batch
             sorted.collate(effective).collect { batch ->
-                def metas = batch.collect { it[1][0] }
-                def stores = (batch.collect { it[1][3] } + batch.collect { it[1][4] }).unique { it.name }
+                def metas = batch.collect { it[0] }
+                def stores = (batch.collect { it[3] } + batch.collect { it[4] }).unique { it.name }
                 def manifest = batch.collect { b ->
-                    def m = b[1][0]
-                    "${m.id}\t${b[1][3].name}\t${b[1][4].name}\t${m.mode_short}_${m.msa_short}"
+                    def m = b[0]
+                    "${m.id}\t${b[3].name}\t${b[4].name}\t${m.mode_short}_${m.msa_short}"
                 }.join('\n')
                 // The alphafold2 backends write PDB structures; the AF3-family writes mmCIF.
-                def struct_ext = (metas[0].model == 'alphafold2') ? 'pdb' : 'cif'
-                [metas, batch.collect { it[1][1] }.flatten(), batch.collect { it[1][2] }, stores, manifest, struct_ext]
+                def struct_ext = (model == 'alphafold2') ? 'pdb' : 'cif'
+                [metas, batch.collect { it[1] }.flatten(), batch.collect { it[2] }, stores, manifest, struct_ext]
             }
         }
-        .map { metas, structs, a3ms, stores, manifest ->
-            [metas.collect { m -> def c2 = m.clone(); c2.msa_tool = selected_msa_tool; c2 }, structs, a3ms, stores, manifest]
+        .map { metas, structs, a3ms, stores, manifest, struct_ext ->
+            [metas.collect { m -> def c2 = m.clone(); c2.msa_tool = selected_msa_tool; c2 }, structs, a3ms, stores, manifest, struct_ext]
         }
 
     POST_PROCESSING(
