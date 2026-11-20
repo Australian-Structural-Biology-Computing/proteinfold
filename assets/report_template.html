@@ -783,23 +783,33 @@
     }
   };
 
-  // Highlight ligand runs on a horizontal PAE axis with a rose band so the
+  // Highlight ligand runs along a PAE axis with a rose band so the
   // fixed-width lanes read as "small molecule tokens live here".
-  const drawLigandRuns = (ctx, plot, coord) => {
+  const drawLigandRuns = (ctx, plot, coord, horizontal) => {
     if (!LIGAND_RUNS.length) return;
     const bandSize = 14;
     ctx.save();
     LIGAND_RUNS.forEach((run) => {
-      const x0 = coord.pos(run.start);
-      const width = coord.end(run.end) - x0;
+      const a0 = coord.pos(run.start);
+      const size = coord.end(run.end) - a0;
       ctx.fillStyle = "#fda4af";
-      ctx.fillRect(x0, plot.y - bandSize, width, bandSize);
-      if (width >= 26) {
+      let cx;
+      let cy;
+      if (horizontal) {
+        ctx.fillRect(a0, plot.y - bandSize, size, bandSize);
+        cx = a0 + size / 2;
+        cy = plot.y - bandSize / 2;
+      } else {
+        ctx.fillRect(plot.x - bandSize, a0, bandSize, size);
+        cx = plot.x - bandSize / 2;
+        cy = a0 + size / 2;
+      }
+      if (size >= 26) {
         ctx.fillStyle = "#9f1239";
         ctx.font = "9px system-ui, sans-serif";
         ctx.textBaseline = "middle";
         ctx.save();
-        ctx.translate(x0 + width / 2, plot.y - bandSize / 2);
+        ctx.translate(cx, cy);
         ctx.rotate(-Math.PI / 2);
         ctx.fillText(run.label, 0, 0);
         ctx.restore();
@@ -1018,13 +1028,23 @@
     let laneCanvas = null;
     const buildLaneCanvas = () => {
       if (!lanes) return;
+      const size = Math.max(1, Math.ceil(lanes.total));
+      // Pass 1: warp token columns into lane columns (rows stay tokens)
       laneCanvas = document.createElement("canvas");
-      laneCanvas.width = Math.max(1, Math.ceil(lanes.total));
+      laneCanvas.width = size;
       laneCanvas.height = n;
       const lctx = laneCanvas.getContext("2d");
       lctx.imageSmoothingEnabled = false;
       for (let ix = 0; ix < n; ix++) {
         lctx.drawImage(off, ix, 0, 1, n, lanes.starts[ix], 0, Math.max(lanes.widths[ix], 0.02), n);
+      }
+      // Pass 2: warp the remaining token rows into lane rows
+      const intermediate = document.createElement("canvas");
+      intermediate.width = size;
+      intermediate.height = n;
+      intermediate.getContext("2d").drawImage(laneCanvas, 0, 0);
+      for (let ix = 0; ix < n; ix++) {
+        lctx.drawImage(intermediate, 0, ix, size, 1, 0, lanes.starts[ix], size, Math.max(lanes.widths[ix], 0.02));
       }
     };
 
@@ -1058,8 +1078,8 @@
         for (const segB of CHAIN_SEGMENTS) {
           const x0 = lanes.pos(segA.start);
           const x1 = lanes.end(segA.end);
-          const y0 = plot.y + (1 - (segB.end + 1) / n) * plot.side;
-          const y1 = plot.y + (1 - segB.start / n) * plot.side;
+          const y0 = plot.y + lanes.starts[segB.start];
+          const y1 = plot.y + lanes.starts[segB.end] + lanes.widths[segB.end];
           const value = table[`${segA.chain}|${segB.chain}`];
           const color =
             value !== undefined && value !== null && value !== ""
@@ -1108,15 +1128,15 @@
       cellAt: (ev) => {
         const rect = ev.currentTarget.getBoundingClientRect();
         const col = lanes.indexAt(ev.clientX - rect.left - plot.x);
-        const rowFloat = (ev.clientY - rect.top - plot.y) / plot.cell;
-        const row = Math.floor(rowFloat);
+        const row = lanes.indexAt(ev.clientY - rect.top - plot.y);
         return { col, row };
       },
       inPlot: (cell) =>
-        !!cell && cell.row >= 0 && cell.row < n && cell.col !== null && cell.col >= 0 && cell.col < n,
+        !!cell && cell.row !== null && cell.col !== null && cell.row >= 0 && cell.row < n && cell.col >= 0 && cell.col < n,
 
       lanePos: (ix) => lanes.pos(ix),
       laneWidth: (ix) => lanes.widths[ix],
+      laneStart: (ix) => lanes.starts[ix],
 
       showTooltip(ev, cell) {
         tooltip.innerHTML = "";
@@ -1180,6 +1200,8 @@
 
       setMode(next) {
         mode = next;
+        // A tooltip rendered for the previous colouring would be stale
+        tooltip.classList.add("hidden");
         this.draw();
       },
       setScores(next) {
@@ -1210,7 +1232,6 @@
         canvas.style.width = `${canvas.width}px`;
         canvas.style.height = `${canvas.height}px`;
         plot.side = side;
-        plot.cell = side / n;
         layoutLanes(side);
         buildLaneCanvas();
         this.draw();
@@ -1240,7 +1261,7 @@
 
         ctx.imageSmoothingEnabled = false;
         if (mode === "pae") {
-          ctx.drawImage(laneCanvas, plot.x, plot.y, lanes.total, plot.side);
+          ctx.drawImage(laneCanvas, plot.x, plot.y, lanes.total, lanes.total);
         } else {
           drawScoreBlocks();
         }
@@ -1267,6 +1288,17 @@
               pos: (ix) => lanes.pos(ix),
               end: (ix) => lanes.end(ix),
             },
+            true,
+          );
+          drawLigandRuns(
+            ctx,
+            plot,
+            {
+              count: n,
+              pos: (ix) => plot.y + lanes.starts[ix],
+              end: (ix) => plot.y + lanes.starts[ix] + lanes.widths[ix],
+            },
+            false,
           );
         }
         drawChainBands(
@@ -1277,9 +1309,8 @@
           CHAIN_SEGMENTS,
           {
             count: n,
-            // rows stay uniform
-            pos: (ix) => plot.y + (1 - (ix + 1) / n) * plot.side,
-            end: (ix) => plot.y + (1 - ix / n) * plot.side,
+            pos: (ix) => plot.y + lanes.starts[ix],
+            end: (ix) => plot.y + lanes.starts[ix] + lanes.widths[ix],
           },
           (ix) => RESIDUES[ix][1],
         );
@@ -1302,7 +1333,7 @@
           ctx.fillStyle = "rgba(234, 88, 12, 0.22)";
           this.highlightRows.forEach((ix) => {
             if (ix < 0 || ix >= n) return;
-            ctx.fillRect(plot.x, plot.y + ix * plot.cell, plot.side, plot.cell);
+            ctx.fillRect(plot.x, plot.y + lanes.starts[ix], plot.side, Math.max(lanes.widths[ix], 0.5));
           });
           this.highlightCols.forEach((ix) => {
             if (ix < 0 || ix >= n) return;
@@ -1319,16 +1350,18 @@
           const c1 = Math.max(a.col, c.col);
           const x0 = lanes.pos(c0);
           const x1 = lanes.end(c1);
+          const y0 = plot.y + lanes.starts[r0];
+          const y1 = plot.y + lanes.starts[r1] + lanes.widths[r1];
           ctx.fillStyle = "rgba(79, 70, 229, 0.18)";
-          ctx.fillRect(x0, plot.y + r0 * plot.cell, x1 - x0, (r1 - r0 + 1) * plot.cell);
+          ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
           ctx.strokeStyle = "rgba(79, 70, 229, 0.9)";
           ctx.lineWidth = 1.5;
-          ctx.strokeRect(x0, plot.y + r0 * plot.cell, x1 - x0, (r1 - r0 + 1) * plot.cell);
+          ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
         } else if (this.hover && this.hover.col !== null) {
           ctx.strokeStyle = "rgba(31, 41, 55, 0.8)";
           ctx.lineWidth = 1;
           const cx = lanes.pos(this.hover.col) + lanes.widths[this.hover.col] / 2;
-          const cy = plot.y + (this.hover.row + 0.5) * plot.cell;
+          const cy = plot.y + lanes.starts[this.hover.row] + lanes.widths[this.hover.row] / 2;
           ctx.beginPath();
           ctx.moveTo(plot.x, cy);
           ctx.lineTo(plot.x + plot.side, cy);
