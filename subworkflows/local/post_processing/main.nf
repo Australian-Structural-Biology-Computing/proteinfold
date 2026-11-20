@@ -101,7 +101,7 @@ workflow POST_PROCESSING {
         // MULTIQC runs once over every mode's custom content.
         MULTIQC (
             GENERATE_MULTIQC_CONTENTS.out.mqc_json
-                .map { meta, files -> [ [id: 'multiqc'], files instanceof List ? files : [files] ] }
+                .map { meta, files -> [ [id: 'multiqc', model: 'proteinfold'], files instanceof List ? files : [files] ] }
                 .groupTuple()
                 .map { meta, files -> [ meta, files.flatten() ] }
                 .combine(ch_multiqc_files.collect().map { files -> [files] })

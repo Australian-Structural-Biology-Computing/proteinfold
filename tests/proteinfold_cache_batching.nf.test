@@ -4,7 +4,7 @@ nextflow_pipeline {
     script "../main.nf"
     tag "pipeline"
     tag "test_proteinfold_cache_batching"
-    profile "test_colabfold2"
+    profile "test_proteinfold"
 
     test("cache partial hit searches only missing samples and predicts both") {
         tag "cache"

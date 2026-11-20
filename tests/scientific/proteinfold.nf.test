@@ -1,13 +1,13 @@
 nextflow_pipeline {
 
-    name "Scientific validation: ColabFold2"
+    name "Scientific validation: proteinfold"
     script "../../main.nf"
     tag "scientific"
     tag "gpu"
     tag "output_validation"
     tag "structure_validation"
-    tag "colabfold2"
-    profile "test_full_colabfold2,gpu"
+    tag "proteinfold"
+    profile "test_full_proteinfold,gpu"
 
     def backends = [
         [mode: 'alphafold2', extension: '.pdb'],
@@ -29,7 +29,7 @@ nextflow_pipeline {
         test("${backend.mode}${backend.model ? ' ' + backend.model : ''}: validate structures and metrics") {
             tag "${backend.mode}"
             options "--mode ${backend.mode} --use_gpu"
-            def samplesheet = new File('tests/scientific/fixtures/colabfold2_single.csv').absolutePath
+            def samplesheet = new File('tests/scientific/fixtures/proteinfold_single.csv').absolutePath
             def testDB = System.getenv('PROTEINFOLD_TEST_DB') ?: 's3://proteinfold-dataset/test-data/mini_dbs'
 
             when {
@@ -44,11 +44,11 @@ nextflow_pipeline {
             }
 
             then {
-                assert workflow.success: "ColabFold2 ${backend.mode} workflow failed (exit ${workflow.exitStatus})"
+                assert workflow.success: "proteinfold ${backend.mode} workflow failed (exit ${workflow.exitStatus})"
                 def command = [
                     'python3', new File('tests/scientific/validate_outputs.py').absolutePath,
                     '--mode', backend.mode,
-                    '--display-name', "ColabFold2 ${backend.mode}${backend.model ? ' ' + backend.model : ''}",
+                    '--display-name', "proteinfold ${backend.mode}${backend.model ? ' ' + backend.model : ''}",
                     '--extension', backend.extension ?: '.cif',
                     '--outdir', params.outdir.toString(),
                     '--samplesheet', params.input.toString(),

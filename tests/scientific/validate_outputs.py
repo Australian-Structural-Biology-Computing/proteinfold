@@ -21,12 +21,6 @@ warnings.filterwarnings("error", category=PDBConstructionWarning, message=".*cou
 
 INTERFACE_SUFFIXES = ("_iptm.tsv", "_chainwise_iptm.tsv", "_ipsae.tsv", "_chainwise_ipsae.tsv")
 
-COLABFOLD2_MODES = frozenset({
-    "alphafold2", "alphafold3", "boltz2", "esmfold2", "protenix2",
-    "chai1", "intellifold2", "opendde", "openfold3", "openbind0", "rosettafold3",
-})
-
-
 def input_ids(samplesheet: str) -> list[str]:
     if samplesheet.startswith(("http://", "https://")):
         with urllib.request.urlopen(samplesheet) as response:  # noqa: S310 - fixed test data URL
@@ -296,8 +290,8 @@ def main() -> None:
         row_count, column_count = validate_pae(path, structure_only=args.structure_only)
         print(f"Validated PAE: {path.name} ({row_count}x{column_count} matrix)")
 
-    multiqc_model = "colabfold2" if args.mode in COLABFOLD2_MODES else args.mode
-    validate_multiqc_report(args.outdir, multiqc_model, ids)
+    # One combined MultiQC report covers every requested mode.
+    validate_multiqc_report(args.outdir, "proteinfold", ids)
     for identifier in ids:
         validate_detailed_report(args.outdir, identifier)
 
