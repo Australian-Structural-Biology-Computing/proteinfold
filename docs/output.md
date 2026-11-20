@@ -122,7 +122,7 @@ A:B	0.2880	0.2750	0.2900
 B:B	0.4000	0.3980	0.4050
 ```
 
-In the HTML reports, the chainwise matrix is displayed chain-by-chain for each ranked model, with the diagonal carrying the per-chain pTM. Modes that do not emit this metric omit the report section.
+In the HTML reports, chainwise iPTM and ipSAE are displayed as chain-by-chain matrices; the chainwise iPTM matrix carries the per-chain pTM on its diagonal (A:A). Modes that do not emit these metrics omit the corresponding report sections. Each report shows the top-ranked structure of each requested mode.
 
 **ipSAE Attribution**
 
@@ -158,19 +158,25 @@ Each model prediction generates a separate file containing the rank number. Rank
 
 #### Example report plots
 
-The report exports include key visualisations such as sequence coverage, predicted Local Distance Difference Test (pLDDT), and Predicted Aligned Error (PAE).
+The report shows the top-ranked structure in a Molstar viewer beside the Predicted Aligned Error (PAE) matrix, with the MSA sequence-coverage plot underneath. The views are cross-linked: drag-selecting a block in the PAE matrix or a position range in the MSA coverage plot highlights the corresponding residues in the structure, and clicking a residue in the structure highlights it in the plots. Hovering the PAE reports the expected position error in Ångströms for the residue pair; hovering the MSA reports sequence identity to the query and column coverage. Residues are coloured by pLDDT (from the B-factor column).
+
+Additional PAE features:
+
+- **Ligand lanes:** non-protein tokens (ligands, cofactors, ions) are grouped into fixed-width lanes on both PAE axes and marked with a rose band, so small molecules remain visible and selectable next to the per-residue polymer lanes. Hovering a ligand lane names the ligand and its PAE to the selected residue.
+- **Off-diagonal selection:** dragging a rectangle that spans two different chain blocks selects both the aligned (row) block and the scored (column) block; a single-cell click selects the residue pair.
+- **Chainwise score overlay:** when chainwise ipSAE or ipTM values are available, a `PAE | ipSAE | ipTM` toggle above the matrix switches the block colouring from the PAE heatmap to the interface score of each chain pair (same-chain blocks are grey, unreported pairs near-white). The tooltips switch accordingly and the fallback chainwise tables only appear when no PAE matrix is available.
 
 ##### Sequence coverage
 
 ![Sequence coverage](images/sequence_coverage_proteinfold-v2.png?raw=true "Example sequence coverage plot")
 
-##### predicted Local Distance Difference Test (pLDDT)
-
-![pLDDT](images/plddt_proteinfold-v2.png?raw=true "Example pLDDT plot")
-
 ##### Predicted Aligned Error (PAE)
 
 ![PAE](images/pae_proteinfold-v2.png?raw=true "Example PAE plot")
+
+> The example figures above predate the current report layout, which shows the
+> Molstar structure viewer beside the PAE matrix with the pLDDT colour legend
+> instead of a separate per-residue pLDDT plot.
 
 ### Per-mode reports
 

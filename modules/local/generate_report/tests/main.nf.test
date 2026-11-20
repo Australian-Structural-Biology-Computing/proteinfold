@@ -36,23 +36,35 @@ nextflow_process {
             def config = new groovy.json.JsonSlurper().parseText(matcher[0][1])
             assert config.programName == "Boltz2"
             assert config.sampleName == "S1"
-            assert config.structFormat == "cif"
-            assert config.models == ["rank_0.cif", "rank_1.cif"]
-            assert config.models_data.size() == 2 && config.models_data.every { it.contains("_atom_site.group_PDB") }
-            assert config.lddt_averages.size() == 2
-            assert config.iptm_scores == ["0.725", "n/a"] && config.ipsae_scores == ["0.725", "n/a"]
+            // Only the top-ranked structure is embedded, in its original format
+            assert config.model == "rank_0.pdb"
+            assert config.structFormat == "pdb"
+            assert config.modelData.count("ATOM") >= 1 && !config.modelData.contains("rank_1")
+            assert config.plddtAverage == 80.5 || config.plddtAverage instanceof Number
+            assert config.iptmScore == "0.725" && config.ipsaeScore == "0.725"
             def payload = "</script><img src=x onerror=alert(1)>"
-            assert config.chainwise[0].chains.contains(payload)
-            assert config.chainwise_ipsae[0].chains == []
+            assert config.chainwise.chains.contains(payload)
+            assert config.chainwise_ipsae.chains == []
             assert !html.contains("<img src=x onerror=alert(1)>")
-            assert !((html =~ /(?s)const renderScoreMatrix = .*?const updatePairScoreTables/)[0]).contains("innerHTML")
+            assert !((html =~ /(?s)const renderScoreMatrix = .*?const buildInteractivePanels/)[0]).contains("innerHTML")
             assert html.contains('onclick="downloadStructure()"') && !html.contains("downloadPdb")
-            assert html.contains('id="structure-download-label"') && html.contains('structure-download-label").textContent')
-            assert (html =~ /image\.id =/).count == 1
             def downloader = (html =~ /(?s)const downloadStructure = .*?const makeDownload/)[0]
-            assert downloader.contains("MODELS[state.model]")
-            assert !downloader.contains(".cif.cif") && !downloader.contains("SAMPLE_NAME")
-            assert html.contains("const modelLabel = ")
+            assert downloader.contains("config.model")
+            assert !downloader.contains(".pdb.pdb") && !downloader.contains(".cif.cif") && !downloader.contains("SAMPLE_NAME")
+            // Molstar-based viewer with cross-highlighting scaffolding
+            assert config.residues && config.residues[0][0] == "A"
+            assert config.pae == null && config.msa == null
+            assert html.contains("cdn.jsdelivr.net/npm/molstar@") && !html.contains("ngl.js") && !html.contains("NGL.Stage")
+            assert html.contains("id=\"molstar-root\"")
+            assert html.contains("id=\"selection-readout\"")
+            assert html.contains("structureInteractivity")
+            // SBP-portal-style layout: no per-model carousel, no pLDDT trace
+            assert !html.contains("canvas_button_container") && !html.contains("plotly")
+            assert html.contains("scores-banner") && html.contains("pLDDT colour legend")
+            // Chainwise scores overlay on the PAE blocks via a colouring toggle
+            assert html.contains("matrix-mode-toggle") && html.contains("drawScoreBlocks")
+            // Ligand tokens flagged so the PAE axes give them fixed lanes
+            assert config.residues.every { it.size() == 5 }
         }
     }
 }
