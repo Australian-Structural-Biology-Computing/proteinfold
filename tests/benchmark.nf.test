@@ -17,7 +17,7 @@ nextflow_pipeline {
         }
         when {
             params {
-                outdir = "$outputDir/results"
+                outdir = "$outputDir"
                 input = "$outputDir/samples.csv"
                 skip_multiqc = true
                 skip_visualisation = true
@@ -32,6 +32,9 @@ nextflow_pipeline {
             assert summary.exists()
             assert summary.readLines()[0] == 'sample,mode,lddt,tm_score'
             assert summary.readLines()[1].startsWith('first,esmfold,')
+            assert snapshot(
+                removeNextflowVersion("$outputDir/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml")
+            ).match()
         }
     }
 
@@ -44,7 +47,7 @@ nextflow_pipeline {
         }
         when {
             params {
-                outdir = "$outputDir/results"
+                outdir = "$outputDir"
                 input = "$outputDir/samples.csv"
                 split_fasta = true
                 skip_multiqc = true
