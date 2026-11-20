@@ -63,8 +63,10 @@
             </p>
           </div>
 
-          <!-- pLDDT colour legend, mirrored above the viewer -->
-          <ul class="flex items-end gap-x-2" aria-label="pLDDT colour legend">
+          <!-- Colour legend for the active structure colouring, plus the
+               pLDDT/chain toggle -->
+          <div class="flex items-end justify-between gap-4">
+            <ul id="plddt-legend" class="flex min-w-0 flex-1 items-end gap-x-2" aria-label="pLDDT colour legend">
             <li class="min-w-0 flex-1 space-y-1">
               <p class="text-center text-xs text-gray-600">
                 <span class="font-medium text-gray-900">Very high</span>
@@ -91,7 +93,34 @@
               </p>
               <div class="h-2 rounded-full" style="background: #ffa500"></div>
             </li>
-          </ul>
+            </ul>
+            <ul
+              id="chain-legend"
+              class="hidden min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1"
+              aria-label="Chain colour legend"
+            ></ul>
+            <div
+              id="color-mode-toggle"
+              class="inline-flex shrink-0 rounded-lg border border-gray-200 bg-white p-0.5 text-xs shadow-sm"
+              role="group"
+              aria-label="Structure colouring"
+            >
+              <button
+                type="button"
+                data-mode="plddt"
+                class="rounded-md bg-gray-100 px-2.5 py-1 font-medium text-gray-900"
+              >
+                pLDDT
+              </button>
+              <button
+                type="button"
+                data-mode="chain"
+                class="rounded-md px-2.5 py-1 font-medium text-gray-500"
+              >
+                Chain
+              </button>
+            </div>
+          </div>
 
           <div
             class="relative h-[44rem] overflow-hidden rounded-lg border border-gray-200 bg-white"
@@ -400,19 +429,31 @@
     return segments;
   })();
 
-  const CHAIN_BAND_COLORS = [
-    "#dbeafe", "#dcfce7", "#fae8ff", "#fef3c7",
-    "#e0f2fe", "#ffe4e6", "#ede9fe", "#d1fae5",
-  ];
-  const CHAIN_TEXT_COLORS = [
-    "#1e40af", "#166534", "#86198f", "#92400e",
-    "#0c4a6e", "#9f1239", "#4c1d95", "#065f46",
+  // Shared chain palette: the 3D viewer (chain colouring mode) and the
+  // matrix axis bands use the same colours, so a chain reads as the same
+  // colour everywhere. Rose is reserved for ligand lanes.
+  const CHAIN_COLORS = [
+    { band: "#93c5fd", text: "#1e3a8a", hex: 0x93c5fd }, // blue
+    { band: "#6ee7b7", text: "#064e3b", hex: 0x6ee7b7 }, // green
+    { band: "#d8b4fe", text: "#6b21a8", hex: 0xd8b4fe }, // purple
+    { band: "#fcd34d", text: "#92400e", hex: 0xfcd34d }, // amber
+    { band: "#67e8f9", text: "#155e75", hex: 0x67e8f9 }, // cyan
+    { band: "#a5b4fc", text: "#3730a3", hex: 0xa5b4fc }, // indigo
+    { band: "#5eead4", text: "#115e59", hex: 0x5eead4 }, // teal
+    { band: "#fdba74", text: "#9a3412", hex: 0xfdba74 }, // orange
   ];
 
-  const chainColorPair = (segIx) => ({
-    fill: CHAIN_BAND_COLORS[segIx % CHAIN_BAND_COLORS.length],
-    text: CHAIN_TEXT_COLORS[segIx % CHAIN_TEXT_COLORS.length],
-  });
+  // Chains are coloured by order of first appearance so the viewer and the
+  // axis bands agree even when a chain id spans several segments
+  const CHAIN_COLOR_INDEX = (() => {
+    const map = new Map();
+    CHAIN_SEGMENTS.forEach((seg) => {
+      if (!map.has(seg.chain)) map.set(seg.chain, map.size % CHAIN_COLORS.length);
+    });
+    return map;
+  })();
+
+  const chainColorPair = (seg) => CHAIN_COLORS[CHAIN_COLOR_INDEX.get(seg.chain) || 0];
 
   const base64ToBytes = (b64) => {
     const binary = atob(b64);
@@ -444,6 +485,7 @@
   };
 
   let viewer = null;
+  let structureColorMode = "plddt";
 
   const applyStructureSelection = (indices) => {
     if (!viewer) return;
@@ -577,6 +619,49 @@
     plugin.representation.structure.themes.colorThemeRegistry.add(provider);
   };
 
+  const CHAIN_THEME_NAME = "chain-palette";
+
+  const registerChainTheme = (plugin) => {
+    const { StructureProperties } = molstar.lib.structure;
+    // StructureProperties only reads location.unit/location.element, so a
+    // bond location can be duck-typed from its a-unit and element index
+    const chainOf = (unit, element) => {
+      if (!unit) return null;
+      try {
+        return StructureProperties.chain.auth_asym_id({ unit, element });
+      } catch (e) {
+        return null;
+      }
+    };
+    const provider = {
+      name: CHAIN_THEME_NAME,
+      label: "Chain",
+      category: "Miscellaneous",
+      factory: (ctx, props) => {
+        const color = (location) => {
+          let chainId = null;
+          if (location && location.kind === "element-location") {
+            chainId = chainOf(location.unit, location.element);
+          } else if (location && location.kind === "bond-location") {
+            chainId = chainOf(location.aUnit, location.aUnit.elements[location.aIndex]);
+          }
+          const ix = chainId !== null ? CHAIN_COLOR_INDEX.get(chainId) : undefined;
+          return ix === undefined ? 0x9ca3af : CHAIN_COLORS[ix].hex;
+        };
+        return {
+          factory: provider.factory,
+          granularity: "group",
+          preferSmoothing: false,
+          color,
+        };
+      },
+      getParams: () => ({}),
+      defaultValues: {},
+      isApplicable: () => true,
+    };
+    plugin.representation.structure.themes.colorThemeRegistry.add(provider);
+  };
+
   const VIEWER_OPTIONS = {
     layoutIsExpanded: false,
     layoutShowControls: false,
@@ -596,22 +681,23 @@
   async function createViewer() {
     viewer = await molstar.Viewer.create("molstar-root", VIEWER_OPTIONS);
     registerPlddtTheme(viewer.plugin);
+    registerChainTheme(viewer.plugin);
     viewer.subscribe(viewer.plugin.behaviors.interaction.click, handleViewerClick);
     await viewer.plugin.clear();
     await viewer.loadStructureFromData(MODEL_DATA, STRUCT_FORMAT);
-    await applyPlddtTheme(viewer);
+    await applyStructureTheme(viewer, PLDDT_THEME_NAME);
   }
 
-  async function applyPlddtTheme(target) {
+  async function applyStructureTheme(target, themeName) {
     const structures = target.plugin.managers.structure.hierarchy.current.structures;
     for (const structure of structures) {
       try {
         await target.plugin.managers.structure.component.updateRepresentationsTheme(
           structure.components,
-          { color: PLDDT_THEME_NAME },
+          { color: themeName },
         );
       } catch (e) {
-        console.error("Failed to apply pLDDT colouring:", e);
+        console.error("Failed to apply structure colouring:", e);
       }
     }
   }
@@ -735,8 +821,8 @@
       }
     });
 
-    segments.forEach((segment, segIx) => {
-      const { fill, text } = chainColorPair(segIx);
+    segments.forEach((segment) => {
+      const { band: fill, text } = chainColorPair(segment);
       const x0 = coord.pos(segment.start);
       const width = coord.end(segment.end) - x0;
       ctx.save();
@@ -1791,6 +1877,49 @@
     const lowerPanels = document.getElementById("lower_panels");
     if (lowerPanels) {
       lowerPanels.classList.toggle("hidden", !MSA_PAYLOAD && !hasIptm && !hasIpsae);
+    }
+
+    // Structure colouring toggle: pLDDT bins or per-chain colours shared
+    // with the matrix axis bands
+    const chainLegend = document.getElementById("chain-legend");
+    if (chainLegend) {
+      const seen = new Set();
+      CHAIN_SEGMENTS.forEach((seg) => {
+        if (seen.has(seg.chain)) return;
+        seen.add(seg.chain);
+        const { band, text } = chainColorPair(seg);
+        const chip = document.createElement("li");
+        chip.className = "flex items-center gap-1.5";
+        const swatch = document.createElement("span");
+        swatch.className = "inline-block h-3 w-3 rounded-sm border border-black/10";
+        swatch.style.background = band;
+        const label = document.createElement("span");
+        label.className = "text-xs font-medium";
+        label.style.color = text;
+        label.textContent = `Chain ${seg.chain}`;
+        chip.appendChild(swatch);
+        chip.appendChild(label);
+        chainLegend.appendChild(chip);
+      });
+    }
+    const colorToggle = document.getElementById("color-mode-toggle");
+    if (colorToggle) {
+      colorToggle.querySelectorAll("button[data-mode]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const mode = btn.dataset.mode;
+          if (mode === structureColorMode || !viewer) return;
+          structureColorMode = mode;
+          colorToggle.querySelectorAll("button[data-mode]").forEach((other) => {
+            const active = other === btn;
+            other.classList.toggle("bg-gray-100", active);
+            other.classList.toggle("text-gray-900", active);
+            other.classList.toggle("text-gray-500", !active);
+          });
+          document.getElementById("plddt-legend").classList.toggle("hidden", mode !== "plddt");
+          chainLegend.classList.toggle("hidden", mode !== "chain");
+          await applyStructureTheme(viewer, mode === "chain" ? CHAIN_THEME_NAME : PLDDT_THEME_NAME);
+        });
+      });
     }
 
     hub.listeners.add((indices, source) => {

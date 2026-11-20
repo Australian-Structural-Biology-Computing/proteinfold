@@ -65,6 +65,8 @@ nextflow_process {
             assert html.contains("matrix-mode-toggle") && html.contains("drawScoreBlocks")
             // Ligand tokens flagged so the PAE axes give them fixed lanes
             assert config.residues.every { it.size() == 5 }
+            // Structure colouring toggle (pLDDT bins vs shared chain palette)
+            assert html.contains("color-mode-toggle") && html.contains("chain-palette")
         }
     }
 }
