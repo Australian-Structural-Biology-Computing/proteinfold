@@ -21,22 +21,26 @@ Exact subdirectories depend on the selected mode. A run will typically contain t
 ### Prediction outputs (all modes)
 
 The output directory stays flat: every result file carries a short mode tag
-(`<MODE>`) in its name instead of living in a per-mode directory, so multiple
-prediction modes can write into the same tree without colliding. The shorthands
-are `af2` (alphafold2), `af3` (alphafold3), `bz2` (boltz2), `chai1`, `esm2`
-(esmfold2), `if2` (intellifold2), `odde` (opendde), `of3` (openfold3), `ob0`
-(openbind0), `px2` (protenix2) and `rf3` (rosettafold3). All three ESMFold2
-model selections publish under the `esm2` tag.
+(`<MODE>`) and a short MSA-source tag (`<MSA>`) in its name instead of living
+in per-mode directories, so multiple prediction modes and MSA sources can
+write into the same tree without colliding. The mode shorthands are `af2`
+(alphafold2), `af3` (alphafold3), `bz2` (boltz2), `chai1`, `esm2` (esmfold2),
+`if2` (intellifold2), `odde` (opendde), `of3` (openfold3), `ob0` (openbind0),
+`px2` (protenix2) and `rf3` (rosettafold3); all three ESMFold2 model
+selections publish under the `esm2` tag. The MSA-source shorthands are
+`mmseqs` (`colabfold_search`), `af2msa` (`alphafold2_msa`), `af3msa`
+(`alphafold3_msa`), `server` (ColabFold MSA server) and `byo`
+(sample-sheet-provided MSAs).
 
 <details markdown="1">
 <summary>Output files</summary>
 
-- `top_ranked_structures/<SEQUENCE NAME>_<MODE>.{cif,pdb}` (`.pdb` for the `alphafold2` modes) (top-ranked structure per input and mode)
-- `metrics/<SEQUENCE NAME>_<MODE>_<METRIC>.tsv` with `<METRIC>` one of
+- `top_ranked_structures/<SEQUENCE NAME>_<MODE>_<MSA>.{cif,pdb}` (`.pdb` for the `alphafold2` modes) (top-ranked structure per input, mode and MSA source)
+- `metrics/<SEQUENCE NAME>_<MODE>_<MSA>_<METRIC>.tsv` with `<METRIC>` one of
   `plddt`, `confidence`, `ptm`, `iptm`, `ipsae`, `chainwise_iptm`, `chainwise_ipsae`, `msa`
   (per-prediction MSA depth summary)
-- `metrics/<SEQUENCE NAME>_<MODE>_<RANK>_pae.tsv` (rank-1 only; published when the backend emits a PAE)
-- `reports/<SEQUENCE NAME>_<MODE>_report.html` (report per sequence and mode)
+- `metrics/<SEQUENCE NAME>_<MODE>_<MSA>_<RANK>_pae.tsv` (rank-1 only; published when the backend emits a PAE)
+- `reports/<SEQUENCE NAME>_<MODE>_<MSA>_report.html` (report per sequence, mode and MSA source)
 - `raw/` (published when `--save_intermediates` is enabled; file names embed the backend model type)
 
 </details>
@@ -44,7 +48,7 @@ model selections publish under the `esm2` tag.
 > [!NOTE]
 > Select the ESMFold2 language-model variants with `--mode esmfold2 --esmfold2_model lm300m` or `--mode esmfold2 --esmfold2_model lm600m`. Confidence output depends on the checkpoint and runtime: pLDDT may contain finite scores or `n/a`, PAE may contain finite scores or `NaN`, and unavailable summary metrics remain empty.
 
-### pLDDT (`<SEQUENCE NAME>_<MODE>_plddt.tsv`)
+### pLDDT (`<SEQUENCE NAME>_<MODE>_<MSA>_plddt.tsv`)
 
 Confidence values per residue, rounded to 2 decimal places. Each ranked result gets its own column (for all-atom modules, atomic token confidences are processed to a naive mean value across the residue).
 
@@ -60,7 +64,7 @@ Positions	rank_0	rank_1	rank_2	rank_3	rank_4
 ...
 ```
 
-### MSA (`<SEQUENCE NAME>_<MODE>_msa.tsv`)
+### MSA (`<SEQUENCE NAME>_<MODE>_<MSA>_msa.tsv`)
 
 The amino acid characters are converted to integers `0-19`, unknown as 20, **integer `21`** represents the gap character.
 
@@ -75,7 +79,7 @@ The amino acid characters are converted to integers `0-19`, unknown as 20, **int
 
 This allows easy sequence indentity calculation when processing as a `numpy` array.
 
-### (i)pTM (`<SEQUENCE NAME>_<MODE>_[i]ptm.tsv`)
+### (i)pTM (`<SEQUENCE NAME>_<MODE>_<MSA>_[i]ptm.tsv`)
 
 (i)pTM scores, rounded to 3 decimal places, listed by the rank number (currently unsorted - to reflect models and seeds where appropriate).
 
@@ -107,7 +111,7 @@ This allows easy sequence indentity calculation when processing as a `numpy` arr
 8 0.595
 ```
 
-### chain-wise (i)pTM (`<SEQUENCE NAME>_<MODE>_chainwise_[i]ptm.tsv`)
+### chain-wise (i)pTM (`<SEQUENCE NAME>_<MODE>_<MSA>_chainwise_[i]ptm.tsv`)
 
 Chain-wise iPTM values, rounded to 4 decimal places, with chain-pair lettering as the row (`X:Y`) and rank number as the column. Where available, self-scores are included as `X:X`.
 
@@ -125,7 +129,7 @@ In the HTML reports, chainwise iPTM and ipSAE are displayed as chain-by-chain ma
 - **Default cutoffs used when deriving:** when `extract_metrics.py` derives iPTM/ipSAE it invokes `ipsae.py` with a PAE cutoff of `10` and a distance cutoff of `15` (these are currently hard-coded in the extraction step). If you require different thresholds, compute iPTM/ipSAE externally or update the extraction call accordingly.
 - **Third-party attribution:** the `ipsae.py` utility bundled in `bin/` is derived from the IPSAE project by the Dunbrack Lab (https://github.com/DunbrackLab/IPSAE/). The original script includes an MIT-style header; keep that header intact if the file is redistributed. Please consult the IPSAE repository for full details and citation information.
 
-### PAE (`<SEQUENCE NAME>_<MODE>_<RANK>_pae.tsv`)
+### PAE (`<SEQUENCE NAME>_<MODE>_<MSA>_<RANK>_pae.tsv`)
 
 Predicted alignment error of residues `j` aligned by residue `i`, rounded to 4 decimal places.
 The row number gives you the index of residue `i` and the column value within the row gives the index of residue `j` for the 2D PAE matrix.
@@ -163,7 +167,7 @@ The report exports include key visualisations such as sequence coverage, predict
 <summary>Output files</summary>
 
 - `reports/`
-  - `<SEQUENCE NAME>_<MODE>_report.html` (report per sequence and mode; `<MODE>` is the shorthand tag)
+  - `<SEQUENCE NAME>_<MODE>_<MSA>_report.html` (report per sequence, mode and MSA source; both are shorthand tags)
 
 </details>
 
@@ -176,7 +180,7 @@ If Foldseek is enabled (`--skip_foldseek false`), results are written to:
 
 - `foldseek_easysearch/`
   - `<SEQUENCE NAME>_<MODE>_foldseek.html` (default output format)
-  - `<SEQUENCE NAME>_<MODE>.m8` (tabular output when `--foldseek_easysearch_arg` does not include `--format-mode 3`)
+  - `<SEQUENCE NAME>_<MODE>_<MSA>.m8` (tabular output when `--foldseek_easysearch_arg` does not include `--format-mode 3`)
 
 </details>
 

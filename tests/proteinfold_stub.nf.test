@@ -71,27 +71,30 @@ nextflow_pipeline {
             assert !versions_report.any { it.contains(":PROTEINFOLD:COLABFOLD2_INFERENCE:") }
             // Every mode folds the protein-only samples; the mode shorthand
             // in the file names keeps the layout flat and collision-free.
+            // Every mode folds the protein-only samples; the mode and MSA
+            // tool shorthands in the file names keep the layout flat and
+            // collision-free.
             ['T1024', 'T1026'].each { id ->
                 submodes.each { sub ->
                     def ext = sub.ext ?: 'cif'
-                    assert stableName.contains("top_ranked_structures/${id}_${sub.short}.${ext}".toString())
-                    assert stableName.contains("metrics/${id}_${sub.short}_plddt.tsv".toString())
-                    assert stableName.contains("metrics/${id}_${sub.short}_msa.tsv".toString())
-                    assert stableName.contains("reports/${id}_${sub.short}_report.html".toString())
+                    assert stableName.contains("top_ranked_structures/${id}_${sub.short}_mmseqs.${ext}".toString())
+                    assert stableName.contains("metrics/${id}_${sub.short}_mmseqs_plddt.tsv".toString())
+                    assert stableName.contains("metrics/${id}_${sub.short}_mmseqs_msa.tsv".toString())
+                    assert stableName.contains("reports/${id}_${sub.short}_mmseqs_report.html".toString())
                 }
             }
             // Per-rank PAE matrices for the protein-only sample.
             submodes.each { sub ->
-                assert stableName.contains("metrics/T1024_${sub.short}_1_pae.tsv".toString())
+                assert stableName.contains("metrics/T1024_${sub.short}_mmseqs_1_pae.tsv".toString())
             }
             // The RNA-containing sample carries non-protein entities: the
             // AlphaFold2 backend skips it (warned) rather than folding a
             // truncated protein-only complex; every AlphaFold3-open backend
             // still folds it in full.
             af3GraphModes.each { sub ->
-                assert stableName.contains("top_ranked_structures/rich_sample_${sub.short}.cif".toString())
+                assert stableName.contains("top_ranked_structures/rich_sample_${sub.short}_mmseqs.cif".toString())
             }
-            assert !stableName.any { it.startsWith('metrics/rich_sample_af2') || it.startsWith('top_ranked_structures/rich_sample_af2') }
+            assert !stableName.any { it.contains('rich_sample_af2') }
             // MultiQC runs once and carries per-mode custom content.
             assert stableName.contains('multiqc/multiqc_report.html')
             submodes.each { sub ->
@@ -123,7 +126,7 @@ nextflow_pipeline {
             def versions_path = new File(params.outdir.toString() + "/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml").absolutePath
             def versions_report = new File(versions_path).readLines()
             assert versions_report.any { it.contains(":PROTEINFOLD:ESMFOLD2:") }
-            assert stableName.contains('top_ranked_structures/T1024_esm2.cif')
+            assert stableName.contains('top_ranked_structures/T1024_esm2_mmseqs.cif')
             assert snapshot(
                 workflow.trace.succeeded().size(),
                 removeNextflowVersion("$outputDir/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml")
