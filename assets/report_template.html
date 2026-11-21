@@ -626,18 +626,22 @@
   // chain's colour family: each element is a lightness/hue variant of the
   // chain colour instead of a global CPK colour, so the chain still reads
   // as one colour in the viewer.
-  // Hue shifts stay small on purpose: large shifts push blue/violet chains'
-  // heteroatoms onto the CPK colours (blue N, red-ish O) and the atoms then
-  // read as Molstar's default scheme instead of the chain family. Atom
-  // types are separated by lightness and saturation primarily.
+  // Hue shifts stay small so heteroatoms never drift onto the CPK colours
+  // (that made them read as Molstar's default scheme); atom types are
+  // separated by lightness and saturation primarily. Sulfur is the
+  // exception: it is hard-set to yellow (see FIXED_ELEMENT_COLORS) so
+  // methionines/cysteines and sulfur-containing ligands stand out in every
+  // chain.
   const ATOM_SHADES = {
-    N: { dh: 0, ds: 1.0, dl: -0.3 },
-    O: { dh: 14, ds: 0.6, dl: -0.12 },
-    S: { dh: -14, ds: 0.4, dl: -0.24 },
-    P: { dh: 20, ds: 0.9, dl: -0.2 },
+    N: { dh: -8, ds: 1.0, dl: -0.32 },
+    O: { dh: 20, ds: 0.85, dl: -0.14 },
+    P: { dh: 24, ds: 0.95, dl: -0.22 },
     H: { dh: 0, ds: 0.25, dl: 0.1 },
     DEFAULT: { dh: 0, ds: 0.4, dl: -0.25 },
   };
+
+  // Fixed element colours that override the chain-family shades
+  const FIXED_ELEMENT_COLORS = { S: 0xffd123 };
 
   const hslToHex = (h, s, l) => {
     const hue = ((h % 360) + 360) % 360;
@@ -694,10 +698,16 @@
           }
           const ix = chainId !== null ? CHAIN_COLOR_INDEX.get(chainId) : undefined;
           if (ix === undefined) return 0x9ca3af;
-          // Carbons carry the chain colour (shared with the legend chips and
-          // the matrix axis bands); other elements get shades of it
-          if (!symbol || symbol.toUpperCase() === "C") return CHAIN_COLORS[ix].hex;
-          return chainAtomColour(ix, symbol.toUpperCase());
+          if (symbol) {
+            const el = symbol.toUpperCase();
+            // Carbons carry the chain colour (shared with the legend chips
+            // and the matrix axis bands); sulfur is globally yellow; other
+            // elements get shades of the chain colour
+            if (el === "C") return CHAIN_COLORS[ix].hex;
+            if (FIXED_ELEMENT_COLORS[el] !== undefined) return FIXED_ELEMENT_COLORS[el];
+            return chainAtomColour(ix, el);
+          }
+          return CHAIN_COLORS[ix].hex;
         };
         return {
           factory: provider.factory,
