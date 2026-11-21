@@ -270,12 +270,8 @@
       <!-- Sequence panel, cross-linked with the viewer and the matrices -->
       <section id="sequence_container" class="min-w-0 space-y-2" aria-label="Sequence">
         <div class="flex flex-wrap items-baseline justify-between gap-4">
-          <h2 class="text-sm font-semibold text-gray-900">Sequence</h2>
-          <div class="flex items-baseline gap-4">
-            <p class="text-xs text-gray-500">
-              Click a residue to highlight it across views &middot; drag for a
-              range &middot; Shift adds to the selection &middot; Esc clears.
-            </p>
+          <div class="flex items-baseline gap-2">
+            <h2 class="text-sm font-semibold text-gray-900">Sequence</h2>
             <button
               id="sequence-toggle"
               type="button"
@@ -286,6 +282,10 @@
               Hide
             </button>
           </div>
+          <p class="text-xs text-gray-500">
+            Click a residue to highlight it across views &middot; drag for a
+            range &middot; Shift adds to the selection &middot; Esc clears.
+          </p>
         </div>
         <div id="sequence-card" class="overflow-x-auto rounded-lg border border-gray-200 bg-white p-3">
           <div id="sequence-root" class="w-full"></div>
