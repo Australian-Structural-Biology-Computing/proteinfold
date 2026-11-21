@@ -12,7 +12,11 @@ process COLABFOLD2_INFERENCE_BATCH {
     // pipeline guarantees by creating it on the host at launch.
     containerOptions {
         if (params.colabfold2_compile_cache) {
-            def dir = params.colabfold2_compile_cache
+            // Resolve against the launch directory and canonicalise: a bind
+            // destination must be absolute (a relative --colabfold2_compile_cache
+            // makes apptainer abort the container with 'destination must be an
+            // absolute path').
+            def dir = file(params.colabfold2_compile_cache).toAbsolutePath().toString()
             if (workflow.containerEngine in ['singularity', 'apptainer']) {
                 "--bind ${dir}"
             } else if (workflow.containerEngine == 'docker') {
@@ -61,7 +65,9 @@ process COLABFOLD2_INFERENCE_BATCH {
     // native compile-cache consumption, so jax's own persistent compilation cache
     // (JAX_COMPILATION_CACHE_DIR) covers them. The AlphaFold2 backends get
     // colabfold's per-shape executable cache via the --compile-cache ext.args entry.
-    def compile_cache = params.colabfold2_compile_cache ?: ''
+    // Same canonicalisation as the containerOptions bind above: the script
+    // text carries the absolute path so the mount and the flags always agree.
+    def compile_cache = params.colabfold2_compile_cache ? file(params.colabfold2_compile_cache).toAbsolutePath().toString() : ''
     // The alphafold2 backends write PDB structures; the AF3-family writes mmCIF.
     def structure_ext = (model_type == 'auto' || model_type.startsWith('alphafold2')) ? 'pdb' : 'cif'
     def shell_quote = { name -> "'" + name.replace("'", "'\\''") + "'" }
