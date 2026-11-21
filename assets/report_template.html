@@ -310,16 +310,21 @@
   // labelled with its residue name on the axis band.
   const LIGAND_RUN_WIDTH = 16;
   const LIGAND_RUNS = (() => {
+    // Structure-derived ligand lanes are only meaningful when the PAE is
+    // aligned with the residue list; a mismatched matrix (e.g. one PAE
+    // token per ligand atom) would place them at arbitrary tokens
+    if (!paeLinked) return [];
     const runs = [];
     RESIDUES.forEach((r, ix) => {
       if (!isLigandToken(ix)) return;
       const last = runs[runs.length - 1];
       // Adjacent tokens of the same ligand share a lane; a new residue name
-      // starts a new lane so distinct ligands stay individually selectable
-      if (last && last.end === ix - 1 && last.label === r[2]) {
+      // or a new chain starts a new lane so distinct ligands stay
+      // individually selectable
+      if (last && last.end === ix - 1 && last.chain === r[0] && last.label === r[2]) {
         last.end = ix;
       } else {
-        runs.push({ start: ix, end: ix, label: r[2] });
+        runs.push({ start: ix, end: ix, chain: r[0], label: r[2] });
       }
     });
     return runs;
@@ -908,40 +913,7 @@
     }
   };
 
-  // Highlight ligand runs along a PAE axis with a rose band so the
-  // fixed-width lanes read as "small molecule tokens live here".
-  const drawLigandRuns = (ctx, plot, coord, horizontal) => {
-    if (!LIGAND_RUNS.length) return;
-    const bandSize = 14;
-    ctx.save();
-    LIGAND_RUNS.forEach((run) => {
-      const a0 = coord.pos(run.start);
-      const size = coord.end(run.end) - a0;
-      ctx.fillStyle = "#fda4af";
-      let cx;
-      let cy;
-      if (horizontal) {
-        ctx.fillRect(a0, plot.y - bandSize, size, bandSize);
-        cx = a0 + size / 2;
-        cy = plot.y - bandSize / 2;
-      } else {
-        ctx.fillRect(plot.x - bandSize, a0, bandSize, size);
-        cx = plot.x - bandSize / 2;
-        cy = a0 + size / 2;
-      }
-      if (size >= 26) {
-        ctx.fillStyle = "#9f1239";
-        ctx.font = "9px system-ui, sans-serif";
-        ctx.textBaseline = "middle";
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(-Math.PI / 2);
-        ctx.fillText(run.label, 0, 0);
-        ctx.restore();
-      }
-    });
-    ctx.restore();
-  };
+
 
   const makeTooltip = (container) => {
     const tooltip = document.createElement("div");
@@ -1498,19 +1470,6 @@
           },
           (ix) => RESIDUES[ix][1],
         );
-        if (mode === "pae") {
-          drawLigandRuns(
-            ctx,
-            plot,
-            {
-              count: n,
-              pos: (ix) => lanes.pos(ix),
-              end: (ix) => lanes.end(ix),
-            },
-            true,
-          );
-        }
-
         drawChainBoundaries(
           ctx,
           { x: plot.x, y: plot.y, w: plot.side, h: plot.side },
@@ -1519,7 +1478,7 @@
             pos: (ix) => lanes.pos(ix),
             end: (ix) => lanes.end(ix),
           },
-          CHAIN_SEGMENTS,
+          linked ? CHAIN_SEGMENTS : [],
           true,
         );
         drawChainBands(
@@ -1535,21 +1494,6 @@
           },
           (ix) => RESIDUES[ix][1],
         );
-        // The rose ligand lanes must be drawn after the chain bands on each
-        // axis, otherwise the chain colour paints over them
-        if (mode === "pae") {
-          drawLigandRuns(
-            ctx,
-            plot,
-            {
-              count: n,
-              pos: (ix) => plot.y + lanes.starts[ix],
-              end: (ix) => plot.y + lanes.starts[ix] + lanes.widths[ix],
-            },
-            false,
-          );
-        }
-
         ctx.fillStyle = "#374151";
         ctx.font = "12px system-ui, sans-serif";
         ctx.textAlign = "center";
