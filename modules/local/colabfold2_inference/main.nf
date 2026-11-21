@@ -5,6 +5,22 @@ process COLABFOLD2_INFERENCE {
 
     container "ghcr.io/tlitfin/proteinfold_colabfold:af3-preview-38683c2"
 
+    // The compiled-kernel cache lives outside the work directory and is only
+    // referenced inside the script, so container autoMounts never sees it:
+    // bind it explicitly so users don't have to pass --singularity-args.
+    // A bind source must exist before the container starts, which the
+    // pipeline guarantees by creating it on the host at launch.
+    containerOptions {
+        if (params.colabfold2_compile_cache) {
+            def dir = params.colabfold2_compile_cache
+            if (workflow.containerEngine in ['singularity', 'apptainer']) {
+                "--bind ${dir}"
+            } else if (workflow.containerEngine == 'docker') {
+                "-v ${dir}:${dir}"
+            }
+        }
+    }
+
     input:
     tuple val(meta), path(input), val(model_type), val(use_esm), path(params_path)
     val num_recycles
