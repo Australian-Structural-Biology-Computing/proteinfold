@@ -12,13 +12,14 @@ import plotly.graph_objects as go
 import re
 from Bio import PDB
 
-def is_missing_input(path, placeholder_prefix="NO_FILE"):
-    return (
-        not path
-        or os.path.basename(path).startswith(placeholder_prefix)
-        or not os.path.exists(path)
-        or os.path.getsize(path) == 0
-    )
+def is_missing_input(path):
+    """True when a metric input is absent or empty.
+
+    The inference task signals an unavailable MSA (the ESMFold2
+    language-model variants fold without one) with a zero-size TSV, which
+    this treats the same as a missing file.
+    """
+    return not path or not os.path.exists(path) or os.path.getsize(path) == 0
 
 def generate_pae_plot(pae_path, out_dir, name, save_image=False):
     #save_image=False because plotly needs a local install of Google Chrome to save images.....
@@ -191,7 +192,7 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
     ) as out_file:
         out_file.write(html_content)
 
-    if not is_missing_input(args.pae, "NO_FILE_PAE"):
+    if not is_missing_input(args.pae):
         pae_fig = generate_pae_plot(args.pae, out_dir, name)
         pae_html_content = pae_fig.to_html(
             full_html=False,
@@ -511,13 +512,13 @@ parser.add_argument("--tag", dest="file_tag", default=None, help="File-name tag;
 parser.add_argument(
     "--generate_tsv", choices=["y", "n"], default="n", dest="generate_tsv"
 )
-parser.add_argument("--msa", dest="msa", default="NO_FILE")
+parser.add_argument("--msa", dest="msa", default=None)
 parser.add_argument("--pdb", dest="pdb", required=True, nargs="+")
-parser.add_argument("--pae", dest="pae", default="NO_FILE")
-parser.add_argument("--iptm", dest="iptm", default="NO_FILE")
-parser.add_argument("--ipsae", dest="ipsae", default="NO_FILE")
-parser.add_argument("--chainwise_iptm", dest="chainwise_iptm", default="NO_FILE")
-parser.add_argument("--chainwise_ipsae", dest="chainwise_ipsae", default="NO_FILE")
+parser.add_argument("--pae", dest="pae", default=None)
+parser.add_argument("--iptm", dest="iptm", default=None)
+parser.add_argument("--ipsae", dest="ipsae", default=None)
+parser.add_argument("--chainwise_iptm", dest="chainwise_iptm", default=None)
+parser.add_argument("--chainwise_ipsae", dest="chainwise_ipsae", default=None)
 parser.add_argument("--name", dest="name")
 parser.add_argument("--output_dir", dest="output_dir")
 parser.add_argument("--html_template", dest="html_template")
@@ -612,7 +613,7 @@ with open(
         '<div id="lddt_placeholder"></div>', lddt_html
     )
 
-if not is_missing_input(args.pae, "NO_FILE_PAE"):
+if not is_missing_input(args.pae):
     with open(
         f"{args.output_dir}/{args.name + ('_' if args.name else '')}PAE.html",
         "r",

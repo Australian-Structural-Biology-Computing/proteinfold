@@ -17,8 +17,8 @@ nextflow_process {
                 input[0] = tuple(
                     [id: 'S1', model: 'boltz2', mode_short: 'bz2'],
                     [file(params.pipelines_testdata_base_path + 'testdata/models/rank_0.pdb', checkIfExists: true), file(params.pipelines_testdata_base_path + 'testdata/models/rank_1.pdb', checkIfExists: true)],
-                    [file("${projectDir}/assets/NO_FILE")],
-                    [file("${projectDir}/assets/NO_FILE")],
+                    [file("${projectDir}/tests/fixtures/NO_FILE")],
+                    [file("${projectDir}/tests/fixtures/NO_FILE")],
                     [file(params.pipelines_testdata_base_path + 'testdata/metrics/S1_scalar.tsv', checkIfExists: true)],
                     [file(params.pipelines_testdata_base_path + 'testdata/metrics/S1_scalar.tsv', checkIfExists: true)],
                     [file(params.pipelines_testdata_base_path + 'testdata/metrics/S1_chainwise.tsv', checkIfExists: true)],
