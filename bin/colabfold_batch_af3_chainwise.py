@@ -33,28 +33,6 @@ import colabfold.alphafold3.predict as af3_predict
 _original_scores_of = af3_predict.scores_of
 
 
-def _chain_labels(inference_result, summary_chain_ids):
-    """Map the summary's chain order onto the predicted structure's chain ids.
-
-    The structure chain ids are what the published structures and the
-    interface scores use, so preferring them keeps every chainwise
-    representation consistent. Falls back to the summary's own ids, then
-    to A/B/C letters, when the structure's ids do not line up one-to-one
-    with the summary order (e.g. duplicated chain ids).
-    """
-    structure_chain_ids = []
-    for chain_id in np.asarray(inference_result.predicted_structure.chain_id):
-        chain_id = str(chain_id)
-        if chain_id not in structure_chain_ids:
-            structure_chain_ids.append(chain_id)
-    if len(structure_chain_ids) == len(summary_chain_ids):
-        return structure_chain_ids
-    if len(set(summary_chain_ids)) == len(summary_chain_ids):
-        return [str(chain_id) for chain_id in summary_chain_ids]
-    import string
-    return [string.ascii_uppercase[i % len(string.ascii_uppercase)] for i in range(len(summary_chain_ids))]
-
-
 def _af3_interface_scores(inference_result):
     """Run colabfold's native interface scores over the AF3 tokens.
 
@@ -93,10 +71,14 @@ def _af3_interface_scores(inference_result):
     token_res_ids = [int(res_id) for res_id in full.token_res_ids]
     num_tokens = len(token_chain_ids)
     chain_order = list(dict.fromkeys(token_chain_ids))
-    chain_to_int = {chain: index + 1 for index, chain in enumerate(chain_order)}
+    # Zero-based: get_interface_scores labels each chain as
+    # PDB_CHAIN_IDS[asym_id], whose first letter is 'A'
+    chain_to_int = {chain: index for index, chain in enumerate(chain_order)}
     asym_id = np.array([chain_to_int[chain] for chain in token_chain_ids])
 
-    atom_positions = np.zeros((num_tokens, num_atom_types), dtype=np.float64)
+    # One xyz triple per (token, atom type): get_interface_scores indexes
+    # atom_positions[token, atom_type] as a coordinate vector
+    atom_positions = np.zeros((num_tokens, num_atom_types, 3), dtype=np.float64)
     atom_mask = np.zeros((num_tokens, num_atom_types), dtype=np.float64)
     plddt = np.zeros(num_tokens, dtype=np.float64)
     atom_x = np.asarray(struc.atom_x, dtype=np.float64)
@@ -135,11 +117,22 @@ def scores_of_with_chainwise(inference_result, ranking_score, *args, **kwargs):
         from alphafold3.model import confidence_types
 
         summary = confidence_types.StructureConfidenceSummary.from_inference_result(inference_result)
-        labels = _chain_labels(inference_result, summary.chain_ids)
+        # The summary's chain ids follow this colabfold's token-level
+        # convention (one entry per token), so the per-chain labels come
+        # from the predicted structure's own chain ids in first-appearance
+        # order - the same order the confidence matrices are indexed by.
+        labels = list(dict.fromkeys(
+            str(chain) for chain in np.asarray(inference_result.predicted_structure.chain_id)
+        ))
         pair_iptm = np.asarray(summary.chain_pair_iptm, dtype=float)
         chain_ptm = np.asarray(summary.chain_ptm, dtype=float)
-        num_chains = len(labels)
-        if num_chains > 1 and pair_iptm.shape == (num_chains, num_chains) and chain_ptm.shape == (num_chains,):
+        num_chains = pair_iptm.shape[0] if pair_iptm.ndim == 2 else 0
+        if (
+            num_chains > 1
+            and pair_iptm.shape == (num_chains, num_chains)
+            and chain_ptm.shape == (num_chains,)
+            and len(labels) == num_chains
+        ):
             # One entry per unordered pair, as the AlphaFold2 path
             # reports them; the AF3 matrix is symmetric by construction,
             # so the max over the two halves is the shared value.
