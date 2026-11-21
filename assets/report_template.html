@@ -1379,31 +1379,28 @@
         // Without a matching label list the PAE indices cannot be mapped onto
         // the structure or the MSA, so selections stay local (tooltips only)
         if (!linked) return;
+        if (mode !== "pae") {
+          // Click-only in the score colourings: the matrix is read as
+          // chain blocks, so a click toggles the block's chains and a drag
+          // that leaves the pressed block selects nothing
+          if (!this.sameBlock(anchor, current)) return;
+          const block = this.chainBlockIndices(anchor);
+          if (block) {
+            this.toggleSelection(block.indices, { rows: block.rows, cols: block.cols });
+          } else {
+            this.toggleSelection(this.singleCellIndices(anchor), {
+              rows: [anchor.row],
+              cols: [anchor.col],
+            });
+          }
+          return;
+        }
         const sameCell = anchor.row === current.row && anchor.col === current.col;
         if (sameCell) {
-          let indices = null;
-          let split = null;
-          if (mode !== "pae") {
-            const block = this.chainBlockIndices(anchor);
-            if (block) {
-              indices = block.indices;
-              split = { rows: block.rows, cols: block.cols };
-            }
-          }
-          if (!indices) {
-            indices = this.singleCellIndices(anchor);
-            split = { rows: [anchor.row], cols: [anchor.col] };
-          }
-          // Dedupe before comparing: for a diagonal block rows and cols
-          // list the same tokens twice
-          const sorted = [...new Set(indices)].sort((a, b) => a - b);
-          if (sameIndexSet(hub.selection, sorted)) {
-            this.pendingSplit = { rows: [], cols: [] };
-            hub.clear(this.id);
-          } else {
-            this.pendingSplit = split;
-            hub.set(indices, this.id);
-          }
+          this.toggleSelection(this.singleCellIndices(anchor), {
+            rows: [anchor.row],
+            cols: [anchor.col],
+          });
         } else {
           // Off-diagonal drags select both the row and the column ranges:
           // the residues of the aligned block and of the scored block
@@ -1414,7 +1411,33 @@
         }
       },
 
+      toggleSelection(indices, split) {
+        // Dedupe before comparing: for a diagonal block rows and cols
+        // list the same tokens twice
+        const sorted = [...new Set(indices)].sort((a, b) => a - b);
+        if (sameIndexSet(hub.selection, sorted)) {
+          this.pendingSplit = { rows: [], cols: [] };
+          hub.clear(this.id);
+        } else {
+          this.pendingSplit = split;
+          hub.set(indices, this.id);
+        }
+      },
+
+      // True when both cells sit in the same row chain and the same column
+      // chain, so a pointer wiggle inside one block still counts as a click
+      sameBlock(a, b) {
+        const chainOf = (ix) => {
+          const seg = CHAIN_SEGMENTS.find((s) => ix >= s.start && ix <= s.end);
+          return seg ? seg.chain : null;
+        };
+        return chainOf(a.row) === chainOf(b.row) && chainOf(a.col) === chainOf(b.col);
+      },
+
       setMode(next) {
+        // A PAE selection (specific residue pairs) has no meaning in the
+        // chain-block score colourings, so switching modes clears it
+        if (next !== mode && hub.selection.length) hub.clear(this.id);
         mode = next;
         // A tooltip rendered for the previous colouring would be stale
         tooltip.classList.add("hidden");
@@ -1562,7 +1585,7 @@
           });
         }
 
-        if (this.drag) {
+        if (this.drag && mode === "pae") {
           const a = this.drag.anchor;
           const c = this.drag.current;
           const r0 = Math.min(a.row, c.row);
