@@ -39,12 +39,15 @@ def safeColabfoldName(name) {
 // the longest sanitised sample-id prefix (sample ids may be prefixes of one
 // another).
 def matchBatchSample(batch_metas, filename) {
-    def ids = batch_metas.collect { safeColabfoldName(it.id) }.sort { -it.length() }
+    // The batch lists travel through nextflow operators that may share or
+    // reuse their buffers across concurrent consumers; iterate over private
+    // copies so a concurrent structural modification cannot break the pass.
+    def ids = new ArrayList(batch_metas).collect { safeColabfoldName(it.id) }.sort { -it.length() }
     def id = ids.find { filename.startsWith(it + '_') || filename.startsWith(it + '.') }
     if (id == null) {
         error("COLABFOLD2_INFERENCE_BATCH produced file '${filename}' that does not match any sample in the batch (${ids.join(', ')})")
     }
-    return batch_metas.find { safeColabfoldName(it.id) == id }
+    return new ArrayList(batch_metas).find { safeColabfoldName(it.id) == id }
 }
 
 // One file per sample: emit [meta, file] tuples.
@@ -107,7 +110,7 @@ def batchInferenceInputs(ch, inference_batch) {
             def sorted = [metas, inputs].transpose().sort { a, b -> (a[0].id as String) <=> (b[0].id as String) }
             def effective = inference_batch == -1 ? Math.max(1, sorted.size()) : inference_batch
             sorted.collate(effective).collect { batch ->
-                tuple(batch*.getAt(0) as List, batch*.getAt(1) as List, model_types[0], use_esms[0], dirs[0])
+                tuple(new ArrayList(batch*.getAt(0)), new ArrayList(batch*.getAt(1)), model_types[0], use_esms[0], dirs[0])
             }
         }
 }

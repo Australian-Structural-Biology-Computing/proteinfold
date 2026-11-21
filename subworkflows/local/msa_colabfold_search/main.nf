@@ -75,12 +75,14 @@ workflow MSA_COLABFOLD_SEARCH {
         .map { meta, csv -> [meta.id, meta, csv] }
         .collect(flat: false)
         .flatMap { rows ->
-            def sorted = rows.sort { a, b -> a[0] <=> b[0] }
+            // Private copies: the collected rows travel through nextflow
+            // operators that may share buffers across concurrent consumers.
+            def sorted = new ArrayList(rows).sort { a, b -> a[0] <=> b[0] }
             def ids = sorted.collect { row -> row[0] }
             if (ids.toSet().size() != ids.size()) error("Duplicate sample IDs are not allowed")
             def effective_batch_size = batch_size == -1 ? Math.max(1, sorted.size()) : batch_size
             sorted.collate(effective_batch_size).collect { batch ->
-                [batch.collect { item -> item[1] }, batch.collect { item -> item[2] }]
+                [new ArrayList(batch.collect { item -> item[1] }), new ArrayList(batch.collect { item -> item[2] })]
             }
         }
     MMSEQS_COLABFOLDSEARCH_BATCH(ch_batches, ch_colabfold_db, ch_uniref30, cache_dir)
