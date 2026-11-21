@@ -30,7 +30,7 @@ nextflow_process {
                     file("$outputDir/ptm.tsv",                       checkIfExists: true),
                     file("$outputDir/iptm.tsv",                      checkIfExists: true),
                     file("$projectDir/tests/fixtures/NO_FILE",               checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
+                    file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
                 ]
                 """
             }

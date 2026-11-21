@@ -46,7 +46,9 @@ workflow NFCORE_PROTEINFOLD {
     ch_samplesheet       = samplesheet
     ch_multiqc           = channel.empty()
     ch_report_input      = channel.empty()
-    modelcif_software_details = file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
+    modelcif_software_details = params.modelcif_software_details \
+        ? file(params.modelcif_software_details, checkIfExists: true) \
+        : file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
     def ch_software_versions = channel.topic('versions')
         .unique()
         .map { process_name, tool_name, version ->
@@ -347,8 +349,7 @@ workflow NFCORE_PROTEINFOLD {
         ch_modelcif,
         params.write_modelcif,
         params.modelcif_binary,
-        params.modelcif_pae_embed,
-        params.modelcif_software_details
+        params.modelcif_pae_embed
     )
 
     emit:
