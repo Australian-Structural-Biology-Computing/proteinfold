@@ -1634,13 +1634,16 @@
       },
 
       setMode(next) {
-        // A PAE selection (specific residue pairs) has no meaning in the
-        // chain-block score colourings, so switching modes clears it
-        if (next !== mode && hub.selection.length) hub.clear(this.id);
+        // A selection has no meaning in the chain-block score colourings,
+        // so entering them clears it. Returning to the PAE colouring keeps
+        // whatever selection is current - including one made while a score
+        // colouring suppressed the bands - and re-applies its highlight.
+        if (next !== mode && next !== "pae" && hub.selection.length) hub.clear(this.id);
         mode = next;
         // A tooltip rendered for the previous colouring would be stale
         tooltip.classList.add("hidden");
-        this.draw();
+        if (next === "pae" && hub.selection.length) this.setHighlight([...hub.selection], "other");
+        else this.draw();
       },
       setScores(next) {
         scores = next;
