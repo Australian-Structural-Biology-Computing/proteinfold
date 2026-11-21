@@ -113,7 +113,7 @@ This allows easy sequence indentity calculation when processing as a `numpy` arr
 
 ### chain-wise pTM/iPTM (`<SEQUENCE NAME>_<MODE>_<MSA>_chainwise.tsv`)
 
-Chain-wise pTM and interface iPTM values, rounded to 4 decimal places, with chain-pair lettering as the row (`X:Y`) and rank number as the column, derived with the bundled `ipsae.py` utility. The on-diagonal `X:X` rows are the per-chain pTM; the off-diagonal `X:Y` rows are the pairwise interface iPTM (the `ipTM_d0chn` values of the ipSAE report). The per-chain pTM rows are emitted by `ipsae.py` as `self` rows using the same estimator as the chain-pair ipTM, with `d0` from the chain's own length.
+Chain-wise pTM and interface iPTM values, rounded to 4 decimal places, with chain-pair lettering as the row (`X:Y`) and rank number as the column. The on-diagonal `X:X` rows are the per-chain pTM; the off-diagonal `X:Y` rows are the pairwise interface iPTM. The values are program-native for every mode: the AlphaFold3-family backends write the chain-pair ipTM matrix and per-chain pTM of their own confidence head into the scores JSON (surfaced by the bundled `colabfold_batch_af3_chainwise.py` wrapper), and the AlphaFold2 backends write the same keys from their `--calc-extra-ptm` pass; both report one entry per unordered chain pair (the AF3 confidence head writes the same value into both orientations of its symmetric matrix). Ranks a mode does not score are `n/a`.
 
 ```
 0	1	2
@@ -124,11 +124,9 @@ B:B	0.4000	0.3980	0.4050
 
 In the HTML reports, the chainwise matrix is displayed chain-by-chain for each ranked model, with the diagonal carrying the per-chain pTM. Modes that do not emit this metric omit the report section.
 
-**ipSAE Derivation and Attribution**
+**ipSAE Attribution**
 
-- **Derived values:** the chain-wise pTM/iPTM values and the global ipSAE (and, for monomer AlphaFold2 runs without a native `iptm`, the derived iPTM fallback) are computed after the fact by running the `ipsae.py` utility included in this pipeline over the model's PAE output and structure. Derived values are generated from the model's PAE/PAE-like output and are not guaranteed to be numerically identical to program-native scores; they follow the ipSAE/ipTM algorithm used by the IPSAE project and are intended to provide a consistent interface-derived score across every prediction mode.
-- **Default cutoffs used when deriving:** when `extract_metrics.py` derives iPTM/ipSAE it invokes `ipsae.py` with a PAE cutoff of `10` and a distance cutoff of `15` (these are currently hard-coded in the extraction step). If you require different thresholds, compute iPTM/ipSAE externally or update the extraction call accordingly.
-- **Third-party attribution:** the `ipsae.py` utility bundled in `bin/` is derived from the IPSAE project by the Dunbrack Lab (https://github.com/DunbrackLab/IPSAE/). The original script includes an MIT-style header; keep that header intact if the file is redistributed. Please consult the IPSAE repository for full details and citation information.
+- The global ipSAE (and the per-chain-pair pDockQ/pDockQ2 scores) come from colabfold's own `get_interface_scores` implementation, which the AlphaFold2 backends run natively and the AlphaFold3-family backends receive through the bundled `colabfold_batch_af3_chainwise.py` wrapper. That implementation is a rework of the IPSAE project by the Dunbrack Lab (https://github.com/DunbrackLab/IPSAE/); consult the IPSAE repository for full details and citation information.
 
 ### PAE (`<SEQUENCE NAME>_<MODE>_<MSA>_<RANK>_pae.tsv`)
 
