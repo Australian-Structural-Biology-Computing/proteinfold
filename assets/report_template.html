@@ -1718,12 +1718,14 @@
       }
     }
 
-    // Plot-sized heatmap, rasterised directly from the byte array: each
-    // destination pixel area-averages every cell that overlaps it, so the
-    // full matrix (all rows, no subsampling) is drawn into the plot area
-    // whether cells are larger or smaller than a pixel. Quantisation
-    // collapses true gaps and zero-identity covered positions; a block
-    // average of zero still renders white like the previous static plot.
+    // Plot-sized heatmap, rasterised directly from the byte array with
+    // nearest-neighbour sampling at each pixel centre - the same
+    // interpolation the legacy static plot used. Every covered cell of a
+    // row holds that row's identity, so a row renders as one consistent
+    // colour with crisp white dots for gaps; averaging would blend the
+    // neighbouring sequences and dilute gaps into coloured speckle
+    // (rows are thinner than a pixel in deep alignments). The full matrix
+    // (all rows, no subsampling) still fills the whole plot area.
     let heat = null;
     const buildHeat = () => {
       const w = Math.max(1, Math.round(plot.width));
@@ -1737,27 +1739,18 @@
       const rowsPerPx = nSeqShown / h;
       const colsPerPx = nCol / w;
       for (let y = 0; y < h; y++) {
-        const r0 = Math.min(nSeqShown - 1, Math.floor(y * rowsPerPx));
-        const r1 = Math.min(nSeqShown - 1, Math.max(r0, Math.ceil((y + 1) * rowsPerPx) - 1));
+        const r = Math.min(nSeqShown - 1, Math.floor((y + 0.5) * rowsPerPx));
+        const base = r * nCol;
+        let o = y * w * 4;
         for (let x = 0; x < w; x++) {
-          const c0 = Math.min(nCol - 1, Math.floor(x * colsPerPx));
-          const c1 = Math.min(nCol - 1, Math.max(c0, Math.ceil((x + 1) * colsPerPx) - 1));
-          let sum = 0;
-          let count = 0;
-          for (let r = r0; r <= r1; r++) {
-            const base = r * nCol;
-            for (let c = c0; c <= c1; c++) {
-              sum += bytes[base + c];
-              count++;
-            }
-          }
-          const v = count ? sum / count : 0;
+          const c = Math.min(nCol - 1, Math.floor((x + 0.5) * colsPerPx));
+          const v = bytes[base + c];
           const [cr, cg, cb] = v === 0 ? [255, 255, 255] : rainbowColor(v / 255);
-          const o = (y * w + x) * 4;
           out[o] = cr;
           out[o + 1] = cg;
           out[o + 2] = cb;
           out[o + 3] = 255;
+          o += 4;
         }
       }
       hctx.putImageData(img, 0, 0);
