@@ -274,6 +274,10 @@
                 <div id="chainwise-iptm-table" class="text-sm"></div>
                 <div class="mt-2 text-xs text-gray-500">Diagonal entries (A:A) are the per-chain pTM.</div>
               </div>
+              <div class="shadow-md p-6 bg-white rounded border">
+                <div class="font-semibold text-gray-900 mb-3">Chainwise ipSAE</div>
+                <div id="chainwise-ipsae-table" class="text-sm"></div>
+              </div>
             </div>
           </div>
           <!-- Directions -->
@@ -552,6 +556,7 @@
       iptm_scores: [],
       ipsae_scores: [],
       chainwise: [],
+      chainwise_ipsae: [],
     };
 
     // Load report configuration from embedded JSON
@@ -574,6 +579,7 @@
     const IPTM_SCORES = config.iptm_scores;
     const IPSAE_SCORES = config.ipsae_scores;
     const CHAINWISE_IPTM_SCORES = config.chainwise;
+    const CHAINWISE_IPSAE_SCORES = config.chainwise_ipsae;
 
     const hasScalarScore = (score) => score !== undefined && score !== null && score !== "" && score !== "n/a";
 
@@ -728,7 +734,8 @@
 
     const updatePairScoreTables = (ix) => {
       const hasIptm = renderScoreMatrix("chainwise-iptm-table", CHAINWISE_IPTM_SCORES[ix], "No chainwise iPTM");
-      document.getElementById("interface_scores_container").classList.toggle("hidden", hasIptm !== true);
+      const hasIpsae = renderScoreMatrix("chainwise-ipsae-table", CHAINWISE_IPSAE_SCORES[ix], "No chainwise ipSAE");
+      document.getElementById("interface_scores_container").classList.toggle("hidden", !(hasIptm || hasIpsae));
     };
 
     const nextModel = () => {

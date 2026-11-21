@@ -87,6 +87,7 @@ def parse_args(args=None):
                              '(e.g. alphafold3) get one seed per model; single-seed programs get one '
                              'shared parameter. Falls back to inferring seeds from structure filenames.')
     parser.add_argument('--chainwise', default=None, help='*_chainwise.tsv (multichain only; A:A diagonal is the per-chain pTM).')
+    parser.add_argument('--chainwise_ipsae', default=None, help='*_chainwise_ipsae.tsv (multichain only; full asymmetric chain-pair ipSAE matrix).')
     parser.add_argument('--param', action='append', default=[], metavar='KEY=VALUE',
                         help='Extra model parameter(s) embedded as SoftwareParameters on the modeling '
                              'software (e.g. --param use_templates=true --param model_preset=monomer_ptm). '
@@ -591,6 +592,7 @@ def build_modelcif(
     name,
     prog,
     chainwise_file=None,
+    chainwise_ipsae_file=None,
     sw_version=None,
     msa_tool=None,
     software_details=None,
@@ -629,6 +631,9 @@ def build_modelcif(
         Path to *_chainwise.tsv; for multichain models the diagonal
         (per-chain pTM) is embedded as Feature metrics and off-diagonal
         (interface ipTM) as FeaturePairwise metrics (per #582).
+    chainwise_ipsae_file : str, optional
+        Path to *_chainwise_ipsae.tsv; the full asymmetric chain-pair
+        ipSAE matrix, embedded as FeaturePairwise metrics.
     name : str
         Sample / sequence identifier used in titles and file naming.
     prog : str
@@ -696,6 +701,7 @@ def build_modelcif(
         return {k: v for k, v in parsed.items() if v}
 
     cw_iptm_by_rank = _maybe_chainwise(chainwise_file, 'chainwise')
+    cw_ipsae_by_rank = _maybe_chainwise(chainwise_ipsae_file, 'chainwise_ipsae')
     pae_by_rank = {}
     pae_matrices = {}
     if 'pae' not in missing_metrics:
@@ -831,6 +837,11 @@ def build_modelcif(
 
     ChainIpTM.software = software
 
+    class ChainIPSAE(modelcif.qa_metric.FeaturePairwise, modelcif.qa_metric.NormalizedScore):
+        """Interface ipSAE between two chains (from colabfold's native interface scores)."""
+
+    ChainIPSAE.software = software
+
 
     # ---- Software parameters: container image (#590), seed, model params --
     # modelcif only writes _ma_software_parameter for SoftwareWithParameters
@@ -944,7 +955,8 @@ def build_modelcif(
                 inst._all_features = (inst,)
                 chain_feats[cid] = inst
             for d, feat_cls, pair_cls in (
-                    (cw_iptm_by_rank.get(rank_key, {}), ChainPTM, ChainIpTM),):
+                    (cw_iptm_by_rank.get(rank_key, {}), ChainPTM, ChainIpTM),
+                    (cw_ipsae_by_rank.get(rank_key, {}), None, ChainIPSAE)):
                 for (ca, cb), value in d.items():
                     fa = chain_feats.get(ca)
                     fb = chain_feats.get(cb)
@@ -1092,6 +1104,7 @@ def main(args=None):
     container_image = None if args.container_image in (None, 'None', 'null') else args.container_image
     seed_arg = None if args.seed in (None, 'None', 'null') else args.seed
     chainwise = None if args.chainwise in (None, 'None', 'null') else args.chainwise
+    chainwise_ipsae = None if args.chainwise_ipsae in (None, 'None', 'null') else args.chainwise_ipsae
     seed_values = _read_seed_values(seed_arg, args.structs, len(args.structs))
     extra_params = {}
     for item in args.param:
@@ -1111,6 +1124,7 @@ def main(args=None):
         container_image=container_image,
         seed_values=seed_values,
         chainwise_file=chainwise,
+        chainwise_ipsae_file=chainwise_ipsae,
         model_params=prog_params,
         template_software=None if args.template_software in (None, 'None') else args.template_software,
         template_version=None if args.template_version in (None, 'None') else args.template_version,

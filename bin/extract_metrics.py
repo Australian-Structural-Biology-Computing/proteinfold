@@ -222,6 +222,7 @@ def read_colabfold_metrics(name, colabfold_metrics_files):
     iptm_rows = []
     ipsae_rows = []
     chainwise = {}
+    chainwise_ipsae = {}
     for fn in colabfold_metrics_files:
         with open(fn) as f:
             data = json.load(f)
@@ -241,6 +242,12 @@ def read_colabfold_metrics(name, colabfold_metrics_files):
         interface_ipsae = data.get("ipsae")
         if isinstance(interface_ipsae, dict) and interface_ipsae:
             ipsae_rows.append((f"{rank_id}", f"{max(interface_ipsae.values()):.3f}"))
+            # The native per-chain-pair ipSAE dict is asymmetric (the
+            # alignment runs from each chain against the other), so both
+            # orientations are kept in the full matrix.
+            chainwise_ipsae[rank_id] = [
+                (f"{label.replace('-', ':')}", value) for label, value in interface_ipsae.items()
+            ]
         chainwise_entries = colabfold_chainwise_rows(data)
         if chainwise_entries:
             chainwise[rank_id] = chainwise_entries
@@ -252,6 +259,8 @@ def read_colabfold_metrics(name, colabfold_metrics_files):
         write_tsv(f"{name}_ipsae.tsv", sorted(ipsae_rows, key = lambda x: x[0]))
     if len(chainwise)>0:
         write_tsv(f"{name}_chainwise.tsv", format_pair_score_rows(dict(sorted(chainwise.items(), key=lambda x: x[0]))))
+    if len(chainwise_ipsae)>0:
+        write_tsv(f"{name}_chainwise_ipsae.tsv", format_pair_score_rows(dict(sorted(chainwise_ipsae.items(), key=lambda x: x[0]))))
 
 def main():
     parser = argparse.ArgumentParser()
