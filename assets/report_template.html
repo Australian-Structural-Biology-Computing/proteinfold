@@ -272,7 +272,7 @@
           <h2 class="text-sm font-semibold text-gray-900">Sequence</h2>
           <p class="text-xs text-gray-500">
             Click a residue to highlight it across views &middot; drag for a
-            range &middot; Esc clears.
+            range &middot; Shift adds to the selection &middot; Esc clears.
           </p>
         </div>
         <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white p-3">
@@ -2232,7 +2232,9 @@
     frame.addEventListener("pointerdown", (ev) => {
       const ix = spanAt(ev);
       if (ix === null) return;
-      drag = { anchor: ix, current: ix };
+      // Shift held at press time adds the new range to the existing
+      // selection instead of replacing it
+      drag = { anchor: ix, current: ix, shift: ev.shiftKey };
       frame.setPointerCapture(ev.pointerId);
       ev.preventDefault();
     });
@@ -2241,14 +2243,23 @@
       const ix = spanAt(ev);
       if (ix === null || ix === drag.current) return;
       drag.current = ix;
-      drawBands(previewBands, indicesFromRange(drag.anchor, drag.current), "seq-band-preview");
+      const range = indicesFromRange(drag.anchor, drag.current);
+      drawBands(
+        previewBands,
+        drag.shift ? [...hub.selection, ...range] : range,
+        "seq-band-preview",
+      );
     });
     const finish = () => {
       if (!drag) return;
-      const { anchor, current } = drag;
+      const { anchor, current, shift } = drag;
       drag = null;
       previewBands.splice(0).forEach((band) => band.remove());
-      if (anchor === current) {
+      if (shift) {
+        // Additive: union the new click/range with the current selection
+        const range = anchor === current ? [anchor] : indicesFromRange(anchor, current);
+        hub.set([...hub.selection, ...range], "seq");
+      } else if (anchor === current) {
         // Plain click toggles the single residue
         if (sameIndexSet(hub.selection, [anchor])) hub.clear("seq");
         else hub.set([anchor], "seq");
