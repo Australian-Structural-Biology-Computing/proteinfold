@@ -1347,19 +1347,61 @@
         return [cell.row, cell.col];
       },
 
+      // Score modes colour whole chain-pair blocks, so a click targets
+      // chains rather than single residues: a diagonal block selects that
+      // chain, an off-diagonal block selects both chains. Returns null for
+      // cells outside any chain so the caller can fall back to the
+      // single-residue behaviour.
+      chainBlockIndices(cell) {
+        const chainOf = (ix) => {
+          const seg = CHAIN_SEGMENTS.find((s) => ix >= s.start && ix <= s.end);
+          return seg ? seg.chain : null;
+        };
+        const rowChain = chainOf(cell.row);
+        const colChain = chainOf(cell.col);
+        if (rowChain === null || colChain === null) return null;
+        // All tokens of a chain, not just the clicked segment: a chain id
+        // split by an interleaved ligand forms several segments but stays
+        // one chain in the viewer, the legend and the axis bands
+        const tokensOf = (chain) => {
+          const out = [];
+          RESIDUES.forEach((r, ix) => {
+            if (r[0] === chain) out.push(ix);
+          });
+          return out;
+        };
+        const rows = tokensOf(rowChain);
+        const cols = tokensOf(colChain);
+        return { rows, cols, indices: [...rows, ...cols] };
+      },
+
       commitSelection(anchor, current) {
         // Without a matching label list the PAE indices cannot be mapped onto
         // the structure or the MSA, so selections stay local (tooltips only)
         if (!linked) return;
         const sameCell = anchor.row === current.row && anchor.col === current.col;
         if (sameCell) {
-          const indices = this.singleCellIndices(anchor);
-          const sorted = [...indices].sort((a, b) => a - b);
+          let indices = null;
+          let split = null;
+          if (mode !== "pae") {
+            const block = this.chainBlockIndices(anchor);
+            if (block) {
+              indices = block.indices;
+              split = { rows: block.rows, cols: block.cols };
+            }
+          }
+          if (!indices) {
+            indices = this.singleCellIndices(anchor);
+            split = { rows: [anchor.row], cols: [anchor.col] };
+          }
+          // Dedupe before comparing: for a diagonal block rows and cols
+          // list the same tokens twice
+          const sorted = [...new Set(indices)].sort((a, b) => a - b);
           if (sameIndexSet(hub.selection, sorted)) {
             this.pendingSplit = { rows: [], cols: [] };
             hub.clear(this.id);
           } else {
-            this.pendingSplit = { rows: [anchor.row], cols: [anchor.col] };
+            this.pendingSplit = split;
             hub.set(indices, this.id);
           }
         } else {
