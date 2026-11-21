@@ -24,12 +24,12 @@ nextflow_process {
                 input[0] = [
                     [ id: 'sw_entries', model: 'alphafold2', msa_tool: 'jackhmmer', no_template_search: true ],
                     file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_MODELCIF.mmcif", checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_MSA.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_MSA.tsv",         checkIfExists: true),
                     file("$outputDir/one_rank_plddt.tsv",           checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_PAE.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_PAE.tsv",         checkIfExists: true),
                     file("$outputDir/ptm.tsv",                       checkIfExists: true),
                     file("$outputDir/iptm.tsv",                      checkIfExists: true),
-                    file("$projectDir/assets/NO_FILE",               checkIfExists: true),
+                    file("$projectDir/tests/fixtures/NO_FILE",               checkIfExists: true),
                     file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
                 ]
                 """

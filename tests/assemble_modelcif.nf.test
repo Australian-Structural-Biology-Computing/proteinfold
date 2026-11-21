@@ -77,7 +77,7 @@ nextflow_process {
             process {
                 (0..1).each { rank ->
                     new File(outputDir, "rank_${rank}.mmcif").text = new URL((params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/') + "testdata/models/DUMMY_MODELCIF.mmcif").text
-                    new File(outputDir, "rank_${rank}_pae.tsv").text = new File(projectDir, 'assets/DUMMY_PAE.tsv').text
+                    new File(outputDir, "rank_${rank}_pae.tsv").text = new File(projectDir, 'tests/fixtures/DUMMY_PAE.tsv').text
                 }
                 def plddt = new File(outputDir, 'two_rank_plddt.tsv')
                 plddt.text = new URL((params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/') + "testdata/metrics/DUMMY_PLDDT.tsv").readLines()
@@ -89,7 +89,7 @@ nextflow_process {
                 input[0] = [
                     [id: 'test', model: 'alphafold2', msa_tool: 'jackhmmer'],
                     [file("$outputDir/rank_0.mmcif"), file("$outputDir/rank_1.mmcif")],
-                    file("$projectDir/assets/DUMMY_MSA.tsv", checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_MSA.tsv", checkIfExists: true),
                     file("$outputDir/two_rank_plddt.tsv", checkIfExists: true),
                     [file("$outputDir/rank_0_pae.tsv"), file("$outputDir/rank_1_pae.tsv")],
                     file("$outputDir/ptm.tsv", checkIfExists: true),
@@ -125,7 +125,7 @@ nextflow_process {
             process {
                 (0..1).each { rank ->
                     new File(outputDir, "rank_${rank}.mmcif").text = new URL((params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/') + "testdata/models/DUMMY_MODELCIF.mmcif").text
-                    new File(outputDir, "rank_${rank}_pae.tsv").text = new File(projectDir, 'assets/DUMMY_PAE.tsv').text
+                    new File(outputDir, "rank_${rank}_pae.tsv").text = new File(projectDir, 'tests/fixtures/DUMMY_PAE.tsv').text
                         .replaceFirst('0\\.2601', rank == 0 ? '0.2601' : '1.2601')
                 }
                 def plddt = new File(outputDir, 'two_rank_plddt.tsv')
@@ -138,7 +138,7 @@ nextflow_process {
                 input[0] = [
                     [id: 'test_embed', model: 'alphafold2', msa_tool: 'jackhmmer'],
                     [file("$outputDir/rank_0.mmcif"), file("$outputDir/rank_1.mmcif")],
-                    file("$projectDir/assets/DUMMY_MSA.tsv", checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_MSA.tsv", checkIfExists: true),
                     file("$outputDir/two_rank_plddt.tsv", checkIfExists: true),
                     [file("$outputDir/rank_0_pae.tsv"), file("$outputDir/rank_1_pae.tsv")],
                     file("$outputDir/ptm.tsv", checkIfExists: true),
@@ -167,12 +167,12 @@ nextflow_process {
                 input[0] = [
                     [ id: 'test', model: 'alphafold2', msa_tool: 'jackhmmer' ],
                     file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_MODELCIF.mmcif", checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_MSA.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_MSA.tsv",         checkIfExists: true),
                     file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/metrics/DUMMY_PLDDT.tsv",       checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_PAE.tsv",         checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_PTM.tsv",         checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_IPTM.tsv",        checkIfExists: true),
-                    file("$projectDir/assets/NO_FILE",               checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_PAE.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_PTM.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_IPTM.tsv",        checkIfExists: true),
+                    file("$projectDir/tests/fixtures/NO_FILE",               checkIfExists: true),
                     file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
                 ]
                 """
@@ -198,12 +198,12 @@ nextflow_process {
                 input[0] = [
                     [ id: 'test_binary', model: 'alphafold2', msa_tool: 'jackhmmer' ],
                     file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/models/DUMMY_MODELCIF.mmcif", checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_MSA.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_MSA.tsv",         checkIfExists: true),
                     file("$outputDir/one_rank_plddt.tsv",           checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_PAE.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_PAE.tsv",         checkIfExists: true),
                     file("$outputDir/ptm.tsv",                       checkIfExists: true),
                     file("$outputDir/iptm.tsv",                      checkIfExists: true),
-                    file("$projectDir/assets/NO_FILE",               checkIfExists: true),
+                    file("$projectDir/tests/fixtures/NO_FILE",               checkIfExists: true),
                     file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
                 ]
                 """
@@ -229,7 +229,7 @@ nextflow_process {
                 sourceFile.delete()
                 (0..4).each { rank ->
                     new File("$outputDir/rank_\${rank}_pae.tsv").text =
-                        new File("$projectDir/assets/DUMMY_PAE.tsv").text
+                        new File("$projectDir/tests/fixtures/DUMMY_PAE.tsv").text
                 }
                 input[0] = [
                     [ id: 'test_multi_default', model: 'alphafold2', msa_tool: 'jackhmmer' ],
@@ -240,12 +240,12 @@ nextflow_process {
                         file("$outputDir/ranked/DUMMY_MMCIF_rank_3.mmcif", checkIfExists: true),
                         file("$outputDir/ranked/DUMMY_MMCIF_rank_4.mmcif", checkIfExists: true)
                     ],
-                    file("$projectDir/assets/DUMMY_MSA.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_MSA.tsv",         checkIfExists: true),
                     file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/metrics/DUMMY_PLDDT.tsv",       checkIfExists: true),
                     file("$outputDir/rank_*_pae.tsv",               checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_PTM.tsv",         checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_IPTM.tsv",        checkIfExists: true),
-                    file("$projectDir/assets/NO_FILE",               checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_PTM.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_IPTM.tsv",        checkIfExists: true),
+                    file("$projectDir/tests/fixtures/NO_FILE",               checkIfExists: true),
                     file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
                 ]
                 """
@@ -283,7 +283,7 @@ nextflow_process {
                 sourceFile.delete()
                 (0..4).each { rank ->
                     new File("$outputDir/rank_\${rank}_pae.tsv").text =
-                        new File("$projectDir/assets/DUMMY_PAE.tsv").text
+                        new File("$projectDir/tests/fixtures/DUMMY_PAE.tsv").text
                 }
                 input[0] = [
                     [ id: 'test_multi', model: 'alphafold2', msa_tool: 'jackhmmer' ],
@@ -294,12 +294,12 @@ nextflow_process {
                         file("$outputDir/ranked/DUMMY_MMCIF_rank_3.mmcif", checkIfExists: true),
                         file("$outputDir/ranked/DUMMY_MMCIF_rank_4.mmcif", checkIfExists: true)
                     ],
-                    file("$projectDir/assets/DUMMY_MSA.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_MSA.tsv",         checkIfExists: true),
                     file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/metrics/DUMMY_PLDDT.tsv",       checkIfExists: true),
                     file("$outputDir/rank_*_pae.tsv",               checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_PTM.tsv",         checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_IPTM.tsv",        checkIfExists: true),
-                    file("$projectDir/assets/NO_FILE",               checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_PTM.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_IPTM.tsv",        checkIfExists: true),
+                    file("$projectDir/tests/fixtures/NO_FILE",               checkIfExists: true),
                     file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
                 ]
                 """
@@ -345,12 +345,12 @@ nextflow_process {
                         file("$outputDir/ranked/DUMMY_MMCIF_rank_3.mmcif", checkIfExists: true),
                         file("$outputDir/ranked/DUMMY_MMCIF_rank_4.mmcif", checkIfExists: true)
                     ],
-                    file("$projectDir/assets/DUMMY_MSA.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_MSA.tsv",         checkIfExists: true),
                     file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/metrics/DUMMY_PLDDT.tsv",       checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_PAE.tsv",         checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_PTM.tsv",         checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_IPTM.tsv",        checkIfExists: true),
-                    file("$projectDir/assets/NO_FILE",               checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_PAE.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_PTM.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_IPTM.tsv",        checkIfExists: true),
+                    file("$projectDir/tests/fixtures/NO_FILE",               checkIfExists: true),
                     file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
                 ]
                 """
@@ -390,12 +390,12 @@ nextflow_process {
                         file("$outputDir/ranked/DUMMY_MMCIF_rank_3.mmcif", checkIfExists: true),
                         file("$outputDir/ranked/DUMMY_MMCIF_rank_4.mmcif", checkIfExists: true)
                     ],
-                    file("$projectDir/assets/DUMMY_MSA.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_MSA.tsv",         checkIfExists: true),
                     file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/metrics/DUMMY_PLDDT.tsv",       checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_PAE.tsv",         checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_PTM.tsv",         checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_IPTM.tsv",        checkIfExists: true),
-                    file("$projectDir/assets/NO_FILE",               checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_PAE.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_PTM.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_IPTM.tsv",        checkIfExists: true),
+                    file("$projectDir/tests/fixtures/NO_FILE",               checkIfExists: true),
                     file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
                 ]
                 """
@@ -435,12 +435,12 @@ nextflow_process {
                         file("$outputDir/ranked/DUMMY_MMCIF_rank_3.mmcif", checkIfExists: true),
                         file("$outputDir/ranked/DUMMY_MMCIF_rank_4.mmcif", checkIfExists: true)
                     ],
-                    file("$projectDir/assets/DUMMY_MSA.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_MSA.tsv",         checkIfExists: true),
                     file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/metrics/DUMMY_PLDDT.tsv",       checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_PAE.tsv",         checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_PTM.tsv",         checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_IPTM.tsv",        checkIfExists: true),
-                    file("$projectDir/assets/NO_FILE",               checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_PAE.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_PTM.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_IPTM.tsv",        checkIfExists: true),
+                    file("$projectDir/tests/fixtures/NO_FILE",               checkIfExists: true),
                     file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
                 ]
                 """
@@ -478,12 +478,12 @@ nextflow_process {
                         file("$outputDir/ranked/DUMMY_MMCIF_rank_3.mmcif", checkIfExists: true),
                         file("$outputDir/ranked/DUMMY_MMCIF_rank_4.mmcif", checkIfExists: true)
                     ],
-                    file("$projectDir/assets/DUMMY_MSA.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_MSA.tsv",         checkIfExists: true),
                     file("${(params.pipelines_testdata_base_path ?: System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/')}testdata/metrics/DUMMY_PLDDT.tsv",       checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_PAE.tsv",         checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_PTM.tsv",         checkIfExists: true),
-                    file("$projectDir/assets/DUMMY_IPTM.tsv",        checkIfExists: true),
-                    file("$projectDir/assets/NO_FILE",               checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_PAE.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_PTM.tsv",         checkIfExists: true),
+                    file("$projectDir/tests/fixtures/DUMMY_IPTM.tsv",        checkIfExists: true),
+                    file("$projectDir/tests/fixtures/NO_FILE",               checkIfExists: true),
                     file("$projectDir/assets/DUMMY_SOFTWARE_DETAILS.yml", checkIfExists: true)
                 ]
                 """

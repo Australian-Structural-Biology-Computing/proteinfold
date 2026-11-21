@@ -257,42 +257,23 @@ def collectMultiqcMetrics(metric_channels) {
         }
 }
 
-// Join predictor outputs and substitute placeholders for unavailable optional metrics.
-def modelcifInput(structs, msa, plddt, pae, ptm, iptm, versions, softwareDetails, msaTool, missingMetrics = [], modelParams = [:], plddtScale = null) {
-    def dummyMetrics = [
-        pae: file("$projectDir/assets/DUMMY_PAE.tsv", checkIfExists: true),
-        ptm: file("$projectDir/assets/DUMMY_PTM.tsv", checkIfExists: true),
-        iptm: file("$projectDir/assets/DUMMY_IPTM.tsv", checkIfExists: true)
-    ]
-    def input = structs.join(msa).join(plddt)
-    [pae: pae, ptm: ptm, iptm: iptm].each { name, metric ->
-        input = input.join(metric, remainder: true)
-            .filter { values -> values[1] != null }
-            .map { values ->
-                def missing = values[-1] == null
-                values[0..-2] + [missing ? dummyMetrics[name] : values[-1], missing]
-            }
-    }
-    input
+// Join predictor outputs into the ModelCIF assembly input. Every backend
+// emits the PAE/PTM/IPTM metrics; the MSA is the one input that can be
+// absent (the ESMFold2 language-model variants), which the inference task
+// signals with a zero-size MSA TSV that lands in missing_metrics.
+def modelcifInput(structs, msa, plddt, pae, ptm, iptm, versions, softwareDetails, msaTool) {
+    structs
+        .join(msa)
+        .join(plddt)
+        .join(pae)
+        .join(ptm)
+        .join(iptm)
         .combine(versions)
         .map { values ->
-            def meta = values[0]
-            def structureFiles = values[1]
-            def msaFile = values[2]
-            def plddtFile = values[3]
-            def paeFile = values[4]
-            def paeMissing = values[5]
-            def ptmFile = values[6]
-            def ptmMissing = values[7]
-            def iptmFile = values[8]
-            def iptmMissing = values[9]
-            def versionsFile = values[10]
-            def modelcifMeta = meta.clone()
+            def modelcifMeta = values[0].clone()
             modelcifMeta.msa_tool = msaTool
-            modelcifMeta.missing_metrics = (missingMetrics + [java.nio.file.Files.size(msaFile) == 0 ? 'msa' : null, paeMissing ? 'pae' : null, ptmMissing ? 'ptm' : null, iptmMissing ? 'iptm' : null]).findAll().unique()
-            modelcifMeta.modelcif_params = modelParams
-            modelcifMeta.plddt_scale = plddtScale
-            [modelcifMeta, structureFiles, msaFile, plddtFile, paeFile, ptmFile, iptmFile, versionsFile, softwareDetails]
+            modelcifMeta.missing_metrics = [java.nio.file.Files.size(values[2]) == 0 ? 'msa' : null].findAll()
+            [modelcifMeta] + values[1..-1] + [softwareDetails]
         }
 }
 
