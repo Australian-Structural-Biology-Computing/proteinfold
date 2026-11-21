@@ -13,7 +13,7 @@ process AF2_MSA_TO_COLABFOLD_JSON {
     tag "$meta.id"
     label 'process_low'
 
-    container "ghcr.io/jscgh/proteinfold_colabfold:af3-preview-e9e8bd0"
+    container "ghcr.io/tlitfin/proteinfold_colabfold:af3-preview-38683c2"
 
     input:
     tuple val(meta), path(fasta), path(raw_dir)

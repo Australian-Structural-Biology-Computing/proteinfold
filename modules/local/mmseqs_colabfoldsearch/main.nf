@@ -3,7 +3,7 @@ process MMSEQS_COLABFOLDSEARCH {
     label 'process_high_memory'
     label 'process_high'
 
-    container "ghcr.io/jscgh/proteinfold_colabfold:af3-preview-38683c2"
+    container "ghcr.io/tlitfin/proteinfold_colabfold:af3-preview-38683c2"
 
     input:
     tuple val(meta), path(fasta)
@@ -14,7 +14,7 @@ process MMSEQS_COLABFOLDSEARCH {
     output:
     tuple val(meta), path("**.a3m"), emit: a3m
     tuple val(meta), path("**.json"), emit: json
-    tuple val("${task.process}"), val('colabfold_search'), eval("pip list | grep \"^colabfold\" | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold_search, topic: versions
+    tuple val("${task.process}"), val('colabfold_search'), eval("pip list | grep \"^colabfold\" | head -1 | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold_search, topic: versions
     tuple val("${task.process}"), val('mmseqs'), eval("mmseqs version 2>/dev/null | head -1"), emit: versions_mmseqs, topic: versions
 
     when:
@@ -68,7 +68,7 @@ process MMSEQS_COLABFOLDSEARCH {
         exit 1
     fi
 
-    colabfold_search_version="\$(pip list 2>/dev/null | grep "^colabfold " | awk '{print \$2}' || true)"
+    colabfold_search_version="\$(pip list 2>/dev/null | grep "^colabfold " | head -1 | awk '{print \$2}' || true)"
     if [[ -z "\$colabfold_search_version" ]]; then
         colabfold_search_version=unknown
     fi
@@ -127,7 +127,7 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
     tag "batch_${batch_meta.collect { meta -> meta.id }.join('_')}"
     label 'process_high_memory'
     label 'process_high'
-    container "ghcr.io/jscgh/proteinfold_colabfold:af3-preview-38683c2"
+    container "ghcr.io/tlitfin/proteinfold_colabfold:af3-preview-38683c2"
 
     input:
     tuple val(batch_meta), path(fastas)
@@ -138,7 +138,7 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
     output:
     tuple val(batch_meta), path("results/*.a3m"), emit: a3m
     tuple val(batch_meta), path("results/*.json"), emit: json
-    tuple val("${task.process}"), val('colabfold_search'), eval("pip list | grep \"^colabfold\" | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold_search, topic: versions
+    tuple val("${task.process}"), val('colabfold_search'), eval("pip list | grep \"^colabfold\" | head -1 | awk '{print \\\$2}' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold_search, topic: versions
     tuple val("${task.process}"), val('mmseqs'), eval("mmseqs version 2>/dev/null | head -1"), emit: versions_mmseqs, topic: versions
 
     when:
