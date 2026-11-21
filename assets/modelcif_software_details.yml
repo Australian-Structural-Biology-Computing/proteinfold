@@ -1,0 +1,110 @@
+# Default protocol/software metadata for modelCIF population, used unless
+# --modelcif_software_details points at a custom YAML.
+# Structure:
+#   defaults: used for every mode unless overridden
+#   programs.<mode>: per-mode overrides keyed by the --mode token
+
+defaults:
+  modeling_software:
+    classification: protein structure prediction
+    description: Neural-network-based structure prediction
+    type: program
+
+  execution_software:
+    enabled: true
+    name: nf-core/proteinfold
+    classification: workflow management
+    description: Workflow orchestration and software environment management
+    location: https://github.com/nf-core/proteinfold
+    type: package
+
+  protocol:
+    msa_step:
+      # Use the step type (CoevolutionMSAStep) and optional metadata overrides.
+      details: Multiple sequence alignment generation and coevolution feature extraction
+      use_main_software: true
+      use_execution_software: false
+
+    # Optional: uncomment to add a TemplateSearchStep upstream of the MSA step
+    # (a template_search version is expected from the run module's topic: channel).
+    # template_search_step:
+    #   name: template search
+    #   details: PDB template identification from the sequence database
+    #   step_details: Structural templates retrieved by sequence similarity
+    #   use_main_software: true
+    #   use_execution_software: false
+
+    modeling_step:
+      name: Structure prediction
+      details: Coordinate generation from sequence and model features
+      use_main_software: true
+      use_execution_software: true
+
+programs:
+  alphafold2:
+    modeling_software:
+      name: AlphaFold2
+      location: https://github.com/google-deepmind/alphafold
+    protocol:
+      template_search_step:
+        name: template search
+        details: PDB template identification from the structure database
+        step_details: Structural templates retrieval
+        use_main_software: false
+        use_execution_software: false
+        template_search_software:
+          name: hhsearch
+
+  alphafold3:
+    modeling_software:
+      name: AlphaFold3
+      location: https://github.com/google-deepmind/alphafold3
+    protocol:
+      template_search_step:
+        name: template search
+        details: PDB template identification from the structure database
+        step_details: Structural templates retrieval
+        use_main_software: false
+        use_execution_software: false
+        template_search_software:
+          name: hmmsearch
+
+  boltz2:
+    modeling_software:
+      name: Boltz2
+      location: https://github.com/jwohlwend/boltz
+
+  chai1:
+    modeling_software:
+      name: Chai-1
+      location: https://github.com/chaidiscovery/chai-lab
+
+  esmfold2:
+    modeling_software:
+      name: ESMFold2
+
+  intellifold2:
+    modeling_software:
+      name: IntelliFold2
+
+  openbind0:
+    modeling_software:
+      name: OpenBind
+
+  opendde:
+    modeling_software:
+      name: OpenDDE
+
+  openfold3:
+    modeling_software:
+      name: OpenFold3
+      location: https://github.com/aqlaboratory/openfold3
+
+  protenix2:
+    modeling_software:
+      name: Protenix
+      location: https://github.com/bytedance/Protenix
+
+  rosettafold3:
+    modeling_software:
+      name: RoseTTAFold3

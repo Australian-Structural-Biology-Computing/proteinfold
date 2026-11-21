@@ -26,7 +26,8 @@ process GENERATE_REPORT {
 
     """
     generate_report.py \\
-        --type ${meta.model} \\
+        --type ${meta.mode_short} \
+        --tag ${meta.mode_short}_${meta.msa_short ?: 'msa'} \\
         --msa ${msa} \\
         --pae ${pae} \\
         --iptm ${iptm} \\
@@ -42,8 +43,8 @@ process GENERATE_REPORT {
 
     stub:
     """
-    touch ${meta.id}_${meta.model}_report.html
-    touch ${meta.id}_${meta.model}_seq_coverage.png
+    touch ${meta.id}_${meta.mode_short}_${meta.msa_short ?: 'msa'}_report.html
+    touch ${meta.id}_${meta.mode_short}_${meta.msa_short ?: 'msa'}_seq_coverage.png
     touch ${meta.id}_coverage_LDDT.html
 
     cat <<-END_VERSIONS > versions.yml

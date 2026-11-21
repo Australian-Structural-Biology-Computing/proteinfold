@@ -1,0 +1,5 @@
+name: af3_msa_json_to_a3m
+channels:
+  - conda-forge
+dependencies:
+  - conda-forge::python=3.13.7

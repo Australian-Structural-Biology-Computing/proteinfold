@@ -1,0 +1,155 @@
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    MSA tool dispatch tests (stub)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Exercises the unified pipeline's --msa_tool selection with stubbed process
+    execution: each tool must route the samplesheet through its own MSA module
+    (and adaptor where applicable) into the colabfold2 inference backends.
+*/
+
+nextflow_pipeline {
+
+    name "Test MSA tool dispatch (stub)"
+    script "../main.nf"
+    tag "pipeline"
+    tag "test_proteinfold_msa_tools"
+    profile "test_proteinfold"
+
+    // msa_tool    = the --msa_tool value under test
+    // msaProcess  = the MSA-generation process that must run
+    // adaptor     = optional adaptor process that must run
+    def tools = [
+        [msa_tool: 'colabfold_search', msaProcess: 'MMSEQS_COLABFOLDSEARCH',      adaptor: null],
+        [msa_tool: 'alphafold2_msa',   msaProcess: 'RUN_ALPHAFOLD2_MSA',          adaptor: 'AF2_MSA_TO_COLABFOLD_JSON'],
+        [msa_tool: 'alphafold3_msa',   msaProcess: 'RUN_ALPHAFOLD3_DATAPIPELINE', adaptor: 'VALIDATE_ALPHAFOLD3_MSA_JSON'],
+    ]
+
+    tools.each { tool ->
+        test("--msa_tool ${tool.msa_tool}") {
+            tag "msa-${tool.msa_tool}"
+
+            when {
+                params {
+                    outdir        = "$outputDir"
+                    msa_tool      = tool.msa_tool
+                    alphafold2_db = "$projectDir/assets/dummy_db_dir"
+                    alphafold3_db = "$projectDir/assets/dummy_db_dir"
+                }
+            }
+
+            then {
+                assert workflow.success
+                def names = workflow.trace.succeeded().collect { it.name }
+                assert names.any { it.contains(tool.msaProcess) } :
+                    "expected ${tool.msaProcess} to run for --msa_tool ${tool.msa_tool}"
+                if (tool.adaptor) {
+                    assert names.any { it.contains(tool.adaptor) } :
+                        "expected adaptor ${tool.adaptor} to run for --msa_tool ${tool.msa_tool}"
+                }
+                // The MSA module output must reach the colabfold2 inference backend.
+                assert names.any { it.contains('OPENDDE') }
+                assert file("${params.outdir}/multiqc/multiqc_report.html").exists()
+                def stable_name = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
+                def stable_path = getAllFilesFromDir(params.outdir, ignoreFile: 'tests/.nftignore')
+                assert snapshot(
+                    workflow.trace.succeeded().size(),
+                    stable_name,
+                    stable_path,
+                    removeNextflowVersion("$outputDir/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml")
+                ).match()
+            }
+        }
+    }
+
+    test("--msa_tool alphafold2_msa repopulates AlphaFold3 JSON input") {
+        tag "msa-alphafold2_msa-json"
+        def richSamplesheet = new File('tests/data/rich_json_samplesheet.csv').absolutePath
+
+        when {
+            params {
+                outdir        = "$outputDir"
+                msa_tool      = 'alphafold2_msa'
+                alphafold2_db = "$projectDir/assets/dummy_db_dir"
+                alphafold3_db = "$projectDir/assets/dummy_db_dir"
+                input         = richSamplesheet
+            }
+        }
+
+        then {
+            assert workflow.success
+            def names = workflow.trace.succeeded().collect { it.name }
+            assert names.any { it.contains('ALPHAFOLD3_JSON_TO_AF2_FASTA') } :
+                "expected protein chains to be extracted from the AlphaFold3 JSON"
+            assert names.any { it.contains('MERGE_ALPHAFOLD3_MSA') } :
+                "expected the original AlphaFold3 JSON to be repopulated with the generated MSAs"
+            assert names.any { it.contains('OPENDDE') }
+            assert file("${params.outdir}/multiqc/multiqc_report.html").exists()
+            def stable_name = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
+            def stable_path = getAllFilesFromDir(params.outdir, ignoreFile: 'tests/.nftignore')
+            assert snapshot(
+                workflow.trace.succeeded().size(),
+                stable_name,
+                stable_path,
+                removeNextflowVersion("$outputDir/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml")
+            ).match()
+        }
+    }
+
+    test("samplesheet MSA bypasses MSA generation") {
+        tag "msa-byo"
+
+        setup {
+            def fasta = file("$outputDir/byo_msa.fasta")
+            fasta.text = ">byo_msa\nMKTAY\n"
+            def msa = file("$outputDir/byo_msa.a3m")
+            msa.text = "#5\t1\n>101\nMKTAY\n>102\nMKTAiY\n"
+            def samplesheet = file("$outputDir/byo_msa_samplesheet.csv")
+            samplesheet.text = "id,fasta,msa\nbyo_msa,${fasta},${msa}\n"
+        }
+        when {
+            params {
+                outdir = "$outputDir/results"
+                input = "$outputDir/byo_msa_samplesheet.csv"
+                msa_tool = 'alphafold2_msa'
+            }
+        }
+
+        then {
+            assert workflow.success
+            def names = workflow.trace.succeeded().collect { it.name }
+            assert !names.any { it.contains('MMSEQS_COLABFOLDSEARCH') }
+            assert !names.any { it.contains('RUN_ALPHAFOLD2_MSA') }
+            assert !names.any { it.contains('RUN_ALPHAFOLD3_DATAPIPELINE') }
+            assert names.any { it.contains('OPENDDE') }
+        }
+    }
+
+    test("--use_msa_server bypasses local MSA generation") {
+        tag "msa-server"
+
+        when {
+            params {
+                outdir          = "$outputDir"
+                msa_tool        = 'alphafold2_msa'
+                use_msa_server  = true
+            }
+        }
+
+        then {
+            assert workflow.success
+            def names = workflow.trace.succeeded().collect { it.name }
+            assert !names.any { it.contains('MMSEQS_COLABFOLDSEARCH') }
+            assert !names.any { it.contains('RUN_ALPHAFOLD2_MSA') }
+            assert !names.any { it.contains('RUN_ALPHAFOLD3_DATAPIPELINE') }
+            assert names.any { it.contains('OPENDDE') }
+            assert file("${params.outdir}/multiqc/multiqc_report.html").exists()
+            def stable_name = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
+            def stable_path = getAllFilesFromDir(params.outdir, ignoreFile: 'tests/.nftignore')
+            assert snapshot(
+                workflow.trace.succeeded().size(),
+                stable_name,
+                stable_path
+            ).match()
+        }
+    }
+}

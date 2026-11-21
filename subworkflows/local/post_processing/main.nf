@@ -11,8 +11,6 @@ include { methodsDescriptionText } from '../utils_nfcore_proteinfold_pipeline'
 
 include { GENERATE_REPORT           } from '../../../modules/local/generate_report'
 include { GENERATE_MULTIQC_CONTENTS } from '../../../modules/local/generate_multiqc_contents'
-include { COMPARE_STRUCTURES        } from '../../../modules/local/compare_structures'
-include { FOLDSEEK_EASYSEARCH       } from '../../../modules/nf-core/foldseek/easysearch/main'
 include { MULTIQC                   } from '../../../modules/nf-core/multiqc/main'
 include { MODELCIF_ASSEMBLE         } from '../../../modules/local/assemble_modelcif/main'
 include { MODELCIF_VALIDATE         } from '../../../modules/local/modelcif_validate/main'
@@ -22,13 +20,8 @@ workflow POST_PROCESSING {
 
     take:
     skip_visualisation
-    requested_modes_size
     ch_report_input
     ch_report_template
-    ch_comparison_template
-    skip_foldseek
-    foldseek_db
-    foldseek_db_path
     skip_multiqc
     outdir
     ch_multiqc_rep
@@ -37,19 +30,18 @@ workflow POST_PROCESSING {
     multiqc_logo
     ch_multiqc_methods_description
     ch_software_versions
-    ch_top_ranked_model
     ch_modelcif
     write_modelcif
     modelcif_binary
     modelcif_pae_embed
-    modelcif_software_details
 
     main:
-    def ch_comparison_report_files = channel.empty()
     def ch_multiqc_files = channel.empty()
     ch_modelcif_published = channel.empty()
 
-    if (write_modelcif) {
+    // ModelCIF assembly consumes real ranked-structure metrics; stub runs
+    // only produce empty placeholder files, so skip assembly entirely there.
+    if (write_modelcif && !workflow.stubRun) {
         MODELCIF_ASSEMBLE(ch_modelcif)
         MODELCIF_VALIDATE(MODELCIF_ASSEMBLE.out.modelcif)
         CIFCHECK(
@@ -64,64 +56,6 @@ workflow POST_PROCESSING {
         GENERATE_REPORT(
             ch_report_input,
             ch_report_template
-        )
-
-        if (requested_modes_size > 1){
-            def dummy_file = file("$projectDir/assets/NO_FILE", checkIfExists: true)
-
-            def esm = ch_top_ranked_model.filter { it ->it[0].model == 'esmfold' }
-            def not_esm = ch_top_ranked_model.filter { it -> it[0].model != 'esmfold' }
-
-            esm = esm
-                    .map { meta, pdb ->
-                        [meta, pdb, dummy_file]
-                    }
-
-            not_esm = not_esm
-                        .map { it ->  [it[0], it[1]] }
-                        .join(GENERATE_REPORT.out.sequence_coverage)
-
-            ch_comparison_report_files = not_esm.mix(esm)
-
-            ch_comparison_report_files
-                .map { it ->
-                    [["id": it[0].id], it[0], it[1], it[2]]
-                }
-                .groupTuple(by: [0], size: requested_modes_size)
-                .map { it ->
-                    it[0].models=it[1].join(',');
-                    [it[0], it[2], it[3]]
-                }
-                .set { ch_comparison_report_input }
-
-            COMPARE_STRUCTURES(
-                ch_comparison_report_input
-                    .map { it ->
-                        [it[0], it[1].collect { file -> file.name} ]
-                    },
-                ch_comparison_report_input
-                    .map { it ->
-                        [ it[0], it[2].collect { file -> file.name } ]
-                    },
-                ch_comparison_report_input
-                    .map { it ->
-                        (it[1] + it[2]).unique()
-                    },
-                ch_comparison_template
-            )
-        }
-    }
-
-    if (!skip_foldseek) {
-        ch_foldseek_db = channel.value([
-            [
-                id: foldseek_db,
-            ],
-            file(foldseek_db_path, checkIfExists: true)
-        ])
-        FOLDSEEK_EASYSEARCH(
-            ch_top_ranked_model,
-            ch_foldseek_db
         )
     }
 
@@ -144,11 +78,16 @@ workflow POST_PROCESSING {
             mqc_generator_script
         )
 
+        // Multi-mode runs emit one contents task per mode; collect them so
+        // MULTIQC runs once over every mode's custom content.
         MULTIQC (
             GENERATE_MULTIQC_CONTENTS.out.mqc_json
-                .combine(ch_multiqc_files.collect().map { [it] })
-                .combine(ch_multiqc_config.collect().ifEmpty([]).map { [it] })
-                .combine(ch_multiqc_custom_config.collect().ifEmpty([]).map { [it] })
+                .map { meta, files -> [ [id: 'multiqc', model: 'proteinfold'], files instanceof List ? files : [files] ] }
+                .groupTuple()
+                .map { meta, files -> [ meta, files.flatten() ] }
+                .combine(ch_multiqc_files.collect().map { files -> [files] })
+                .combine(ch_multiqc_config.collect().ifEmpty([]).map { config -> [config] })
+                .combine(ch_multiqc_custom_config.collect().ifEmpty([]).map { config -> [config] })
                 .map { meta, mqc_json, extra_files, config_files, custom_config_files ->
                     // A single-file glob output arrives as a bare java.nio.file.Path, which is Iterable: `path + list` would splice its name components into the list.
                     def mqc_json_files = mqc_json instanceof List ? mqc_json : [mqc_json]

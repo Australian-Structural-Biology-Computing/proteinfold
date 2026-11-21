@@ -3,23 +3,24 @@ process MSA_CACHE_LOOKUP {
     cpus 1
     memory '1 GB'
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/de/deb97ccf27bd258b3f42fccf4fbc19e5cefe8582359699e12a808bdedb2cc5a8/data' :
-        'community.wave.seqera.io/library/pip_pyyaml:c2bd49f8575c1263' }"
+        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/18/183a5c5b5d21b977c9348a98e36d62610984a2017e427e6c182ef47782a0ea4f/data' :
+        'community.wave.seqera.io/library/python:3.12--67983005212f7291' }"
 
     input:
     tuple val(meta), path(fasta)
+    val cache_dir
 
     output:
     tuple val(meta), path(fasta), path('cache_result')
 
     script:
-    def cache_dir = MsaCache.directory(params) ?: ''
-    def cache_id = (params.msa_cache_id ?: params.boltz_msa_cache_id) ?: ''
-    def tool_id = (params.msa_cache_tool_id ?: params.boltz_msa_cache_tool_id) ?: ''
+    def dir = cache_dir ?: ''
+    def cache_id = params.msa_cache_id ?: ''
+    def tool_id = params.msa_cache_tool_id ?: ''
     def args = task.ext.args ?: ''
     def artifact = task.ext.msa_cache_artifact ?: 'af3_json'
     def extension = artifact == 'a3m' ? 'a3m' : 'json'
-    def quotedDir = "'${cache_dir.toString().replace("'", "'\\''")}'"
+    def quotedDir = "'${dir.toString().replace("'", "'\\''")}'"
     def quotedId = "'${cache_id.toString().replace("'", "'\\''")}'"
     def quotedToolId = "'${tool_id.toString().replace("'", "'\\''")}'"
     def quotedArgs = "'${args.toString().replace("'", "'\\''")}'"
@@ -32,13 +33,13 @@ process MSA_CACHE_LOOKUP {
     """
 
     stub:
-    def cache_dir = MsaCache.directory(params) ?: ''
-    def cache_id = (params.msa_cache_id ?: params.boltz_msa_cache_id) ?: ''
-    def tool_id = (params.msa_cache_tool_id ?: params.boltz_msa_cache_tool_id) ?: ''
+    def dir = cache_dir ?: ''
+    def cache_id = params.msa_cache_id ?: ''
+    def tool_id = params.msa_cache_tool_id ?: ''
     def args = task.ext.args ?: ''
     def artifact = task.ext.msa_cache_artifact ?: 'af3_json'
     def extension = artifact == 'a3m' ? 'a3m' : 'json'
-    def quotedDir = "'${cache_dir.toString().replace("'", "'\\''")}'"
+    def quotedDir = "'${dir.toString().replace("'", "'\\''")}'"
     def quotedId = "'${cache_id.toString().replace("'", "'\\''")}'"
     def quotedToolId = "'${tool_id.toString().replace("'", "'\\''")}'"
     def quotedArgs = "'${args.toString().replace("'", "'\\''")}'"

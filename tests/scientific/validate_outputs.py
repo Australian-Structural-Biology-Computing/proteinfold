@@ -21,11 +21,20 @@ warnings.filterwarnings("error", category=PDBConstructionWarning, message=".*cou
 
 INTERFACE_SUFFIXES = ("_iptm.tsv", "_chainwise_iptm.tsv", "_ipsae.tsv", "_chainwise_ipsae.tsv")
 
-COLABFOLD2_MODES = frozenset({
-    "colabfold2-alphafold3", "colabfold2-boltz2", "esmfold2", "protenix2",
-    "chai1", "intellifold2", "opendde", "openfold3", "openbind0", "rosettafold3",
-})
-
+# Shorthand tokens baked into published file names (see workflows/proteinfold.nf).
+MODE_SHORTS = {
+    "alphafold2": "af2",
+    "alphafold3": "af3",
+    "boltz2": "bz2",
+    "chai1": "chai1",
+    "esmfold2": "esm2",
+    "intellifold2": "if2",
+    "opendde": "odde",
+    "openfold3": "of3",
+    "openbind0": "ob0",
+    "protenix2": "px2",
+    "rosettafold3": "rf3",
+}
 
 def input_ids(samplesheet: str) -> list[str]:
     if samplesheet.startswith(("http://", "https://")):
@@ -249,6 +258,12 @@ def main() -> None:
         "and PAE scores according to the checkpoint and runtime version.",
     )
     parser.add_argument(
+        "--msa-tag",
+        default="mmseqs",
+        help="MSA-tool shorthand baked into the published file names "
+        "(mmseqs, af2msa, af3msa, server, byo).",
+    )
+    parser.add_argument(
         "--require-pae",
         action="store_true",
         help="Require one PAE matrix per input. Some prediction modes do not emit PAE.",
@@ -257,12 +272,12 @@ def main() -> None:
 
     parser_canary()
     ids = input_ids(args.samplesheet)
-    mode_dir = args.outdir / args.mode
-    assert mode_dir.is_dir(), f"{args.display_name} output directory does not exist: {mode_dir}"
-
-    structure_dirs = [path for path in mode_dir.rglob("top_ranked_structures") if path.is_dir()]
-    assert structure_dirs, f"No top_ranked_structures directory below {mode_dir}"
-    structures = sorted(path for directory in structure_dirs for path in directory.glob(f"*{args.extension}"))
+    # Flat layout: predictions are identified by the mode shorthand in file
+    # names rather than a per-mode directory.
+    short = MODE_SHORTS.get(args.mode, args.mode)
+    suffix = f"_{short}_{args.msa_tag}"
+    metrics_dir = args.outdir / "metrics"
+    structures = sorted((args.outdir / "top_ranked_structures").glob(f"*{suffix}{args.extension}"))
     assert structures, f"{args.display_name} produced no {args.extension} structures"
     for identifier in ids:
         assert any(identifier in path.name for path in structures), (
@@ -272,7 +287,7 @@ def main() -> None:
         residue_count = validate_structure(structure)
         print(f"Validated structure: {structure.name} ({residue_count} residues)")
 
-    plddt_files = sorted(mode_dir.rglob("*plddt.tsv"))
+    plddt_files = sorted(metrics_dir.glob(f"*{suffix}_plddt.tsv"))
     assert plddt_files, f"{args.display_name} produced no pLDDT metrics"
     for identifier in ids:
         assert any(identifier in path.name for path in plddt_files), (
@@ -285,7 +300,7 @@ def main() -> None:
         else:
             print(f"Validated pLDDT: {path.name} ({position_count} positions, {score_count} scores, mean={mean_plddt:.1f})")
 
-    pae_files = sorted(path for path in mode_dir.rglob("*.tsv") if path.parent.name == "paes")
+    pae_files = sorted(metrics_dir.glob(f"*{suffix}_*_pae.tsv"))
     if args.require_pae:
         assert pae_files, f"{args.display_name} produced no PAE matrices"
         for identifier in ids:
@@ -296,13 +311,13 @@ def main() -> None:
         row_count, column_count = validate_pae(path, structure_only=args.structure_only)
         print(f"Validated PAE: {path.name} ({row_count}x{column_count} matrix)")
 
-    multiqc_model = "colabfold2" if args.mode in COLABFOLD2_MODES else args.mode
-    validate_multiqc_report(args.outdir, multiqc_model, ids)
+    # One combined MultiQC report covers every requested mode.
+    validate_multiqc_report(args.outdir, "proteinfold", ids)
     for identifier in ids:
         validate_detailed_report(args.outdir, identifier)
 
     interface_files = sorted(
-        path for path in mode_dir.rglob("*.tsv") if path.name.endswith(INTERFACE_SUFFIXES)
+        path for path in metrics_dir.glob(f"*{suffix}_*.tsv") if path.name.endswith(INTERFACE_SUFFIXES)
     )
     for path in interface_files:
         if path.stat().st_size == 0:

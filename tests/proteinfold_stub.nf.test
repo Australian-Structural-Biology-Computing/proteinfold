@@ -1,0 +1,135 @@
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    proteinfold stub tests
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Exercises pipeline-level orchestration and report channel contracts with stubbed
+    process execution. A single multi-mode run covers every wired backend (one
+    invocation per backend process, per-mode output directories, per-mode MultiQC
+    contents, and the AlphaFold2 skip for non-protein entities); the only separate
+    inference test covers the --esmfold2_model selection, which cannot ride along
+    with the multi-mode run because it re-uses the esmfold2 mode token.
+*/
+
+nextflow_pipeline {
+
+    name "Test proteinfold (stub)"
+    script "../main.nf"
+    tag "pipeline"
+    tag "test_proteinfold_stub"
+    profile "test_proteinfold"
+
+    // mode   = the --mode token as a user would type it
+    // short  = the shorthand baked into published file names
+    // alias  = the COLABFOLD2_INFERENCE process alias it must dispatch to
+    // ext    = published structure extension (the AlphaFold2 backends emit PDB)
+    def submodes = [
+        [mode: 'alphafold3', short: 'af3', alias: 'ALPHAFOLD3'],
+        [mode: 'alphafold2', short: 'af2', alias: 'ALPHAFOLD2', ext: 'pdb'],
+        [mode: 'esmfold2',   short: 'esm2', alias: 'ESMFOLD2'],
+        [mode: 'protenix2',  short: 'px2', alias: 'PROTEINX2'],
+        [mode: 'boltz2',     short: 'bz2', alias: 'BOLTZ2'],
+        [mode: 'chai1',      short: 'chai1', alias: 'CHAI1'],
+        [mode: 'intellifold2', short: 'if2', alias: 'INTELLIFOLD2'],
+        [mode: 'opendde',    short: 'odde', alias: 'OPENDDE'],
+        [mode: 'openfold3',  short: 'of3', alias: 'OPENFOLD3'],
+        [mode: 'openbind0',  short: 'ob0', alias: 'OPENBIND0'],
+        [mode: 'rosettafold3', short: 'rf3', alias: 'ROSETTAFOLD3'],
+    ]
+    def af3GraphModes = submodes.findAll { it.mode != 'alphafold2' }
+
+    test("one multi-mode run folds every sample with every compatible backend") {
+        tag "proteinfold-multimode"
+        def base = System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/'
+        setup {
+            def sheet = new File("${outputDir}/multimode_samplesheet.csv")
+            sheet.text = [
+                'id,fasta',
+                "T1024,${base}testdata/sequences/T1024.fasta",
+                "T1026,${base}testdata/sequences/T1026.fasta",
+                "rich_sample,${base}testdata/sequences/boltz/mixed.json",
+            ].join('\n') + '\n'
+        }
+
+        when {
+            params {
+                outdir = "$outputDir"
+                mode   = submodes*.mode.join(',')
+                input  = "${outputDir}/multimode_samplesheet.csv"
+            }
+        }
+
+        then {
+            def stableName = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
+            assert workflow.success
+            def versions_path = new File(params.outdir.toString() + "/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml").absolutePath
+            def versions_report = new File(versions_path).readLines()
+            // Every requested mode dispatched to its own backend process alias.
+            submodes.each { sub ->
+                assert versions_report.any { it.contains(":PROTEINFOLD:${sub.alias}:") } :
+                    "expected the ${sub.alias} backend in the versions report"
+            }
+            assert !versions_report.any { it.contains(":PROTEINFOLD:COLABFOLD2_INFERENCE:") }
+            // Every mode folds the protein-only samples; the mode shorthand
+            // in the file names keeps the layout flat and collision-free.
+            // Every mode folds the protein-only samples; the mode and MSA
+            // tool shorthands in the file names keep the layout flat and
+            // collision-free.
+            ['T1024', 'T1026'].each { id ->
+                submodes.each { sub ->
+                    def ext = sub.ext ?: 'cif'
+                    assert stableName.contains("top_ranked_structures/${id}_${sub.short}_mmseqs.${ext}".toString())
+                    assert stableName.contains("metrics/${id}_${sub.short}_mmseqs_plddt.tsv".toString())
+                    assert stableName.contains("metrics/${id}_${sub.short}_mmseqs_msa.tsv".toString())
+                    assert stableName.contains("reports/${id}_${sub.short}_mmseqs_report.html".toString())
+                }
+            }
+            // Per-rank PAE matrices for the protein-only sample.
+            submodes.each { sub ->
+                assert stableName.contains("metrics/T1024_${sub.short}_mmseqs_1_pae.tsv".toString())
+            }
+            // The RNA-containing sample carries non-protein entities: the
+            // AlphaFold2 backend skips it (warned) rather than folding a
+            // truncated protein-only complex; every AlphaFold3-open backend
+            // still folds it in full.
+            af3GraphModes.each { sub ->
+                assert stableName.contains("top_ranked_structures/rich_sample_${sub.short}_mmseqs.cif".toString())
+            }
+            assert !stableName.any { it.contains('rich_sample_af2') }
+            // MultiQC carries the per-mode custom contents. Its stub
+            // ignores staged inputs, so those files are not republished in
+            // stub runs; the module tests cover their behaviour.
+            assert stableName.contains('multiqc/multiqc_report.html')
+            // Snapshot the task count and the versions report: that is what pins
+            // the per-backend dispatch and the recorded versions.
+            assert snapshot(
+                workflow.trace.succeeded().size(),
+                removeNextflowVersion("$outputDir/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml")
+            ).match()
+        }
+    }
+
+    test("esmfold2 model selection resolves the requested LM variant") {
+        tag "proteinfold-esmfold2-lm600m"
+
+        when {
+            params {
+                outdir         = "$outputDir"
+                mode           = 'esmfold2'
+                esmfold2_model = 'lm600m'
+            }
+        }
+
+        then {
+            def stableName = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
+            assert workflow.success
+            def versions_path = new File(params.outdir.toString() + "/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml").absolutePath
+            def versions_report = new File(versions_path).readLines()
+            assert versions_report.any { it.contains(":PROTEINFOLD:ESMFOLD2:") }
+            assert stableName.contains('top_ranked_structures/T1024_esm2_mmseqs.cif')
+            assert snapshot(
+                workflow.trace.succeeded().size(),
+                removeNextflowVersion("$outputDir/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml")
+            ).match()
+        }
+    }
+}

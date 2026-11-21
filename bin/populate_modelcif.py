@@ -38,14 +38,17 @@ from Bio.PDB.Polypeptide import protein_letters_3to1 as _aa3to1
 # Version is absent — it is resolved at runtime from collected Nextflow version
 # metadata so it reflects the actual container/tool version that ran.
 _SOFTWARE_INFO = {
-    'alphafold2':           ('AlphaFold2',            'https://github.com/google-deepmind/alphafold',         'protein structure prediction'),
-    'alphafold3':           ('AlphaFold3',            'https://github.com/google-deepmind/alphafold3',        'protein structure prediction'),
-    'boltz':                ('Boltz',                 'https://github.com/jwohlwend/boltz',                   'protein structure prediction'),
-    'colabfold':            ('ColabFold',             'https://github.com/sokrypton/ColabFold',               'protein structure prediction'),
-    'esmfold':              ('ESMFold',               'https://github.com/facebookresearch/esm',              'protein structure prediction'),
-    'helixfold3':           ('HelixFold3',            'https://github.com/PaddlePaddle/PaddleHelix',          'protein structure prediction'),
-    'rosettafold2na':       ('RoseTTAFold2NA',        'https://github.com/uw-ipd/RoseTTAFold2NA',             'protein structure prediction'),
-    'rosettafold_all_atom': ('RoseTTAFold-All-Atom',  'https://github.com/baker-laboratory/RoseTTAFold-All-Atom', 'protein structure prediction'),
+    'alphafold2':    ('AlphaFold2',    'https://github.com/google-deepmind/alphafold',    'protein structure prediction'),
+    'alphafold3':    ('AlphaFold3',    'https://github.com/google-deepmind/alphafold3',   'protein structure prediction'),
+    'boltz2':        ('Boltz2',        'https://github.com/jwohlwend/boltz',              'protein structure prediction'),
+    'chai1':         ('Chai-1',        'https://github.com/chaidiscovery/chai-lab',       'protein structure prediction'),
+    'esmfold2':      ('ESMFold2',      'unknown',                                         'protein structure prediction'),
+    'intellifold2':  ('IntelliFold2',  'unknown',                                         'protein structure prediction'),
+    'openbind0':     ('OpenBind',      'unknown',                                         'protein structure prediction'),
+    'opendde':       ('OpenDDE',       'unknown',                                         'protein structure prediction'),
+    'openfold3':     ('OpenFold3',     'https://github.com/aqlaboratory/openfold3',       'protein structure prediction'),
+    'protenix2':     ('Protenix',      'https://github.com/bytedance/Protenix',           'protein structure prediction'),
+    'rosettafold3':  ('RoseTTAFold3',  'unknown',                                         'protein structure prediction'),
 }
 
 # Tools that can be attributed to the template search step (#579); version,
@@ -321,8 +324,8 @@ def _rank_from_pae_filename(pae_file):
 
 def _map_pae_files_to_ranks(pae_files, num_structs):
     """Map PAE files to model ranks by filename, rejecting gaps, duplicates
-    and unparseable names.  A single arbitrarily-named file (e.g. DUMMY_PAE.tsv)
-    is accepted when there is exactly one model."""
+    and unparseable names.  A single arbitrarily-named file is accepted when
+    there is exactly one model."""
     if num_structs == 1 and len(pae_files) == 1:
         return {0: pae_files[0]}
     pae_by_rank = {}

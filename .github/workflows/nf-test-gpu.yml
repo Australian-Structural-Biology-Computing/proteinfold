@@ -5,11 +5,7 @@ on:
     paths:
       - "conf/test.config"
       - "conf/test_nostub.config"
-      - "modules/local/colabfold_batch/**"
-      - "modules/local/run_alphafold2_pred/**"
-      - "modules/local/run_alphafold3_inference/**"
-      - "modules/local/run_boltz/**"
-      - "modules/local/run_esmfold/**"
+      - "modules/local/colabfold2_inference/**"
       - "tests/fixtures/**"
   release:
     types: [published]

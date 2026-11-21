@@ -29,6 +29,7 @@ nextflow_process {
                 ]
                 input[1] = file('db/*')
                 input[2] = uniref30Dir
+                input[3] = ''
                 """
             }
         }

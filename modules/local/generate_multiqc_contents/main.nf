@@ -4,8 +4,8 @@ process GENERATE_MULTIQC_CONTENTS {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/de/deb97ccf27bd258b3f42fccf4fbc19e5cefe8582359699e12a808bdedb2cc5a8/data' :
-        'community.wave.seqera.io/library/pip_pyyaml:c2bd49f8575c1263' }"
+        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/18/183a5c5b5d21b977c9348a98e36d62610984a2017e427e6c182ef47782a0ea4f/data' :
+        'community.wave.seqera.io/library/python:3.12--67983005212f7291' }"
 
     input:
     tuple val(meta), path(metric_files)

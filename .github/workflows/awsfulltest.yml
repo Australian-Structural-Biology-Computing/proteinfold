@@ -20,17 +20,7 @@ jobs:
     strategy:
       matrix:
         compute_env: ["gpu"]
-        mode:
-          [
-            "alphafold2_split",
-            "alphafold2_multimer",
-            "colabfold_local",
-            "colabfold_webserver",
-            "colabfold_multimer",
-            "esmfold",
-            "esmfold_multimer",
-            "boltz",
-          ]
+        mode: ["colabfold2"]
     steps:
       - name: Set revision variable
         id: revision

@@ -9,6 +9,7 @@ process MMSEQS_COLABFOLDSEARCH {
     tuple val(meta), path(fasta)
     path ('db/*')
     path ('uniref30/*')
+    val cache_dir
 
     output:
     tuple val(meta), path("**.a3m"), emit: a3m
@@ -25,10 +26,10 @@ process MMSEQS_COLABFOLDSEARCH {
         error("Local MMSEQS_COLABFOLDSEARCH module does not support Conda. Please use Docker / Singularity / Podman instead.")
     }
     def args = task.ext.args ?: ''
-    def cache_dir = MsaCache.directory(params) ?: ''
+    def dir = cache_dir ?: ''
     def cache_id = task.ext.msa_cache_id ?: ''
     def tool_id = task.ext.msa_cache_tool_id ?: ''
-    def quotedDir = "'${cache_dir.toString().replace("'", "'\\''")}'"
+    def quotedDir = "'${dir.toString().replace("'", "'\\''")}'"
     def quotedId = "'${cache_id.toString().replace("'", "'\\''")}'"
     def quotedToolId = "'${tool_id.toString().replace("'", "'\\''")}'"
     def quotedArgs = "'${args.toString().replace("'", "'\\''")}'"
@@ -87,20 +88,52 @@ process MMSEQS_COLABFOLDSEARCH {
     """
     mkdir results
     touch results/${meta.id}.a3m
-    touch results/${meta.id}.json
+    python3 - ${fasta} ${meta.id} <<'PY'
+import json, sys
+path, sample_id = sys.argv[1], sys.argv[2]
+records, header, seq = [], None, []
+for line in open(path):
+    line = line.strip()
+    if line.startswith('>'):
+        if header is not None:
+            records.append((header, ''.join(seq)))
+        header, seq = line[1:], []
+    elif line:
+        seq.append(line)
+if header is not None:
+    records.append((header, ''.join(seq)))
+document = {
+    'dialect': 'alphafold3',
+    'version': 2,
+    'name': sample_id,
+    'modelSeeds': [1],
+    'sequences': [
+        {
+            'protein': {
+                'id': [chr(ord('A') + i) for i in range(len(records))] or ['A'],
+                'sequence': ':'.join(s for _, s in records) or 'ACDE',
+                'unpairedMsa': '>' + (records[0][0] if records else 'query') + '\\n' + (':'.join(s for _, s in records) or 'ACDE') + '\\n',
+            }
+        }
+    ],
+}
+with open(f'results/{sample_id}.json', 'w') as handle:
+    json.dump(document, handle)
+PY
     """
 }
 
 process MMSEQS_COLABFOLDSEARCH_BATCH {
-    tag "batch_${batch_meta*.id.join('_')}"
+    tag "batch_${batch_meta.collect { meta -> meta.id }.join('_')}"
     label 'process_high_memory'
     label 'process_high'
     container "ghcr.io/jscgh/proteinfold_mmseqs_colabfoldsearch:2.1.0dev"
 
     input:
-    tuple val(batch_meta), path(csvs)
+    tuple val(batch_meta), path(fastas)
     path ('db/*')
     path ('uniref30/*')
+    val cache_dir
 
     output:
     tuple val(batch_meta), path("results/*.a3m"), emit: a3m
@@ -116,10 +149,10 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
         error("Local MMSEQS_COLABFOLDSEARCH_BATCH module does not support Conda. Please use Docker / Singularity / Podman instead.")
     }
     def args = task.ext.args ?: ''
-    def cache_dir = MsaCache.directory(params) ?: ''
+    def dir = cache_dir ?: ''
     def cache_id = task.ext.msa_cache_id ?: ''
     def tool_id = task.ext.msa_cache_tool_id ?: ''
-    def quotedDir = "'${cache_dir.toString().replace("'", "'\\''")}'"
+    def quotedDir = "'${dir.toString().replace("'", "'\\''")}'"
     def quotedId = "'${cache_id.toString().replace("'", "'\\''")}'"
     def quotedToolId = "'${tool_id.toString().replace("'", "'\\''")}'"
     def quotedArgs = "'${args.toString().replace("'", "'\\''")}'"
@@ -127,14 +160,15 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
     for f in uniref30/*; do
         [ -e "db/\$(basename \$f)" ] || ln -sf \$(realpath \$f) db/\$(basename \$f)
     done
-    first=1
-    for f in ${csvs}; do
-        if [ \$first -eq 1 ]; then cat "\$f" > input.csv; first=0
-        else tail -n +2 "\$f" >> input.csv; fi
-    done
-    colabfold_search $args --threads $task.cpus input.csv ./db --af3-json results/
-    for f in ${csvs}; do
-        id=\$(basename "\$f" .csv)
+    # Every input is a colon-delimited FASTA holding exactly one record whose
+    # header is the sample id (multifasta_to_colabfold_fasta or the AF3 JSON
+    # extractor), so batching is a plain concatenation and colabfold_search
+    # names each result after the record header.
+    cat ${fastas} > query.fasta
+    colabfold_search $args --threads $task.cpus query.fasta ./db --af3-json results/
+    for f in ${fastas}; do
+        id=\$(basename "\$f")
+        id="\${id%.*}"
         test -s "results/\${id}.a3m" || { echo "Missing A3M output for \$id" >&2; exit 1; }
         test -s "results/\${id}.json" || { echo "Missing JSON output for \$id" >&2; exit 1; }
         if [ -n ${quotedDir} ]; then
@@ -146,6 +180,41 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
     stub:
     """
     mkdir results
-    for f in ${csvs}; do id=\$(basename "\$f" .csv); printf '>stub\n' > results/\${id}.a3m; printf '{"stub":true}\n' > results/\${id}.json; done
+    for f in ${fastas}; do
+        id=\$(basename "\$f"); id="\${id%.*}"
+        printf '>stub\n' > results/\${id}.a3m
+        python3 - "\$f" "\$id" <<'PY'
+import json, sys
+path, sample_id = sys.argv[1], sys.argv[2]
+records, header, seq = [], None, []
+for line in open(path):
+    line = line.strip()
+    if line.startswith('>'):
+        if header is not None:
+            records.append((header, ''.join(seq)))
+        header, seq = line[1:], []
+    elif line:
+        seq.append(line)
+if header is not None:
+    records.append((header, ''.join(seq)))
+document = {
+    'dialect': 'alphafold3',
+    'version': 2,
+    'name': sample_id,
+    'modelSeeds': [1],
+    'sequences': [
+        {
+            'protein': {
+                'id': [chr(ord('A') + i) for i in range(len(records))] or ['A'],
+                'sequence': ':'.join(s for _, s in records) or 'ACDE',
+                'unpairedMsa': '>' + (records[0][0] if records else 'query') + '\\n' + (':'.join(s for _, s in records) or 'ACDE') + '\\n',
+            }
+        }
+    ],
+}
+with open(f'results/{sample_id}.json', 'w') as handle:
+    json.dump(document, handle)
+PY
+    done
     """
 }

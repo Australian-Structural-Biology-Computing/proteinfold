@@ -1,0 +1,25 @@
+name: "af3_msa_json_to_a3m"
+description: Convert an AlphaFold3-format MSA JSON into a ColabFold a3m query file for the alphafold2 ColabFold2 backends.
+tools: []
+input:
+  - - meta:
+        type: map
+        description: Groovy Map containing sample information.
+    - input_json:
+        type: file
+        description: AlphaFold3-format MSA JSON.
+        pattern: "*.json"
+output:
+  a3m:
+    - - meta:
+          type: map
+          description: Groovy Map containing sample information.
+      - "${meta.id}.a3m":
+          type: file
+          description: ColabFold a3m query file with paired and unpaired MSA blocks.
+          pattern: "*.a3m"
+  versions:
+    - - "versions.yml":
+          type: file
+          description: File containing software versions.
+          pattern: "versions.yml"

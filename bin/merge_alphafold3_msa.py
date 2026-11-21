@@ -53,6 +53,11 @@ def merge_msa(original, searched):
                 )
             protein[field] = value
 
+        # Templates are only propagated when the searched JSON provides them
+        # (the alphafold2_msa adaptor does; MMseqs results never do).
+        if protein.get("templates") is None and candidate.get("templates") is not None:
+            protein["templates"] = candidate["templates"]
+
     return merged
 
 

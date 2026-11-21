@@ -12,13 +12,14 @@ import plotly.graph_objects as go
 import re
 from Bio import PDB
 
-def is_missing_input(path, placeholder_prefix="NO_FILE"):
-    return (
-        not path
-        or os.path.basename(path).startswith(placeholder_prefix)
-        or not os.path.exists(path)
-        or os.path.getsize(path) == 0
-    )
+def is_missing_input(path):
+    """True when a metric input is absent or empty.
+
+    The inference task signals an unavailable MSA (the ESMFold2
+    language-model variants fold without one) with a zero-size TSV, which
+    this treats the same as a missing file.
+    """
+    return not path or not os.path.exists(path) or os.path.getsize(path) == 0
 
 def generate_pae_plot(pae_path, out_dir, name, save_image=False):
     #save_image=False because plotly needs a local install of Google Chrome to save images.....
@@ -191,7 +192,7 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
     ) as out_file:
         out_file.write(html_content)
 
-    if not is_missing_input(args.pae, "NO_FILE_PAE"):
+    if not is_missing_input(args.pae):
         pae_fig = generate_pae_plot(args.pae, out_dir, name)
         pae_html_content = pae_fig.to_html(
             full_html=False,
@@ -488,40 +489,50 @@ def build_pair_score_matrices(score_maps):
 print("Starting...")
 
 version = "1.0.0"
+# Display names keyed by the shorthand mode tokens the pipeline passes as
+# --type (the same tokens baked into the report file names); unknown tokens
+# fall back to the token itself in programName (see below).
 model_name = {
-    "esmfold": "ESMFold",
-    "alphafold2": "AlphaFold2",
-    "alphafold3": "Alphafold3",
-    "colabfold": "ColabFold",
-    "colabfold2": "ColabFold2",
-    "boltz": "Boltz"
+    "af2": "AlphaFold2",
+    "af3": "AlphaFold3",
+    "bz2": "Boltz2",
+    "chai1": "Chai1",
+    "esm2": "ESMFold2",
+    "if2": "IntelliFold2",
+    "ob0": "OpenBind0",
+    "odde": "OpenDDE",
+    "of3": "OpenFold3",
+    "px2": "Protenix2",
+    "rf3": "RosettaFold3",
 }
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--type", dest="in_type")
+parser.add_argument("--tag", dest="file_tag", default=None, help="File-name tag; defaults to --type")
 parser.add_argument(
     "--generate_tsv", choices=["y", "n"], default="n", dest="generate_tsv"
 )
-parser.add_argument("--msa", dest="msa", default="NO_FILE")
+parser.add_argument("--msa", dest="msa", default=None)
 parser.add_argument("--pdb", dest="pdb", required=True, nargs="+")
-parser.add_argument("--pae", dest="pae", default="NO_FILE")
-parser.add_argument("--iptm", dest="iptm", default="NO_FILE")
-parser.add_argument("--ipsae", dest="ipsae", default="NO_FILE")
-parser.add_argument("--chainwise_iptm", dest="chainwise_iptm", default="NO_FILE")
-parser.add_argument("--chainwise_ipsae", dest="chainwise_ipsae", default="NO_FILE")
+parser.add_argument("--pae", dest="pae", default=None)
+parser.add_argument("--iptm", dest="iptm", default=None)
+parser.add_argument("--ipsae", dest="ipsae", default=None)
+parser.add_argument("--chainwise_iptm", dest="chainwise_iptm", default=None)
+parser.add_argument("--chainwise_ipsae", dest="chainwise_ipsae", default=None)
 parser.add_argument("--name", dest="name")
 parser.add_argument("--output_dir", dest="output_dir")
 parser.add_argument("--html_template", dest="html_template")
 parser.add_argument("--version", action="version", version=f"{version}")
 parser.set_defaults(output_dir="")
-parser.set_defaults(in_type="esmfold")
+parser.set_defaults(in_type="af3")
 parser.set_defaults(name="")
 args = parser.parse_args()
+file_tag = args.file_tag or args.in_type
 
 lddt_data, lddt_averages = pdb_to_lddt(args.pdb, args.generate_tsv)
 
 generate_output_images(
-    args.msa, lddt_data, args.name, args.output_dir, args.in_type, args.generate_tsv, args.pdb
+    args.msa, lddt_data, args.name, args.output_dir, file_tag, args.generate_tsv, args.pdb
 )
 
 print("generating html report...")
@@ -562,7 +573,7 @@ def script_safe_json_dumps(obj):
 report_config = {
     "reportType": "standard",
     "sampleName": args.name,
-    "programName": model_name[args.in_type.lower()],
+    "programName": model_name.get(args.in_type.lower(), args.in_type),
     "structFormat": "cif",
     "models": model_names,
     "models_data": models_data,
@@ -581,7 +592,7 @@ proteinfold_template = proteinfold_template.replace(
 )
 
 if not is_missing_input(args.msa):
-    image_path = f"{args.output_dir}/{args.name}_{args.in_type}_seq_coverage.png"
+    image_path = f"{args.output_dir}/{args.name}_{file_tag}_seq_coverage.png"
     with open(image_path, "rb") as in_file:
         data_uri = f"data:image/png;base64,{base64.b64encode(in_file.read()).decode('utf-8')}"
         proteinfold_template = proteinfold_template.replace(
@@ -602,7 +613,7 @@ with open(
         '<div id="lddt_placeholder"></div>', lddt_html
     )
 
-if not is_missing_input(args.pae, "NO_FILE_PAE"):
+if not is_missing_input(args.pae):
     with open(
         f"{args.output_dir}/{args.name + ('_' if args.name else '')}PAE.html",
         "r",
@@ -616,6 +627,6 @@ else:
     proteinfold_template = re.sub(pattern, "", proteinfold_template, flags=re.DOTALL)
 
 with open(
-    f"{args.output_dir}/{args.name}_{args.in_type.lower()}_report.html", "w"
+    f"{args.output_dir}/{args.name}_{file_tag.lower()}_report.html", "w"
 ) as out_file:
     out_file.write(proteinfold_template)

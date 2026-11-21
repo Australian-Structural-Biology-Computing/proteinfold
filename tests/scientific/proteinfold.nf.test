@@ -1,0 +1,71 @@
+nextflow_pipeline {
+
+    name "Scientific validation: proteinfold"
+    script "../../main.nf"
+    tag "scientific"
+    tag "gpu"
+    tag "output_validation"
+    tag "structure_validation"
+    tag "proteinfold"
+    profile "test_full_proteinfold,gpu"
+
+    // Every backend runs with the global default kernel configuration
+    // (colabfold2_kernel_backend = 'auto': no fused-kernel flags, upstream
+    // out-of-the-box behaviour) on the H200; per-backend overrides would be
+    // a global parameter and cannot differ within one pipeline invocation.
+    def backends = [
+        [mode: 'alphafold2', extension: '.pdb'],
+        [mode: 'alphafold3'],
+        [mode: 'boltz2'],
+        [mode: 'protenix2'],
+        [mode: 'chai1'],
+        [mode: 'intellifold2'],
+        [mode: 'opendde'],
+        [mode: 'openfold3'],
+        [mode: 'openbind0'],
+        [mode: 'rosettafold3'],
+        [mode: 'esmfold2', model: 'msa'],
+        [mode: 'esmfold2', model: 'lm300m', structure_only: true],
+        [mode: 'esmfold2', model: 'lm600m', structure_only: true]
+    ]
+
+    backends.each { backend ->
+        test("${backend.mode}${backend.model ? ' ' + backend.model : ''}: validate structures and metrics") {
+            tag "${backend.mode}"
+            options "--mode ${backend.mode} --use_gpu"
+            def samplesheet = new File('tests/scientific/fixtures/proteinfold_single.csv').absolutePath
+            def testDB = System.getenv('PROTEINFOLD_TEST_DB') ?: 's3://proteinfold-dataset/test-data/mini_dbs'
+
+            when {
+                params {
+                    outdir = "$outputDir"
+                    input = samplesheet
+                    colabfold_db = testDB
+                    colabfold2_params_path = System.getenv('PROTEINFOLD_CF2_CACHE')
+                    esmfold2_model = backend.model ?: 'msa'
+                }
+            }
+
+            then {
+                assert workflow.success: "proteinfold ${backend.mode} workflow failed (exit ${workflow.exitStatus})"
+                def command = [
+                    'python3', new File('tests/scientific/validate_outputs.py').absolutePath,
+                    '--mode', backend.mode,
+                    '--display-name', "proteinfold ${backend.mode}${backend.model ? ' ' + backend.model : ''}",
+                    '--extension', backend.extension ?: '.cif',
+                    '--msa-tag', 'mmseqs',
+                    '--outdir', params.outdir.toString(),
+                    '--samplesheet', params.input.toString(),
+                    '--require-pae'
+                ]
+                if (backend.structure_only) command << '--structure-only'
+                def process = command.execute()
+                def stdout = new StringBuffer()
+                def stderr = new StringBuffer()
+                process.consumeProcessOutput(stdout, stderr)
+                assert process.waitFor() == 0: "${stdout}\n${stderr}"
+                assert file("${params.outdir}/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml").size() > 0
+            }
+        }
+    }
+}

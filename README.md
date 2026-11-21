@@ -28,34 +28,43 @@ On release, automated continuous integration tests run the pipeline on a full-si
 
 ## Pipeline summary
 
-| Mode                                                        | Protein | RNA | Small-molecule | PTM | Constraints | pLM | MSA server | Split MSA |
-| :---------------------------------------------------------- | :-----: | :-: | :------------: | :-: | :---------: | :-: | :--------: | :-------: |
-| [AlphaFold2](https://github.com/google-deepmind/alphafold)  |   ✅    | ❌  |       ❌       | ❌  |     ❌      | ❌  |     ❌     |    ✅     |
-| [ESMFold](https://github.com/facebookresearch/esm)          |   ✅    | ❌  |       ❌       | ❌  |     ❌      | ✅  |     ❌     |    ❌     |
-| [ColabFold](https://github.com/sokrypton/ColabFold)         |   ✅    | ❌  |       ❌       | ❌  |     ❌      | ❌  |     ✅     |    ✅     |
-| [ColabFold2](https://github.com/sokrypton/ColabFold)        |   ✅    | ✅  |       ✅       | ✅  |     ❌      | ✅  |     ✅     |    ❌     |
-| [AlphaFold3](https://github.com/google-deepmind/alphafold3) |   ✅    | ✅  |       ✅       | ✅  |     ❌      | ❌  |     ❌     |    ✅     |
-| [Boltz](https://github.com/jwohlwend/boltz/)                |   ✅    | ✅  |       ✅       | ✅  |     ✅      | ❌  |     ✅     |    ✅     |
+All structure prediction runs through the [ColabFold2](https://github.com/sokrypton/ColabFold) inference module, which wraps the AlphaFold3-family backends below (plus the classic AlphaFold2 models). Users choose one MSA generation module with `--msa_tool`.
 
-**nf-core/proteinfold** supports multiple tools for general molecular structure prediction. Each of the methods have overlapping functionality which can be utilized within the pipeline. All tools support predicting protein structure from an input amino acid sequence. The pipeline is composed of the following steps:
+\* `alphafold2` runs the classic AlphaFold2 models (monomer vs multimer is selected automatically per query); it emits PDB structures and only supports protein chains.
+
+| Backend (`--mode`) | Protein | RNA | Small-molecule | PTM | pLM |
+| :----------------- | :-----: | :-: | :------------: | :-: | :-: |
+| `alphafold3`       |   ✅    | ✅  |       ✅       | ✅  | ❌  |
+| `boltz2`           |   ✅    | ✅  |       ✅       | ✅  | ❌  |
+| `openfold3`        |   ✅    | ✅  |       ✅       | ✅  | ❌  |
+| `protenix2`        |   ✅    | ✅  |       ✅       | ✅  | ❌  |
+| `chai1`            |   ✅    | ✅  |       ✅       | ✅  | ❌  |
+| `intellifold2`     |   ✅    | ✅  |       ✅       | ✅  | ❌  |
+| `opendde`          |   ✅    | ✅  |       ✅       | ✅  | ❌  |
+| `openbind0`        |   ✅    | ✅  |       ✅       | ✅  | ❌  |
+| `rosettafold3`     |   ✅    | ✅  |       ✅       | ✅  | ❌  |
+| `esmfold2`         |   ✅    | ❌  |       ❌       | ❌  | ✅  |
+| `alphafold2`*      |   ✅    | ❌  |       ❌       | ❌  | ❌  |
+
+MSA generation modules (select one with `--msa_tool`, or use `--use_msa_server` for the ColabFold webserver):
+
+| `--msa_tool`       | Search engine                                   | Paired MSAs | Protein-only |
+| :----------------- | :---------------------------------------------- | :---------: | :----------: |
+| `colabfold_search` | MMseqs2 (ColabFold databases)                   |     ✅      |      ✅      |
+| `alphafold2_msa`   | JackHMMER/HHblits (AlphaFold2 databases)        |     ✅      |      ✅      |
+| `alphafold3_msa`   | AlphaFold3 data pipeline (JackHMMER/HMM search) |     ✅      |      ❌      |
+
+The pipeline is composed of the following steps:
 
 1. Split input fasta file (Optional): The pipeline can split large batches of monomeric sequences (eg an entire genome) from a multi-entry fasta input using the `--split_fasta` flag.
 
-2. Prepare databases for chosen methods: The pipeline downloads any required reference data.
+2. Prepare databases for the selected MSA tool and prediction backend: The pipeline downloads any required reference data.
 
-3. Structure prediction:
+3. MSA generation: The selected MSA module produces input MSAs; non-ColabFold-search MSAs are converted into the AlphaFold3-format input JSON consumed by the prediction backends (the `alphafold2_msa` adaptor reproduces AlphaFold2's species-based MSA pairing).
 
-   i. Combined: MSA Search + Model Inference: Structures are predicted from MSAs generated using built-in homolog search pipelines.
+4. Structure prediction: The ColabFold2 backend selected with `--mode` predicts structures from the input MSAs.
 
-   ii. Split: AlphaFold2 MSA Search + Model Inference: The AlphaFold2 MSA generation pipeline is executed independently and then provided as input for AlphaFold2 structure prediction.
-
-   iii. Split: ColabFold MSA Search + Model Inference: The ColabFold MSA generation pipeline is used to produce input MSAs which can be used by ColabFold and Boltz.
-
-   iv. pLM: Protein Language Model: The ESMFold model is used to predict structures without generating an MSA.
-
-4. Generate Report: The pipeline produces an interactive HTML report to visualize structure prediction outputs.
-
-5. Comparison Report: The structures predicted by parallel modes are combined in an interactive HTML report.
+5. Generate Report: The pipeline produces an interactive HTML report to visualize structure prediction outputs.
 
 6. MultiQC: The overall QC statistics are summarized.
 
@@ -79,7 +88,8 @@ nextflow run nf-core/proteinfold \
    -profile <docker/singularity/.../institute> \
    --input samplesheet.csv \
    --outdir <OUTDIR> \
-   --mode <MODE>
+   --mode <MODE> \
+   --msa_tool <MSA_TOOL>
 ```
 
 The pipeline takes care of downloading the databases and parameters required by each of the modes. In case you have already downloaded the required files, you can skip this step by providing the path to the databases using the `--db` parameter.
@@ -90,13 +100,14 @@ nextflow run nf-core/proteinfold \
    --input samplesheet.csv \
    --outdir <OUTDIR> \
    --mode <MODE> \
+   --msa_tool <MSA_TOOL> \
    --db <DBDIR>
 ```
 
 > [!WARNING]
 > The reference data for most methods is extremely large and may exceed individual user disk allocations on shared HPC systems.
 
-In order to run multiple methods simultaneously where reference data is stored at different locations, the `--db` flag can be overwritten for each specific mode (e.g. `--alphafold2_db`, `--alphafold3_db`, `--colabfold_db` (shared with the ColabFold2 modes), and `--esmfold_db`). Please refer to the [usage documentation](https://nf-co.re/proteinfold/usage) to check the directory structure you must provide for each database.
+The `--db` flag can be overwritten per MSA tool or backend (e.g. `--colabfold_db` for `colabfold_search`, `--alphafold2_db` for `alphafold2_msa`, `--alphafold3_db` for `alphafold3_msa`). Please refer to the [usage documentation](https://nf-co.re/proteinfold/usage) to check the directory structure you must provide for each database.
 
 > [!WARNING]
 > Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/running/run-pipelines#using-parameter-files).
@@ -111,7 +122,7 @@ For more details about the output files and reports, please refer to the
 
 ## Adding new modes to the pipeline
 
-For details on how to contribute new modes to the pipeline please refer to the [Howto contribute new modes](https://nf-co.re/proteinfold/usage/HOWTO_CONTRIBUTE_NEW_MODES).
+New prediction backends are added as ColabFold2 modes: register the backend in `main.nf` (`colabfold2_bare_models` / `COLABFOLD2_BACKENDS`), alias the `COLABFOLD2_INFERENCE` module in `workflows/proteinfold.nf`, and extend `colabfold2_mode_tokens` in `main.nf` and `nextflow.config`.
 
 ## Credits
 

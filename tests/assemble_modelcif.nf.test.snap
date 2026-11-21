@@ -1,0 +1,449 @@
+{
+    "chainwise metrics are skipped for monomer inputs": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "test_cw",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer",
+                            "missing_metrics": [
+                                "pae"
+                            ]
+                        },
+                        "test_cw_alphafold2.mmcif:md5,03fa9e74aa87a2f7ef9276dee9974d33"
+                    ]
+                ],
+                "1": [
+                    
+                ],
+                "2": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ],
+                "modelcif": [
+                    [
+                        {
+                            "id": "test_cw",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer",
+                            "missing_metrics": [
+                                "pae"
+                            ]
+                        },
+                        "test_cw_alphafold2.mmcif:md5,03fa9e74aa87a2f7ef9276dee9974d33"
+                    ]
+                ],
+                "pae": [
+                    
+                ],
+                "versions": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ]
+            }
+        ],
+        "timestamp": "2026-11-17T09:01:13.61798445",
+        "meta": {
+            "nf-test": "0.9.4",
+            "nextflow": "25.10.4"
+        }
+    },
+    "template search step is attributed to its own tool": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "test_tpl",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer",
+                            "missing_metrics": [
+                                "pae"
+                            ]
+                        },
+                        "test_tpl_alphafold2.mmcif:md5,deb35110fc754cd0c1bbe92b4ea53370"
+                    ]
+                ],
+                "1": [
+                    
+                ],
+                "2": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ],
+                "modelcif": [
+                    [
+                        {
+                            "id": "test_tpl",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer",
+                            "missing_metrics": [
+                                "pae"
+                            ]
+                        },
+                        "test_tpl_alphafold2.mmcif:md5,deb35110fc754cd0c1bbe92b4ea53370"
+                    ]
+                ],
+                "pae": [
+                    
+                ],
+                "versions": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ]
+            }
+        ],
+        "timestamp": "2026-11-17T09:01:21.881551702",
+        "meta": {
+            "nf-test": "0.9.4",
+            "nextflow": "25.10.4"
+        }
+    },
+    "dummy inputs produce modelcif with associated PAE": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "test",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer"
+                        },
+                        "test_alphafold2.mmcif:md5,eb1b7b26a2c1d1604777cd27b154ff1d"
+                    ]
+                ],
+                "1": [
+                    [
+                        "rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
+                    ]
+                ],
+                "2": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ],
+                "modelcif": [
+                    [
+                        {
+                            "id": "test",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer"
+                        },
+                        "test_alphafold2.mmcif:md5,eb1b7b26a2c1d1604777cd27b154ff1d"
+                    ]
+                ],
+                "pae": [
+                    [
+                        "rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
+                    ]
+                ],
+                "versions": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ]
+            }
+        ],
+        "timestamp": "2026-11-17T08:59:57.275225092",
+        "meta": {
+            "nf-test": "0.9.4",
+            "nextflow": "25.10.4"
+        }
+    },
+    "dummy inputs produce modelcif with embedded PAE": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "test_embed",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer"
+                        },
+                        "test_embed_alphafold2.mmcif:md5,450b7c7aa1663c827c996b254b59c3bc"
+                    ]
+                ],
+                "1": [
+                    [
+                        "rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_1_pae.tsv:md5,54440f2807f1b0abc445490fd8a2b72c"
+                    ]
+                ],
+                "2": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ],
+                "modelcif": [
+                    [
+                        {
+                            "id": "test_embed",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer"
+                        },
+                        "test_embed_alphafold2.mmcif:md5,450b7c7aa1663c827c996b254b59c3bc"
+                    ]
+                ],
+                "pae": [
+                    [
+                        "rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_1_pae.tsv:md5,54440f2807f1b0abc445490fd8a2b72c"
+                    ]
+                ],
+                "versions": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ]
+            }
+        ],
+        "timestamp": "2026-11-17T09:00:07.766826895",
+        "meta": {
+            "nf-test": "0.9.4",
+            "nextflow": "25.10.4"
+        }
+    },
+    "--seed tsv attaches container and seed software parameters": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "test_seed",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer",
+                            "missing_metrics": [
+                                "pae"
+                            ]
+                        },
+                        "test_seed_alphafold2.mmcif:md5,dff1e9536be2278a0c8e900b9c91aca3"
+                    ]
+                ],
+                "1": [
+                    
+                ],
+                "2": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ],
+                "modelcif": [
+                    [
+                        {
+                            "id": "test_seed",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer",
+                            "missing_metrics": [
+                                "pae"
+                            ]
+                        },
+                        "test_seed_alphafold2.mmcif:md5,dff1e9536be2278a0c8e900b9c91aca3"
+                    ]
+                ],
+                "pae": [
+                    
+                ],
+                "versions": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ]
+            }
+        ],
+        "timestamp": "2026-11-17T09:00:58.091619279",
+        "meta": {
+            "nf-test": "0.9.4",
+            "nextflow": "25.10.4"
+        }
+    },
+    "dummy inputs include all ranked models by default": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "test_multi_default",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer"
+                        },
+                        "test_multi_default_alphafold2.mmcif:md5,1de3ee98ab0b73d5297b012fecf0b1f9"
+                    ]
+                ],
+                "1": [
+                    [
+                        "rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_2_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_3_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_4_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
+                    ]
+                ],
+                "2": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ],
+                "modelcif": [
+                    [
+                        {
+                            "id": "test_multi_default",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer"
+                        },
+                        "test_multi_default_alphafold2.mmcif:md5,1de3ee98ab0b73d5297b012fecf0b1f9"
+                    ]
+                ],
+                "pae": [
+                    [
+                        "rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_2_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_3_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_4_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
+                    ]
+                ],
+                "versions": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ]
+            }
+        ],
+        "timestamp": "2026-11-17T09:00:34.029991786",
+        "meta": {
+            "nf-test": "0.9.4",
+            "nextflow": "25.10.4"
+        }
+    },
+    "dummy inputs produce modelcif from five mmcif structures": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "test_multi",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer"
+                        },
+                        "test_multi_alphafold2.mmcif:md5,dee7d6415bf7613313c9271e7d38bca9"
+                    ]
+                ],
+                "1": [
+                    [
+                        "rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_2_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_3_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_4_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
+                    ]
+                ],
+                "2": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ],
+                "modelcif": [
+                    [
+                        {
+                            "id": "test_multi",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer"
+                        },
+                        "test_multi_alphafold2.mmcif:md5,dee7d6415bf7613313c9271e7d38bca9"
+                    ]
+                ],
+                "pae": [
+                    [
+                        "rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_2_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_3_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "rank_4_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
+                    ]
+                ],
+                "versions": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ]
+            }
+        ],
+        "timestamp": "2026-11-17T09:00:41.473030383",
+        "meta": {
+            "nf-test": "0.9.4",
+            "nextflow": "25.10.4"
+        }
+    },
+    "pLDDT metric type follows --plddt-scale": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "test_scale",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer",
+                            "missing_metrics": [
+                                "pae"
+                            ]
+                        },
+                        "test_scale_alphafold2.mmcif:md5,dc9d72ebfc81fff11bd0148c24bd2c31"
+                    ]
+                ],
+                "1": [
+                    
+                ],
+                "2": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ],
+                "modelcif": [
+                    [
+                        {
+                            "id": "test_scale",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer",
+                            "missing_metrics": [
+                                "pae"
+                            ]
+                        },
+                        "test_scale_alphafold2.mmcif:md5,dc9d72ebfc81fff11bd0148c24bd2c31"
+                    ]
+                ],
+                "pae": [
+                    
+                ],
+                "versions": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ]
+            }
+        ],
+        "timestamp": "2026-11-17T09:00:48.589120589",
+        "meta": {
+            "nf-test": "0.9.4",
+            "nextflow": "25.10.4"
+        }
+    },
+    "dummy inputs produce binaryCIF": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "test_binary",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer"
+                        },
+                        "test_binary_alphafold2.bcif:md5,ceb0f2c80d93f04334b9691f98375807"
+                    ]
+                ],
+                "1": [
+                    "DUMMY_PAE.tsv:md5,303948e029199ff88b8242abb5b01182"
+                ],
+                "2": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ],
+                "modelcif": [
+                    [
+                        {
+                            "id": "test_binary",
+                            "model": "alphafold2",
+                            "msa_tool": "jackhmmer"
+                        },
+                        "test_binary_alphafold2.bcif:md5,ceb0f2c80d93f04334b9691f98375807"
+                    ]
+                ],
+                "pae": [
+                    "DUMMY_PAE.tsv:md5,303948e029199ff88b8242abb5b01182"
+                ],
+                "versions": [
+                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                ]
+            }
+        ],
+        "timestamp": "2026-11-17T09:00:25.268372218",
+        "meta": {
+            "nf-test": "0.9.4",
+            "nextflow": "25.10.4"
+        }
+    }
+}

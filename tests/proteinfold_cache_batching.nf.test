@@ -1,0 +1,107 @@
+nextflow_pipeline {
+
+    name "Test MSA batching and cache"
+    script "../main.nf"
+    tag "pipeline"
+    tag "test_proteinfold_cache_batching"
+    profile "test_proteinfold"
+
+    test("cache partial hit searches only missing samples and predicts both") {
+        tag "cache"
+        setup {
+            def hit = file("$outputDir/hit.fasta")
+            hit.text = '>hit\nACDEFG\n'
+            def miss = file("$outputDir/miss.fasta")
+            miss.text = '>miss\nMNPQRS\n'
+            def sheet = file("$outputDir/samples.csv")
+            sheet.text = "id,fasta\nhit,${hit}\nmiss,${miss}\n"
+            def query = file("$outputDir/hit.csv")
+            query.text = 'id,sequence\nhit,ACDEFG\n'
+            def payload = file("$outputDir/hit.a3m")
+            payload.text = '>hit\nACDEFG\n'
+            def jsonPayload = file(projectDir + '/modules/local/msa_cache_lookup/tests/multimer.json')
+            def cache = file("$outputDir/cache")
+            def command = ['python3', file(projectDir + '/bin/msa_cache.py').toString(), 'store', query.toString(), 'revision', 'sha256:test-image', '', cache.toString(), jsonPayload.toString(), payload.toString()]
+            assert command.execute().waitFor() == 0
+        }
+        when {
+            params {
+                outdir = "$outputDir/results"
+                input = "$outputDir/samples.csv"
+                msa_cache_dir = "$outputDir/cache"
+                msa_cache_id = 'revision'
+                msa_cache_tool_id = 'sha256:test-image'
+            }
+        }
+        then {
+            assert workflow.success
+            assert workflow.trace.succeeded().count { it.name.contains('MSA_CACHE_LOOKUP') } == 2
+            def searches = workflow.trace.succeeded().findAll { it.name.contains('MMSEQS_COLABFOLDSEARCH_BATCH') }
+            assert searches.size() == 1
+            assert searches[0].name.contains('batch_miss')
+            assert !searches[0].name.contains('batch_hit')
+            assert workflow.trace.succeeded().count { it.name.contains('OPENDDE') } == 2
+        }
+    }
+
+    test("cache hits skip search entirely") {
+        tag "cache"
+        setup {
+            def sheet = file("$outputDir/samples.csv")
+            def jsonPayload = file(projectDir + '/modules/local/msa_cache_lookup/tests/multimer.json')
+            def cache = file("$outputDir/cache")
+            def rows = ['hit': 'ACDEFG', 'miss': 'MNPQRS']
+            sheet.text = 'id,fasta\n' + rows.collect { id, sequence ->
+                def fasta = file("$outputDir/${id}.fasta")
+                fasta.text = ">${id}\n${sequence}\n"
+                def query = file("$outputDir/${id}.csv")
+                query.text = "id,sequence\n${id},${sequence}\n"
+                def payload = file("$outputDir/${id}.a3m")
+                payload.text = ">${id}\n${sequence}\n"
+                def command = ['python3', file(projectDir + '/bin/msa_cache.py').toString(), 'store', query.toString(), 'revision', 'sha256:test-image', '', cache.toString(), jsonPayload.toString(), payload.toString()]
+                assert command.execute().waitFor() == 0
+                "${id},${fasta}\n"
+            }.join('')
+        }
+        when {
+            params {
+                outdir = "$outputDir/results"
+                input = "$outputDir/samples.csv"
+                msa_cache_dir = "$outputDir/cache"
+                msa_cache_id = 'revision'
+                msa_cache_tool_id = 'sha256:test-image'
+            }
+        }
+        then {
+            assert workflow.success
+            assert workflow.trace.succeeded().count { it.name.contains('MSA_CACHE_LOOKUP') } == 2
+            assert workflow.trace.succeeded().count { it.name.contains('MMSEQS_COLABFOLDSEARCH') } == 0
+            assert workflow.trace.succeeded().count { it.name.contains('OPENDDE') } == 2
+        }
+    }
+
+    test("runs multiple MSA batches") {
+        when {
+            params {
+                outdir = "$outputDir"
+                input = 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/proteinfold/testdata/samplesheet/v2.0/colabfold_batching_samplesheet.csv'
+                msa_batch_size = 2
+            }
+        }
+
+        then {
+            assert workflow.success
+            assert file("${params.outdir}/multiqc/multiqc_report.html").exists()
+            assert file("${params.outdir}/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml").size() > 0
+            def batches = workflow.trace.succeeded().findAll { it.name.contains('MMSEQS_COLABFOLDSEARCH_BATCH') }
+            assert batches.size() == 2
+            def stable_name = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
+            def stable_path = getAllFilesFromDir(params.outdir, ignoreFile: 'tests/.nftignore')
+            assert snapshot(
+                workflow.trace.succeeded().size(),
+                stable_name,
+                stable_path
+            ).match()
+        }
+    }
+}

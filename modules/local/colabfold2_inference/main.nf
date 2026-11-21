@@ -6,17 +6,14 @@ process COLABFOLD2_INFERENCE {
     container "ghcr.io/jscgh/proteinfold_colabfold:af3-preview-e9e8bd0"
 
     input:
-    tuple val(meta), path(input)
-    val model_type
-    val use_esm
-    val public_mode
+    tuple val(meta), path(input), val(model_type), val(use_esm), path(params_path)
     val num_recycles
-    path params_path
 
     output:
     path "raw/**"                                             , optional: true, emit: raw
-    tuple val(meta), path("${meta.id}_colabfold2.cif")        , optional: true, emit: top_ranked_structure
+    tuple val(meta), path("${meta.id}_colabfold2.*")          , optional: true, emit: top_ranked_structure
     tuple val(meta), path("raw/*_rank_*.cif")                 , optional: true, emit: structures
+    tuple val(meta), path("raw/*_rank_*.pdb")                 , optional: true, emit: structures_pdb
     tuple val(meta), path("${meta.id}_colabfold2_msa.tsv")    , optional: true, emit: msa
     tuple val(meta), path("${meta.id}_1_pae.tsv")             , optional: true, emit: pae
     tuple val(meta), path("${meta.id}_ptm.tsv")               , optional: true, emit: ptms
@@ -42,11 +39,15 @@ process COLABFOLD2_INFERENCE {
     def args = task.ext.args ?: ''
     def use_esm_arg = use_esm ? '--use-esm' : ''
     def precision = task.ext.weights_precision ?: 'fp32'
+    // Forward the global --random_seed; colabfold_batch defaults to 0 anyway.
+    def random_seed_arg = params.random_seed != null ? "--random-seed ${params.random_seed}" : ''
     def input_files = input instanceof Collection ? input.collect { file_path -> file_path.name } : [input.name]
     if (input_files.size() != 1) {
         error("COLABFOLD2_INFERENCE received multiple inputs for sample '${meta.id}'. Use --split_fasta to run each FASTA record independently.")
     }
     def require_msa_output = input_files.any { name -> name ==~ /(?i).*\.(fa|faa|fasta)$/ }
+    // The alphafold2 backends write PDB structures; the AF3-family writes mmCIF.
+    def structure_ext = (model_type == 'auto' || model_type.startsWith('alphafold2')) ? 'pdb' : 'cif'
     def shell_quote = { name -> "'" + name.replace("'", "'\\''") + "'" }
     def quoted_input_files = input_files.collect(shell_quote).join(' ')
 
@@ -66,6 +67,8 @@ process COLABFOLD2_INFERENCE {
             python3 -c 'import json, sys; d=json.load(open(sys.argv[1])); n=len(d) if isinstance(d, list) else 1; sys.exit(f"ColabFold2 requires one AlphaFold3 job per samplesheet row; {sys.argv[1]} contains {n} jobs") if n != 1 else None' "\$f"
         fi
     done
+    # alphafold2 backends consume ColabFold a3m queries; the AF3-family
+    # consumes FASTA or AlphaFold3 JSON with embedded MSAs.
 
     cat > sitecustomize.py <<'EOF'
     def _register_missing_gpu_kinds():
@@ -92,16 +95,17 @@ process COLABFOLD2_INFERENCE {
         --num-recycle ${num_recycles} \
         --weights-precision ${precision} \
         --data "${params_path}" \
+        ${random_seed_arg} \
         $args \
         msa_in/ \
         raw/
 
-    mapfile -t ranked_structures < <(find raw -maxdepth 1 -type f -name '*_rank_*.cif' | sort)
+    mapfile -t ranked_structures < <(find raw -maxdepth 1 -type f -name "*_rank_*.${structure_ext}" | sort)
     if (( \${#ranked_structures[@]} == 0 )); then
-        echo "COLABFOLD2_INFERENCE produced no ranked mmCIF structures" >&2
+        echo "COLABFOLD2_INFERENCE produced no ranked structures" >&2
         exit 1
     fi
-    cp "\${ranked_structures[0]}" "${meta.id}_colabfold2.cif"
+    cp "\${ranked_structures[0]}" "${meta.id}_colabfold2.${structure_ext}"
 
     mapfile -t score_files < <(find raw -maxdepth 1 -type f -name '*_scores_rank_*.json' | sort)
     if (( \${#score_files[@]} == 0 )); then
@@ -121,7 +125,27 @@ process COLABFOLD2_INFERENCE {
         echo "COLABFOLD2_INFERENCE received FASTA input but the MSA server produced no a3m files" >&2
         exit 1
     else
-        touch "${meta.id}_colabfold2_msa.tsv"
+        input_file=${quoted_input_files}
+        if [[ "\$input_file" == *.a3m ]]; then
+            extract_metrics.py --name "${meta.id}" --paired_a3m "\$input_file"
+            mv "${meta.id}_msa.tsv" "${meta.id}_colabfold2_msa.tsv"
+        elif [[ "\$input_file" == *.json ]]; then
+            if af3_msa_json_to_a3m.py "\$input_file" --output "${meta.id}_input.a3m"; then
+                extract_metrics.py --name "${meta.id}" --paired_a3m "${meta.id}_input.a3m"
+                mv "${meta.id}_msa.tsv" "${meta.id}_colabfold2_msa.tsv"
+            else
+                conversion_status=\$?
+                if [[ "\$conversion_status" -eq 2 || "\$conversion_status" -eq 3 ]]; then
+                    touch "${meta.id}_colabfold2_msa.tsv"
+                else
+                    echo "COLABFOLD2_INFERENCE could not convert the input MSA" >&2
+                    exit "\$conversion_status"
+                fi
+            fi
+        else
+            echo "COLABFOLD2_INFERENCE cannot extract an MSA from \$input_file" >&2
+            exit 1
+        fi
     fi
 
     touch \
@@ -144,10 +168,11 @@ process COLABFOLD2_INFERENCE {
     """
 
     stub:
+    def structure_ext = (model_type == 'auto' || model_type.startsWith('alphafold2')) ? 'pdb' : 'cif'
     """
     mkdir raw
-    touch "${meta.id}_colabfold2.cif"
-    touch "raw/${meta.id}_rank_001_${model_type}_seed_000_sample_0.cif"
+    touch "${meta.id}_colabfold2.${structure_ext}"
+    touch "raw/${meta.id}_rank_001_${model_type}_seed_000_sample_0.${structure_ext}"
     touch "raw/${meta.id}_scores_rank_001_${model_type}_seed_000_sample_0.json"
     touch "${meta.id}_colabfold2_msa.tsv"
     touch "${meta.id}_1_pae.tsv"

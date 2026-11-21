@@ -32,7 +32,10 @@ process MERGE_ALPHAFOLD3_MSA {
 
     stub:
     """
-    touch ${meta.id}.json
+    # The merge is pure-python JSON repopulation; the original input is a
+    # real staged file even in stub runs, so hand it through unchanged to
+    # keep downstream consumers (a3m conversion, inference) honest.
+    cp original_input.json ${meta.id}.json
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         python: \$(python3 --version | sed 's/Python //g')

@@ -32,7 +32,7 @@ process MODELCIF_ASSEMBLE {
     def pae_inputs = meta.missing_metrics?.contains('pae') ? "${pae}" : 'pae/*.tsv'
     def modelcif_params = (meta.modelcif_params ?: [:]).collect { key, value -> "--param ${key}=${value}" }.join(' ')
     def plddt_scale = meta.plddt_scale ? "--plddt-scale ${meta.plddt_scale}" : ''
-    def output_prefix = "${meta.id}_${meta.model}"
+    def output_prefix = "${meta.id}_${meta.mode_short ?: meta.model}${meta.msa_short ? "_" + meta.msa_short : ''}"
     """
     ${stage_pae}
 

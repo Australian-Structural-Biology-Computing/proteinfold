@@ -1,0 +1,15 @@
+name: "msa_alphafold3"
+description: alphafold3 data-pipeline MSA generation
+input:
+  - ch_fasta:
+      type: channel
+      description: Channel with [meta, fasta] for FASTA-origin samples
+  - ch_json:
+      type: channel
+      description: Channel with [meta, json] for AlphaFold3-JSON-origin samples
+output:
+  - msa_json:
+      type: channel
+      description: Channel with [meta, json] AlphaFold3-format MSA JSON per sample
+authors:
+  - "@tom"
