@@ -1,4 +1,4 @@
-name: alphafold3_json_to_colabfold_fasta
+name: to_colabfold_fasta
 channels:
   - conda-forge
 dependencies:

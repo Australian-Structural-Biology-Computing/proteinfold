@@ -20,7 +20,7 @@ include { COLABFOLD2_INFERENCE as OPENDDE         } from '../modules/local/colab
 include { COLABFOLD2_INFERENCE as ROSETTAFOLD3    } from '../modules/local/colabfold2_inference'
 include { COLABFOLD2_INFERENCE as ESMFOLD2        } from '../modules/local/colabfold2_inference'
 
-include { ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA } from '../modules/local/alphafold3_json_to_colabfold_fasta'
+include { TO_COLABFOLD_FASTA } from '../modules/local/to_colabfold_fasta'
 include { ALPHAFOLD3_JSON_TO_COLABFOLD_A3M   } from '../modules/local/af3_msa_json_to_a3m'
 include { MSA_COLABFOLD_SEARCH } from '../subworkflows/local/msa_colabfold_search'
 include { MSA_ALPHAFOLD2       } from '../subworkflows/local/msa_alphafold2'
@@ -219,9 +219,9 @@ workflow PROTEINFOLD {
         if (msa_tool == 'msa_server') {
             // Server mode: colabfold_batch runs the webserver search itself;
             // JSON inputs are reduced to their protein chains first.
-            ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA(ch_input_by_ext.json)
+            TO_COLABFOLD_FASTA(ch_input_by_ext.json)
             ch_af2_inference_input = ch_input_by_ext.fasta
-                .mix(ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA.out.query_fasta)
+                .mix(TO_COLABFOLD_FASTA.out.query_fasta)
                 .map { meta, input ->
                     def tagged = meta.clone()
                     tagged.msa_short = 'server'

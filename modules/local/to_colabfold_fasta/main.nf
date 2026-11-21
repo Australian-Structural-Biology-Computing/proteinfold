@@ -1,4 +1,4 @@
-process ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA {
+process TO_COLABFOLD_FASTA {
     tag   "$meta.id"
     label 'process_single'
 
@@ -8,34 +8,29 @@ process ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA {
         'community.wave.seqera.io/library/biopython_python:06582b7b722f3db3' }"
 
     input:
-    tuple val(meta), path(input_json)
+    tuple val(meta), path(input_file, stageAs: 'input/*')
 
     output:
     tuple val(meta), path("${meta.id}.fasta"), emit: query_fasta
-    path "versions.yml"                         , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
+    // The input is staged under its own name inside input/, keeping it
+    // apart from the <id>.fasta output even when a FASTA input is itself
+    // named after the sample.
+    def staged = input_file instanceof Collection ? input_file[0].name : input_file.name
+    def input_name = staged.tokenize('/')[-1]
     """
-    alphafold3_json_to_colabfold_fasta.py \
-        ${input_json} \
-        --id ${meta.id} \
+    to_colabfold_query_fasta.py \\
+        input/${input_name} \\
+        --id ${meta.id} \\
         --output ${meta.id}.fasta
-
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        python: \$(python3 --version | sed 's/Python //g')
-    END_VERSIONS
     """
 
     stub:
     """
     touch ${meta.id}.fasta
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        python: \$(python3 --version | sed 's/Python //g')
-    END_VERSIONS
     """
 }

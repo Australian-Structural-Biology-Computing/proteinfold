@@ -9,12 +9,11 @@
  * non-protein entities intact).
  */
 
-include { ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA } from '../../../modules/local/alphafold3_json_to_colabfold_fasta'
-include { MERGE_ALPHAFOLD3_MSA               } from '../../../modules/local/merge_alphafold3_msa'
-include { MMSEQS_COLABFOLDSEARCH             } from '../../../modules/local/mmseqs_colabfoldsearch'
-include { MMSEQS_COLABFOLDSEARCH_BATCH       } from '../../../modules/local/mmseqs_colabfoldsearch'
-include { MULTIFASTA_TO_COLABFOLD_FASTA      } from '../../../modules/local/multifasta_to_colabfold_fasta'
-include { MSA_CACHE_LOOKUP                   } from '../../../modules/local/msa_cache_lookup'
+include { MERGE_ALPHAFOLD3_MSA } from '../../../modules/local/merge_alphafold3_msa'
+include { MMSEQS_COLABFOLDSEARCH } from '../../../modules/local/mmseqs_colabfoldsearch'
+include { MMSEQS_COLABFOLDSEARCH_BATCH } from '../../../modules/local/mmseqs_colabfoldsearch'
+include { MSA_CACHE_LOOKUP } from '../../../modules/local/msa_cache_lookup'
+include { TO_COLABFOLD_FASTA } from '../../../modules/local/to_colabfold_fasta'
 
 workflow MSA_COLABFOLD_SEARCH {
 
@@ -40,14 +39,13 @@ workflow MSA_COLABFOLD_SEARCH {
         .map { meta, input_json -> [meta.id, input_json] }
         .set { ch_json_templates }
 
-    ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA(ch_json_for_search)
+    // Colon-join every sample into a single ColabFold query so complexes
+    // are searched (and paired) as one entry: multi-chain FASTAs join
+    // across their records, and AlphaFold3 JSONs reduce to their protein
+    // chains, matching the JSON extraction.
+    TO_COLABFOLD_FASTA(ch_fasta.mix(ch_json_for_search))
 
-    // Colon-join multi-chain FASTAs so complexes are searched (and
-    // paired) as a single query, matching the JSON extraction.
-    MULTIFASTA_TO_COLABFOLD_FASTA(ch_fasta)
-
-    ch_search_input = MULTIFASTA_TO_COLABFOLD_FASTA.out.query_fasta
-        .mix(ALPHAFOLD3_JSON_TO_COLABFOLD_FASTA.out.query_fasta)
+    ch_search_input = TO_COLABFOLD_FASTA.out.query_fasta
 
     def batch_size = msa_batch_size instanceof Number ? msa_batch_size : msa_batch_size.toString().toInteger()
     if (batch_size == 0 || batch_size < -1) {

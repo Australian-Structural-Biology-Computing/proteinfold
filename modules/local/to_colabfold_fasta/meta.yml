@@ -1,0 +1,20 @@
+name: "to_colabfold_fasta"
+description: Reduce a sample FASTA or AlphaFold3 JSON to the single-query ColabFold FASTA used by the MMseqs2 search.
+tools: []
+input:
+  - - meta:
+        type: map
+        description: Groovy Map containing sample information.
+    - input_file:
+        type: file
+        description: Multi-record FASTA or AlphaFold3 JSON describing the sample's chains.
+        pattern: "*.{fa,fasta,faa,json}"
+output:
+  query_fasta:
+    - - meta:
+          type: map
+          description: Groovy Map containing sample information.
+      - "*.fasta":
+          type: file
+          description: Colon-delimited single-record FASTA with the sample id as header.
+          pattern: "*.fasta"
