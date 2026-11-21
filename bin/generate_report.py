@@ -25,7 +25,6 @@ PAE_MAX = 30.0
 # Maximum number of MSA rows embedded in the interactive report. Rows are
 # sorted by sequence identity before sampling, so the identity gradient of the
 # coverage plot is preserved even for very deep MSAs.
-MSA_MAX_ROWS = 1024
 
 def encode_u8_b64(values):
     """Quantise floats in [0, 1] to uint8 and return a base64 string."""
@@ -138,22 +137,17 @@ def load_msa_matrix(msa_path):
 def build_msa_payload(msa_path):
     """Pack the sorted MSA coverage matrix for the interactive report viewer.
 
-    Values are quantised to uint8. Deep MSAs are subsampled uniformly after the
-    identity sort so the embedded report stays small; the full sequence count
-    is reported alongside so the UI can flag the reduction.
+    Values are quantised to uint8; every sequence is embedded and the viewer
+    resamples the full matrix into the plot area.
     """
     loaded = load_msa_matrix(msa_path)
     if loaded is None:
         return None
     n_cols, rows, identities = loaded
-    n_rows = len(rows)
-    if n_rows > MSA_MAX_ROWS:
-        keep = np.unique(np.round(np.linspace(0, n_rows - 1, MSA_MAX_ROWS)).astype(int))
-        shown = [rows[i] for i in keep]
-        shown_identities = [identities[i] for i in keep]
-    else:
-        shown = rows
-        shown_identities = identities
+    # All rows are embedded - the viewer squeezes the full matrix into the
+    # plot area instead of subsampling
+    shown = rows
+    shown_identities = identities
     # Row 0 is the most similar sequence (the query): the original coverage
     # plot drew the identity-sorted rows with origin="lower", which puts the
     # query at the top of the image
@@ -167,7 +161,7 @@ def build_msa_payload(msa_path):
     ])
     seqid = shown_identities
     return {
-        "nSeq": int(n_rows),
+        "nSeq": int(len(rows)),
         "nSeqShown": int(len(shown)),
         "nCol": int(n_cols),
         "data": encode_u8_b64(flat),

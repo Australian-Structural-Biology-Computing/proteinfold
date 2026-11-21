@@ -875,7 +875,9 @@
   // Black separator lines across the plot where one chain's axis band
   // hands over to the next; segments of the same chain colour (a chain id
   // split by an interleaved ligand) get no line. horizontal adds the
-  // mirrored lines on the square PAE matrix.
+  // mirrored lines on the square PAE matrix. origin carries the plot
+  // rectangle (x, y, w, h) - vertical lines span the height, horizontal
+  // lines the width, which differ on the MSA plot.
   const drawChainBoundaries = (ctx, origin, coord, segments, horizontal) => {
     ctx.strokeStyle = "#000000";
     ctx.lineWidth = 1;
@@ -889,11 +891,11 @@
       }
       const p = coord.pos(segments[i].start);
       ctx.moveTo(p, origin.y);
-      ctx.lineTo(p, origin.y + origin.side);
+      ctx.lineTo(p, origin.y + origin.h);
       if (horizontal) {
         const q = origin.y + (p - origin.x);
         ctx.moveTo(origin.x, q);
-        ctx.lineTo(origin.x + origin.side, q);
+        ctx.lineTo(origin.x + origin.w, q);
       }
     }
     ctx.stroke();
@@ -1566,7 +1568,7 @@
 
         drawChainBoundaries(
           ctx,
-          plot,
+          { x: plot.x, y: plot.y, w: plot.side, h: plot.side },
           {
             count: n,
             pos: (ix) => lanes.pos(ix),
@@ -1698,24 +1700,50 @@
       }
     }
 
-    // Offscreen matrix at one pixel per cell. Quantisation collapses true gaps
-    // and zero-identity covered positions; both render white like the
-    // previous static plot.
-    const off = document.createElement("canvas");
-    off.width = nCol;
-    off.height = nSeqShown;
-    const offCtx = off.getContext("2d");
-    const image = offCtx.createImageData(nCol, nSeqShown);
-    for (let i = 0; i < nCol * nSeqShown; i++) {
-      const v = bytes[i];
-      const [cr, cg, cb] = v === 0 ? [255, 255, 255] : rainbowColor(v / 255);
-      const o = i * 4;
-      image.data[o] = cr;
-      image.data[o + 1] = cg;
-      image.data[o + 2] = cb;
-      image.data[o + 3] = 255;
-    }
-    offCtx.putImageData(image, 0, 0);
+    // Plot-sized heatmap, rasterised directly from the byte array: each
+    // destination pixel area-averages every cell that overlaps it, so the
+    // full matrix (all rows, no subsampling) is drawn into the plot area
+    // whether cells are larger or smaller than a pixel. Quantisation
+    // collapses true gaps and zero-identity covered positions; a block
+    // average of zero still renders white like the previous static plot.
+    let heat = null;
+    const buildHeat = () => {
+      const w = Math.max(1, Math.round(plot.width));
+      const h = Math.max(1, Math.round(plot.height));
+      heat = document.createElement("canvas");
+      heat.width = w;
+      heat.height = h;
+      const hctx = heat.getContext("2d");
+      const img = hctx.createImageData(w, h);
+      const out = img.data;
+      const rowsPerPx = nSeqShown / h;
+      const colsPerPx = nCol / w;
+      for (let y = 0; y < h; y++) {
+        const r0 = Math.min(nSeqShown - 1, Math.floor(y * rowsPerPx));
+        const r1 = Math.min(nSeqShown - 1, Math.max(r0, Math.ceil((y + 1) * rowsPerPx) - 1));
+        for (let x = 0; x < w; x++) {
+          const c0 = Math.min(nCol - 1, Math.floor(x * colsPerPx));
+          const c1 = Math.min(nCol - 1, Math.max(c0, Math.ceil((x + 1) * colsPerPx) - 1));
+          let sum = 0;
+          let count = 0;
+          for (let r = r0; r <= r1; r++) {
+            const base = r * nCol;
+            for (let c = c0; c <= c1; c++) {
+              sum += bytes[base + c];
+              count++;
+            }
+          }
+          const v = count ? sum / count : 0;
+          const [cr, cg, cb] = v === 0 ? [255, 255, 255] : rainbowColor(v / 255);
+          const o = (y * w + x) * 4;
+          out[o] = cr;
+          out[o + 1] = cg;
+          out[o + 2] = cb;
+          out[o + 3] = 255;
+        }
+      }
+      hctx.putImageData(img, 0, 0);
+    };
 
     const widget = {
       id: "msa",
@@ -1781,6 +1809,7 @@
         canvas.style.height = `${canvas.height}px`;
         plot.cellX = plot.width / nCol;
         plot.cellY = plot.height / nSeqShown;
+        buildHeat();
         this.draw();
       },
 
@@ -1796,9 +1825,8 @@
           ["0", "50", "100% identity"],
         );
 
-        ctx.imageSmoothingEnabled = nCol > plot.width;
         // Row 0 (the query, highest identity) at the top, like the previous plot
-        ctx.drawImage(off, plot.x, plot.y, plot.width, plot.height);
+        ctx.drawImage(heat, plot.x, plot.y);
         ctx.strokeStyle = "#d1d5db";
         ctx.lineWidth = 1;
         ctx.strokeRect(plot.x + 0.5, plot.y + 0.5, plot.width - 1, plot.height - 1);
@@ -1819,7 +1847,7 @@
 
         drawChainBoundaries(
           ctx,
-          { x: plot.x, y: plot.y, side: plot.width },
+          { x: plot.x, y: plot.y, w: plot.width, h: plot.height },
           {
             count: nCol,
             pos: (ix) => plot.x + ix * plot.cellX,
