@@ -56,6 +56,11 @@ import re
 import subprocess
 import sys
 
+try:
+    import zstandard
+except ImportError:  # fall back to the zstd CLI in read_text
+    zstandard = None
+
 # Same caps the MMseqs search applies to colabfold_search output.
 MAX_MSA_SEQS = 16384
 MAX_PAIRED_SEQS = 8192
@@ -244,8 +249,17 @@ def templates_for_chain(chain_msa_dir, sequence, obsolete, mmcif_dir, cutoff,
 
 
 def read_text(path):
-    """Read a possibly zstd-compressed text file."""
+    """Read a possibly zstd-compressed text file.
+
+    The zstandard module is preferred (the colabfold runtime image ships it
+    but not the zstd CLI); the CLI is the fallback for environments without
+    the module.
+    """
     if path.endswith(".zst"):
+        if zstandard is not None:
+            with open(path, "rb") as handle:
+                with zstandard.ZstdDecompressor().stream_reader(handle) as reader:
+                    return reader.read().decode("utf-8")
         result = subprocess.run(
             ["zstd", "-dc", path], check=True,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
