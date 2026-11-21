@@ -48,7 +48,7 @@
         visibility: visible;
       }
       .seq-residue {
-        width: 1.5ch;
+        width: 1.3ch;
         border-radius: 2px;
         line-height: 1.45;
         text-align: center;
@@ -2086,14 +2086,16 @@
   function createSequencePanel(container) {
     const frame = document.createElement("div");
     frame.className =
-      "select-none font-mono text-xs leading-[1.45] cursor-pointer pt-1";
+      "select-none font-mono text-sm leading-[1.5] cursor-pointer pt-1";
     container.appendChild(frame);
 
     const spans = []; // token index -> residue span
     const chainOf = (seg) => RESIDUES[seg.start][0];
     const isLigandSeg = (seg) => !!RESIDUES[seg.start][4];
-    const RESIDUES_PER_ROW = 100;
 
+    // Residues keep a neutral character colour; the chain identity lives in
+    // the chip that labels each block
+    let widgetRef = null;
     let row = null;
     let rowCount = 0;
     let chipBand = null;
@@ -2123,31 +2125,61 @@
       rowCount = 0;
     };
 
-    CHAIN_SEGMENTS.forEach((seg) => {
-      for (let ix = seg.start; ix <= seg.end; ix++) {
-        if (!row || rowCount >= RESIDUES_PER_ROW || ix === seg.start) startRow(ix, seg);
-        const r = RESIDUES[ix];
-        const span = document.createElement("span");
-        span.className = "seq-residue";
-        const one = ONE_LETTER_CODES[r[2].toUpperCase()];
-        span.textContent = r[4] ? r[2] : one || "?";
-        span.style.background = chipBand;
-        span.style.color = chipFg;
-        if (r[4]) {
-          // Ligand names are three-plus characters: let the cell grow so
-          // the name stays readable instead of overflowing the box
-          span.style.width = "auto";
-          span.style.minWidth = "1.5ch";
-          span.style.padding = "0 2px";
-          span.style.fontWeight = "600";
+    // The row length adapts to the panel width: measure the monospace cell
+    // once, then fit as many residues as the available width takes
+    const probe = document.createElement("span");
+    probe.className = "seq-residue";
+    probe.style.visibility = "hidden";
+    probe.textContent = "M";
+    frame.appendChild(probe);
+    const cellWidth = probe.getBoundingClientRect().width + 0.5; // + column gap
+    const reservedWidth = 76; // gutter + chip slot
+    probe.remove();
+    const residuesPerRow = () =>
+      Math.max(20, Math.min(160, Math.floor((container.clientWidth - reservedWidth) / cellWidth)));
+
+    const render = () => {
+      frame.replaceChildren();
+      spans.length = 0;
+      const perRow = residuesPerRow();
+      CHAIN_SEGMENTS.forEach((seg) => {
+        for (let ix = seg.start; ix <= seg.end; ix++) {
+          if (!row || rowCount >= perRow || ix === seg.start) startRow(ix, seg);
+          const r = RESIDUES[ix];
+          const span = document.createElement("span");
+          span.className = "seq-residue";
+          const one = ONE_LETTER_CODES[r[2].toUpperCase()];
+          span.textContent = r[4] ? r[2] : one || "?";
+          if (r[4]) {
+            // Ligand names are three-plus characters: let the cell grow so
+            // the name stays readable instead of overflowing the box
+            span.style.width = "auto";
+            span.style.minWidth = "1.5ch";
+            span.style.padding = "0 2px";
+            span.style.fontWeight = "600";
+          }
+          span.title = `${r[0]}:${r[1]} ${r[2]}${r[4] ? " (ligand)" : ""}`;
+          span.dataset.ix = String(ix);
+          row.appendChild(span);
+          spans[ix] = span;
+          rowCount++;
         }
-        span.title = `${r[0]}:${r[1]} ${r[2]}${r[4] ? " (ligand)" : ""}`;
-        span.dataset.ix = String(ix);
-        row.appendChild(span);
-        spans[ix] = span;
-        rowCount++;
-      }
+      });
+    };
+    render();
+
+    // Re-flow when the panel width changes (the height-only resize of the
+    // first layout pass is filtered out)
+    let lastWidth = container.clientWidth;
+    const seqObserver = new ResizeObserver(() => {
+      const width = container.clientWidth;
+      if (Math.abs(width - lastWidth) < 12) return;
+      lastWidth = width;
+      previewed = new Set();
+      render();
+      if (widgetRef) widgetRef.setHighlight(hub.selection);
     });
+    seqObserver.observe(container);
 
     const spanAt = (ev) => {
       const el = document.elementFromPoint(ev.clientX, ev.clientY);
@@ -2201,7 +2233,7 @@
     frame.addEventListener("pointerup", finish);
     frame.addEventListener("pointercancel", finish);
 
-    return {
+    const widget = {
       id: "seq",
       setHighlight(indices) {
         const next = new Set(indices);
@@ -2218,6 +2250,8 @@
         highlighted = next;
       },
     };
+    widgetRef = widget;
+    return widget;
   }
 
   // Panels: scores banner, chainwise matrices, widget wiring
