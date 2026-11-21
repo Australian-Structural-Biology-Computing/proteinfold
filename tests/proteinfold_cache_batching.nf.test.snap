@@ -10,10 +10,6 @@
                 "msa/T1026_mmseqs.json",
                 "msa/T1027_mmseqs.a3m",
                 "msa/T1027_mmseqs.json",
-                "multifasta",
-                "multifasta/T1024.fasta",
-                "multifasta/T1026.fasta",
-                "multifasta/T1027.fasta",
                 "multiqc",
                 "multiqc/multiqc_data",
                 "multiqc/multiqc_data/.stub",
@@ -38,9 +34,6 @@
                 "T1026_mmseqs.json:md5,a7935f6914a8ac6ba965668a4079001b",
                 "T1027_mmseqs.a3m:md5,2d5bea1d28ffa33dc01f46541bedc592",
                 "T1027_mmseqs.json:md5,a53d88ac8ab10efd65193cc6bfc931a5",
-                "T1024.fasta:md5,a0f123964aa4daa9ac1b0f3192943035",
-                "T1026.fasta:md5,6bf7b57662d52f99945e082741b4123b",
-                "T1027.fasta:md5,f597c1c08be83569e25d71df1286e7e0",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_mmseqs_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -51,7 +44,7 @@
                 "T1027_odde_mmseqs.cif:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-21T12:31:30.06139291",
+        "timestamp": "2026-11-22T02:07:56.415288738",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
