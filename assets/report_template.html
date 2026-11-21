@@ -746,17 +746,17 @@
   // Shared drawing helpers for the PAE / MSA canvases
   // ---------------------------------------------------------------------------
 
-  // Green colour scale for the PAE, light (0 A) -> dark (PAE_MAX)
-  const GREENS_R_STOPS = [
-    [247, 252, 245],
-    [217, 240, 211],
-    [189, 223, 186],
-    [161, 217, 155],
-    [116, 196, 118],
-    [65, 171, 93],
-    [35, 139, 69],
-    [0, 109, 44],
+  // Green colour scale for the PAE, dark (0 A) -> light (PAE_MAX)
+  const GREENS_STOPS = [
     [0, 68, 27],
+    [0, 109, 44],
+    [35, 139, 69],
+    [65, 171, 93],
+    [116, 196, 118],
+    [161, 217, 155],
+    [189, 223, 186],
+    [217, 240, 211],
+    [247, 252, 245],
   ];
 
   const sampleStops = (stops, t) => {
@@ -1179,7 +1179,7 @@
             const base = r * (n + 1);
             sum += lanePrefix[base + c1 + 1] - lanePrefix[base + c0];
           }
-          const [cr, cg, cb] = sampleStops(GREENS_R_STOPS, sum / (r1 - r0 + 1) / (c1 - c0 + 1) / 255);
+          const [cr, cg, cb] = sampleStops(GREENS_STOPS, sum / (r1 - r0 + 1) / (c1 - c0 + 1) / 255);
           out[o] = cr;
           out[o + 1] = cg;
           out[o + 2] = cb;
@@ -1465,7 +1465,7 @@
           drawLegendBar(
             ctx,
             { x: plot.x, y: 18, width: plot.side, height: 14 },
-            (t) => sampleStops(GREENS_R_STOPS, t),
+            (t) => sampleStops(GREENS_STOPS, t),
             ["0", `${(paeMax / 2).toFixed(0)}`, `${paeMax.toFixed(0)} \u00C5`],
           );
         } else {
