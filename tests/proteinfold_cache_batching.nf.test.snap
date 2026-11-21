@@ -17,8 +17,6 @@
                 "multiqc",
                 "multiqc/multiqc_data",
                 "multiqc/multiqc_data/.stub",
-                "multiqc/multiqc_data/proteinfold_opendde_generalstats_mqc.json",
-                "multiqc/multiqc_data/proteinfold_opendde_plddt_lineplot_mqc.json",
                 "multiqc/multiqc_plots",
                 "multiqc/multiqc_plots/.stub",
                 "multiqc/multiqc_report.html",
@@ -44,8 +42,6 @@
                 "T1026.fasta:md5,6bf7b57662d52f99945e082741b4123b",
                 "T1027.fasta:md5,f597c1c08be83569e25d71df1286e7e0",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "proteinfold_opendde_generalstats_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "proteinfold_opendde_plddt_lineplot_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_mmseqs_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_mmseqs_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -55,7 +51,7 @@
                 "T1027_odde_mmseqs.cif:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-21T01:10:13.091039918",
+        "timestamp": "2026-11-21T12:31:30.06139291",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
