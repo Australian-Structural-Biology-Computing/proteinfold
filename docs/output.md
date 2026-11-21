@@ -128,6 +128,18 @@ In the HTML reports, the chainwise matrix is displayed chain-by-chain for each r
 
 - The global ipSAE (and the per-chain-pair pDockQ/pDockQ2 scores) come from colabfold's own `get_interface_scores` implementation, which the AlphaFold2 backends run natively and the AlphaFold3-family backends receive through the bundled `colabfold_batch_af3_chainwise.py` wrapper. That implementation is a rework of the IPSAE project by the Dunbrack Lab (https://github.com/DunbrackLab/IPSAE/); consult the IPSAE repository for full details and citation information.
 
+### chain-wise ipSAE (`<SEQUENCE NAME>_<MODE>_<MSA>_chainwise_ipsae.tsv`)
+
+Per-chain-pair ipSAE values, rounded to 4 decimal places, with chain-pair lettering as the row (`X:Y`) and rank number as the column. These come straight from colabfold's native `get_interface_scores` computation, which the AlphaFold2 backends run for every complex and the AlphaFold3-family backends receive through the bundled `colabfold_batch_af3_chainwise.py` wrapper. ipSAE is asymmetric - the alignment runs from each chain against the other - so both orientations are kept:
+
+```
+0	1
+A:B	0.7100	0.3050
+B:A	0.6900	0.2980
+```
+
+In the HTML reports, the ipSAE matrix is displayed chain-by-chain for each ranked model alongside the chainwise iPTM matrix. Modes that do not emit this metric omit the report section.
+
 ### PAE (`<SEQUENCE NAME>_<MODE>_<MSA>_<RANK>_pae.tsv`)
 
 Predicted alignment error of residues `j` aligned by residue `i`, rounded to 4 decimal places.

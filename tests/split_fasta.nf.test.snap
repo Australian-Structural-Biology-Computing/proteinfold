@@ -6,6 +6,7 @@
                 "metrics",
                 "metrics/T1024_odde_mmseqs_1_pae.tsv",
                 "metrics/T1024_odde_mmseqs_chainwise.tsv",
+                "metrics/T1024_odde_mmseqs_chainwise_ipsae.tsv",
                 "metrics/T1024_odde_mmseqs_confidence.tsv",
                 "metrics/T1024_odde_mmseqs_ipsae.tsv",
                 "metrics/T1024_odde_mmseqs_iptm.tsv",
@@ -14,6 +15,7 @@
                 "metrics/T1024_odde_mmseqs_ptm.tsv",
                 "metrics/T1026_odde_mmseqs_1_pae.tsv",
                 "metrics/T1026_odde_mmseqs_chainwise.tsv",
+                "metrics/T1026_odde_mmseqs_chainwise_ipsae.tsv",
                 "metrics/T1026_odde_mmseqs_confidence.tsv",
                 "metrics/T1026_odde_mmseqs_ipsae.tsv",
                 "metrics/T1026_odde_mmseqs_iptm.tsv",
@@ -46,6 +48,7 @@
             [
                 "T1024_odde_mmseqs_1_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_mmseqs_chainwise.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1024_odde_mmseqs_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_mmseqs_confidence.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_mmseqs_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_mmseqs_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -54,6 +57,7 @@
                 "T1024_odde_mmseqs_ptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_mmseqs_1_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_mmseqs_chainwise.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026_odde_mmseqs_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_mmseqs_confidence.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_mmseqs_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_mmseqs_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -74,7 +78,7 @@
                 "T1026_odde_mmseqs.cif:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-21T14:25:36.908233344",
+        "timestamp": "2026-11-21T17:35:43.731996707",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"

@@ -19,7 +19,7 @@ warnings.filterwarnings("error", category=PDBConstructionWarning, message=".*dis
 warnings.filterwarnings("error", category=PDBConstructionWarning, message=".*duplicate.*")
 warnings.filterwarnings("error", category=PDBConstructionWarning, message=".*could not assign element.*")
 
-INTERFACE_SUFFIXES = ("_iptm.tsv", "_chainwise.tsv", "_ipsae.tsv")
+INTERFACE_SUFFIXES = ("_iptm.tsv", "_chainwise.tsv", "_chainwise_ipsae.tsv", "_ipsae.tsv")
 
 # Shorthand tokens baked into published file names (see workflows/proteinfold.nf).
 MODE_SHORTS = {
