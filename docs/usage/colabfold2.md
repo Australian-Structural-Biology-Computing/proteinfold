@@ -75,7 +75,11 @@ Two mechanisms share the directory:
 
 The directory is bound into the inference containers automatically (the
 pipeline creates it on the host at launch if it does not exist yet), so no
-custom `--singularity-args` are needed.
+custom `--singularity-args` are needed. It is deliberately *not* staged into
+the task directories: staged inputs are hashed, and a cache that grows over
+time would then invalidate `-resume` on every run. This way tasks hash only
+the directory's path, and the cache contents can evolve freely between
+resumed runs.
 
 Both mechanisms cache compiled executables that a run loads and executes, so
 a cache directory is code, not data: anyone who can write to it can run code
