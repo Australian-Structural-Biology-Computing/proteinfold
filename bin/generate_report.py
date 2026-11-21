@@ -36,7 +36,7 @@ def encode_pae_payload(pae_path):
 
     Returns None if the matrix is missing, empty or not square.
     """
-    if is_missing_input(pae_path, "NO_FILE_PAE"):
+    if is_missing_input(pae_path):
         return None
     try:
         pae = np.genfromtxt(pae_path, delimiter="\t")
@@ -165,14 +165,6 @@ def build_msa_payload(msa_path):
         "mask": base64.b64encode(mask.tobytes()).decode("ascii"),
         "seqid": encode_u8_b64(shown_identities),
     }
-
-def is_missing_input(path, placeholder_prefix="NO_FILE"):
-    return (
-        not path
-        or os.path.basename(path).startswith(placeholder_prefix)
-        or not os.path.exists(path)
-        or os.path.getsize(path) == 0
-    )
 
 def generate_msa_image(msa_path, name, out_dir, in_type):
     """Render the static MSA sequence-coverage PNG published with the run.
