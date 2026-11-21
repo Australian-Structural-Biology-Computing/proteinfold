@@ -344,7 +344,7 @@ workflow PROTEINFOLD {
     // Combine every backend's emits. The metas already carry the public
     // mode (tagged at dispatch), so publication and MultiQC grouping stay
     // collision-free without further tagging.
-    def combined = [top_ranked_structure: [], structures: [], structures_pdb: [], msa: [], pae: [], ptms: [], iptms: [], ipsaes: [], chainwise_iptms: [], chainwise_ipsaes: [], confidence: [], plddt: [], scores: [], raw: []]
+    def combined = [top_ranked_structure: [], structures: [], structures_pdb: [], msa: [], pae: [], ptms: [], iptms: [], ipsaes: [], chainwise: [], confidence: [], plddt: [], scores: [], raw: []]
     backends_out.each { backend, out ->
         combined.top_ranked_structure   << out.top_ranked_structure
         combined.structures             << out.structures
@@ -354,8 +354,7 @@ workflow PROTEINFOLD {
         combined.ptms                   << out.ptms
         combined.iptms                  << out.iptms
         combined.ipsaes                 << out.ipsaes
-        combined.chainwise_iptms        << out.chainwise_iptms
-        combined.chainwise_ipsaes       << out.chainwise_ipsaes
+        combined.chainwise             << out.chainwise
         combined.confidence             << out.confidence
         combined.plddt                  << out.plddt
         combined.scores                 << out.scores
@@ -385,8 +384,7 @@ workflow PROTEINFOLD {
         ptms                : combined.ptms.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
         iptms               : combined.iptms.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
         ipsaes              : combined.ipsaes.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
-        chainwise_iptms     : combined.chainwise_iptms.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
-        chainwise_ipsaes    : combined.chainwise_ipsaes.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
+        chainwise           : combined.chainwise.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
         confidence          : combined.confidence.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
         plddt               : combined.plddt.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
         scores              : combined.scores.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
@@ -403,8 +401,7 @@ workflow PROTEINFOLD {
     ptm             = ch_batch.ptms
     iptm            = ch_batch.iptms
     ipsae           = ch_batch.ipsaes
-    chainwise_iptm  = ch_batch.chainwise_iptms
-    chainwise_ipsae = ch_batch.chainwise_ipsaes
+    chainwise       = ch_batch.chainwise
     confidence      = ch_batch.confidence
     plddt           = ch_batch.plddt
     multiqc_metrics = ch_multiqc_metrics

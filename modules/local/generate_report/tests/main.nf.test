@@ -21,7 +21,6 @@ nextflow_process {
                     [file("${projectDir}/tests/fixtures/NO_FILE")],
                     [file(params.pipelines_testdata_base_path + 'testdata/metrics/S1_scalar.tsv', checkIfExists: true)],
                     [file(params.pipelines_testdata_base_path + 'testdata/metrics/S1_scalar.tsv', checkIfExists: true)],
-                    [file(params.pipelines_testdata_base_path + 'testdata/metrics/S1_chainwise.tsv', checkIfExists: true)],
                     [file(params.pipelines_testdata_base_path + 'testdata/metrics/S1_chainwise.tsv', checkIfExists: true)]
                 )
                 input[1] = file("${projectDir}/assets/report_template.html", checkIfExists: true)
@@ -42,7 +41,7 @@ nextflow_process {
             assert config.lddt_averages.size() == 2
             assert config.iptm_scores == ["0.725", "n/a"] && config.ipsae_scores == ["0.725", "n/a"]
             def payload = "</script><img src=x onerror=alert(1)>"
-            assert config.chainwise_iptm[0].chains.contains(payload) && config.chainwise_ipsae[0].chains.contains(payload)
+            assert config.chainwise[0].chains.contains(payload)
             assert !html.contains("<img src=x onerror=alert(1)>")
             assert !((html =~ /(?s)const renderScoreMatrix = .*?const updatePairScoreTables/)[0]).contains("innerHTML")
             assert html.contains('onclick="downloadStructure()"') && !html.contains("downloadPdb")

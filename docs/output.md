@@ -37,7 +37,7 @@ selections publish under the `esm2` tag. The MSA-source shorthands are
 
 - `top_ranked_structures/<SEQUENCE NAME>_<MODE>_<MSA>.{cif,pdb}` (`.pdb` for the `alphafold2` modes) (top-ranked structure per input, mode and MSA source)
 - `metrics/<SEQUENCE NAME>_<MODE>_<MSA>_<METRIC>.tsv` with `<METRIC>` one of
-  `plddt`, `confidence`, `ptm`, `iptm`, `ipsae`, `chainwise_iptm`, `chainwise_ipsae`, `msa`
+  `plddt`, `confidence`, `ptm`, `iptm`, `ipsae`, `chainwise`, `msa`
   (per-prediction MSA depth summary)
 - `metrics/<SEQUENCE NAME>_<MODE>_<MSA>_<RANK>_pae.tsv` (rank-1 only; published when the backend emits a PAE)
 - `reports/<SEQUENCE NAME>_<MODE>_<MSA>_report.html` (report per sequence, mode and MSA source)
@@ -111,21 +111,22 @@ This allows easy sequence indentity calculation when processing as a `numpy` arr
 8 0.595
 ```
 
-### chain-wise (i)pTM (`<SEQUENCE NAME>_<MODE>_<MSA>_chainwise_[i]ptm.tsv`)
+### chain-wise pTM/iPTM (`<SEQUENCE NAME>_<MODE>_<MSA>_chainwise.tsv`)
 
-Chain-wise iPTM values, rounded to 4 decimal places, with chain-pair lettering as the row (`X:Y`) and rank number as the column. Where available, self-scores are included as `X:X`.
+Chain-wise pTM and interface iPTM values, rounded to 4 decimal places, with chain-pair lettering as the row (`X:Y`) and rank number as the column, derived with the bundled `ipsae.py` utility. The on-diagonal `X:X` rows are the per-chain pTM; the off-diagonal `X:Y` rows are the pairwise interface iPTM (the `ipTM_d0chn` values of the ipSAE report). The per-chain pTM rows are emitted by `ipsae.py` as `self` rows using the same estimator as the chain-pair ipTM, with `d0` from the chain's own length.
 
 ```
 0	1	2
+A:A	0.3810	0.3790	0.3850
 A:B	0.2880	0.2750	0.2900
-B:A	0.2904	0.2801	0.2915
+B:B	0.4000	0.3980	0.4050
 ```
 
-In the HTML reports, chainwise iPTM and ipSAE are displayed as chain-by-chain matrices for each ranked model. Modes that do not emit these metrics omit the corresponding report sections.
+In the HTML reports, the chainwise matrix is displayed chain-by-chain for each ranked model, with the diagonal carrying the per-chain pTM. Modes that do not emit this metric omit the report section.
 
-**IpTM Derivation and Attribution**
+**ipSAE Derivation and Attribution**
 
-- **Derived vs native values:** iPTM values may come either from the prediction program itself (when the program emits an `iptm` or chain-pair matrix) or be derived after-the-fact by running the `ipsae.py` utility included in this pipeline. Derived values are generated from the model's PAE/PAE-like output and are not guaranteed to be numerically identical to program-native iPTM values; they follow the ipSAE/ipTM algorithm used by the IPSAE project and are intended to provide a consistent interface-derived score when a native value is not available.
+- **Derived values:** the chain-wise pTM/iPTM values and the global ipSAE (and, for monomer AlphaFold2 runs without a native `iptm`, the derived iPTM fallback) are computed after the fact by running the `ipsae.py` utility included in this pipeline over the model's PAE output and structure. Derived values are generated from the model's PAE/PAE-like output and are not guaranteed to be numerically identical to program-native scores; they follow the ipSAE/ipTM algorithm used by the IPSAE project and are intended to provide a consistent interface-derived score across every prediction mode.
 - **Default cutoffs used when deriving:** when `extract_metrics.py` derives iPTM/ipSAE it invokes `ipsae.py` with a PAE cutoff of `10` and a distance cutoff of `15` (these are currently hard-coded in the extraction step). If you require different thresholds, compute iPTM/ipSAE externally or update the extraction call accordingly.
 - **Third-party attribution:** the `ipsae.py` utility bundled in `bin/` is derived from the IPSAE project by the Dunbrack Lab (https://github.com/DunbrackLab/IPSAE/). The original script includes an MIT-style header; keep that header intact if the file is redistributed. Please consult the IPSAE repository for full details and citation information.
 

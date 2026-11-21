@@ -20,12 +20,9 @@ input:
     - ipsae:
         type: file
         description: Interface predicted aligned error file.
-    - chainwise_iptm:
+    - chainwise:
         type: file
-        description: Chainwise interface predicted TM-score file.
-    - chainwise_ipsae:
-        type: file
-        description: Chainwise interface predicted aligned error file.
+        description: Chainwise per-chain pTM (diagonal) and interface iPTM (off-diagonal) matrix file.
     - template:
         type: file
         description: HTML report template.

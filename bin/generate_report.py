@@ -517,8 +517,7 @@ parser.add_argument("--pdb", dest="pdb", required=True, nargs="+")
 parser.add_argument("--pae", dest="pae", default=None)
 parser.add_argument("--iptm", dest="iptm", default=None)
 parser.add_argument("--ipsae", dest="ipsae", default=None)
-parser.add_argument("--chainwise_iptm", dest="chainwise_iptm", default=None)
-parser.add_argument("--chainwise_ipsae", dest="chainwise_ipsae", default=None)
+parser.add_argument("--chainwise", dest="chainwise", default=None)
 parser.add_argument("--name", dest="name")
 parser.add_argument("--output_dir", dest="output_dir")
 parser.add_argument("--html_template", dest="html_template")
@@ -539,10 +538,10 @@ print("generating html report...")
 structures = sorted(args.pdb, key=natural_path_sort_key)
 iptm_scores = read_ranked_score_tsv(args.iptm, len(structures))
 ipsae_scores = read_ranked_score_tsv(args.ipsae, len(structures))
-chainwise_iptm_scores = read_pair_score_tsv(args.chainwise_iptm, len(structures))
-chainwise_ipsae_scores = read_pair_score_tsv(args.chainwise_ipsae, len(structures))
-chainwise_iptm_matrices = build_pair_score_matrices(chainwise_iptm_scores)
-chainwise_ipsae_matrices = build_pair_score_matrices(chainwise_ipsae_scores)
+# One chainwise store: the on-diagonal (A:A) row is the per-chain pTM, the
+# off-diagonal (A:B) rows are the pairwise interface ipTM values.
+chainwise_scores = read_pair_score_tsv(args.chainwise, len(structures))
+chainwise_matrices = build_pair_score_matrices(chainwise_scores)
 aligned_structures = align_structures(structures)
 
 io = PDB.MMCIFIO()
@@ -580,8 +579,7 @@ report_config = {
     "lddt_averages": lddt_averages,
     "iptm_scores": iptm_scores,
     "ipsae_scores": ipsae_scores,
-    "chainwise_iptm": chainwise_iptm_matrices,
-    "chainwise_ipsae": chainwise_ipsae_matrices,
+    "chainwise": chainwise_matrices,
 }
 config_blob = (
     '<script type="application/json" id="report-config">'

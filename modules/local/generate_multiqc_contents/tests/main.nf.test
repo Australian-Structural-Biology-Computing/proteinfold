@@ -30,7 +30,7 @@ nextflow_process {
                         file(params.pipelines_testdata_base_path + 'testdata/metrics/S2_ptm.tsv', checkIfExists: true),
                         file(params.pipelines_testdata_base_path + 'testdata/metrics/S2_iptm.tsv', checkIfExists: true),
                         file(params.pipelines_testdata_base_path + 'testdata/metrics/S2_0_pae.tsv', checkIfExists: true),
-                        file(params.pipelines_testdata_base_path + 'testdata/metrics/S2_chainwise_iptm.tsv', checkIfExists: true)
+                        file(params.pipelines_testdata_base_path + 'testdata/metrics/S1_chainwise.tsv', checkIfExists: true)
                     ],
                 ]
                 input[1] = file("${projectDir}/modules/local/generate_multiqc_contents/generate_multiqc_contents.py", checkIfExists: true)

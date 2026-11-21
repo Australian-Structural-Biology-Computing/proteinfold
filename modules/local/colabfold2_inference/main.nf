@@ -19,8 +19,7 @@ process COLABFOLD2_INFERENCE {
     tuple val(meta), path("${meta.id}_ptm.tsv")               , optional: true, emit: ptms
     tuple val(meta), path("${meta.id}_iptm.tsv")              , optional: true, emit: iptms
     tuple val(meta), path("${meta.id}_ipsae.tsv")             , optional: true, emit: ipsaes
-    tuple val(meta), path("${meta.id}_chainwise_iptm.tsv")    , optional: true, emit: chainwise_iptms
-    tuple val(meta), path("${meta.id}_chainwise_ipsae.tsv")   , optional: true, emit: chainwise_ipsaes
+    tuple val(meta), path("${meta.id}_chainwise.tsv")         , optional: true, emit: chainwise
     tuple val(meta), path("${meta.id}_plddt.tsv")             , optional: true, emit: plddt
     tuple val(meta), path("${meta.id}_confidence.tsv")        , optional: true, emit: confidence
     tuple val(meta), path("raw/*_scores_rank_*.json")         , optional: true, emit: scores
@@ -153,8 +152,7 @@ process COLABFOLD2_INFERENCE {
         "${meta.id}_ptm.tsv" \
         "${meta.id}_iptm.tsv" \
         "${meta.id}_ipsae.tsv" \
-        "${meta.id}_chainwise_iptm.tsv" \
-        "${meta.id}_chainwise_ipsae.tsv" \
+        "${meta.id}_chainwise.tsv" \
         "${meta.id}_plddt.tsv"
     cp "${meta.id}_plddt.tsv" "${meta.id}_confidence.tsv"
 
@@ -179,8 +177,7 @@ process COLABFOLD2_INFERENCE {
     touch "${meta.id}_ptm.tsv"
     touch "${meta.id}_iptm.tsv"
     touch "${meta.id}_ipsae.tsv"
-    touch "${meta.id}_chainwise_iptm.tsv"
-    touch "${meta.id}_chainwise_ipsae.tsv"
+    touch "${meta.id}_chainwise.tsv"
     touch "${meta.id}_plddt.tsv"
     touch "${meta.id}_confidence.tsv"
 
