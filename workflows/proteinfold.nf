@@ -84,7 +84,7 @@ def splitBatchOutputs(out) {
         ptms                : splitBatchSingleFiles(out.ptms),
         iptms               : splitBatchSingleFiles(out.iptms),
         ipsaes              : splitBatchSingleFiles(out.ipsaes),
-        chainwise_iptms     : splitBatchSingleFiles(out.chainwise_iptms),
+        chainwise           : splitBatchSingleFiles(out.chainwise),
         chainwise_ipsaes    : splitBatchSingleFiles(out.chainwise_ipsaes),
         confidence          : splitBatchSingleFiles(out.confidence),
         plddt               : splitBatchSingleFiles(out.plddt),
