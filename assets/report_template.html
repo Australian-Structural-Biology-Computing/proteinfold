@@ -2200,7 +2200,6 @@
     };
 
     const chainOf = (seg) => RESIDUES[seg.start][0];
-    const isLigandSeg = (seg) => !!RESIDUES[seg.start][4];
 
     // Residues keep a neutral character colour; the chain identity lives in
     // the chip that labels each block
@@ -2223,9 +2222,10 @@
     // Chain label on its own heading line above the chain's rows - inline
     // chips read like an extra residue character and shifted the count
     const startChain = (seg) => {
+      // Ligand chains are coloured by their chain id like every other chain
       const { band, text } = chainColorPair(seg);
-      chipBand = isLigandSeg(seg) ? "#fda4af" : band;
-      chipFg = isLigandSeg(seg) ? "#9f1239" : text;
+      chipBand = band;
+      chipFg = text;
       const head = document.createElement("div");
       head.className = "seq-chainhead";
       const chip = document.createElement("span");
