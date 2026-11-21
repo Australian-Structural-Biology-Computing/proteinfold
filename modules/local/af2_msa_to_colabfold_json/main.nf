@@ -16,7 +16,7 @@ process AF2_MSA_TO_COLABFOLD_JSON {
     container "ghcr.io/tlitfin/proteinfold_colabfold:af3-preview-38683c2"
 
     input:
-    tuple val(meta), path(fasta), path(raw_dir)
+    tuple val(meta), path(fasta), path(raw_dir, stageAs: 'raw_dir')
     val   use_small_bfd
     path(template_mmcif_dir, stageAs: 'template_mmcif_dir')
     path(obsolete_dat, stageAs: 'obsolete.dat')
