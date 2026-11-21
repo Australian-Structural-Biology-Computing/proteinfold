@@ -73,9 +73,16 @@ Two mechanisms share the directory:
   directory is exported as `JAX_COMPILATION_CACHE_DIR` so JAX's persistent
   compilation cache reuses those compiled kernels across tasks and runs.
 
-The directory must be writable inside the container. If your container engine
-does not mount host paths by default, bind it explicitly, e.g.
-`--singularity-args '--bind /scratch/share/colabfold_compile_cache'`.
+The directory is bound into the inference containers automatically (the
+pipeline creates it on the host at launch if it does not exist yet), so no
+custom `--singularity-args` are needed.
+
+Both mechanisms cache compiled executables that a run loads and executes, so
+a cache directory is code, not data: anyone who can write to it can run code
+with the privileges of every user whose runs consume it. Keep the cache
+per-user (e.g. `~/.cache/proteinfold/compile`, mode `0700`) and only share it
+within a group of mutually trusting accounts that runs under the same
+account boundary.
 
 ## File Structure
 
