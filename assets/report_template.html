@@ -45,9 +45,6 @@
           <span id="iptm-score-row" class="whitespace-nowrap"
             >ipTM = <span id="iptm-score" class="font-medium"></span
           ></span>
-          <span id="ipsae-score-row" class="whitespace-nowrap"
-            >ipSAE = <span id="ipsae-score" class="font-medium"></span
-          ></span>
         </div>
       </header>
 
@@ -317,7 +314,6 @@
   const SAMPLE_NAME = config.sampleName;
   const PLDDT_AVERAGE = config.plddtAverage;
   const IPTM_SCORE = config.iptmScore;
-  const IPSAE_SCORE = config.ipsaeScore;
   const CHAINWISE_IPTM_SCORES = config.chainwise;
   const CHAINWISE_IPSAE_SCORES = config.chainwise_ipsae;
 
@@ -1988,14 +1984,12 @@
     };
     show("plddt-score-row", hasScalarScore(PLDDT_AVERAGE));
     show("iptm-score-row", hasScalarScore(IPTM_SCORE));
-    show("ipsae-score-row", hasScalarScore(IPSAE_SCORE));
     document.getElementById("scores-banner").classList.toggle(
       "hidden",
-      !hasScalarScore(PLDDT_AVERAGE) && !hasScalarScore(IPTM_SCORE) && !hasScalarScore(IPSAE_SCORE),
+      !hasScalarScore(PLDDT_AVERAGE) && !hasScalarScore(IPTM_SCORE),
     );
     document.getElementById("plddt-score").textContent = hasScalarScore(PLDDT_AVERAGE) ? PLDDT_AVERAGE : "";
     document.getElementById("iptm-score").textContent = hasScalarScore(IPTM_SCORE) ? IPTM_SCORE : "";
-    document.getElementById("ipsae-score").textContent = hasScalarScore(IPSAE_SCORE) ? IPSAE_SCORE : "";
 
     let paeWidget = null;
     if (PAE_PAYLOAD) {
