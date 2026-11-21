@@ -1456,6 +1456,17 @@
           this.highlightRows = this.pendingSplit.rows;
           this.highlightCols = this.pendingSplit.cols;
           this.pendingSplit = null;
+        } else if (mode !== "pae") {
+          // The score colourings read as chain blocks: residue-level bands
+          // from another widget (e.g. an MSA range) do not match that view,
+          // so they are not drawn here. Own bands from a previous chain-block
+          // click are stale once the selection moved elsewhere - drop them.
+          if (this.highlightRows.length || this.highlightCols.length) {
+            this.highlightRows = [];
+            this.highlightCols = [];
+            this.draw();
+          }
+          return;
         } else {
           this.highlightRows = indices;
           this.highlightCols = indices;
