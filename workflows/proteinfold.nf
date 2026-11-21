@@ -33,7 +33,8 @@ workflow PROTEINFOLD {
     // a bind source must exist before a container starts -- create it on the
     // host, owned by the launching user, ahead of any task.
     if (params.colabfold2_compile_cache) {
-        new File(params.colabfold2_compile_cache as String).mkdirs()
+        // Resolved against the launch directory, matching the module's bind.
+        new File(file(params.colabfold2_compile_cache).toAbsolutePath().toString()).mkdirs()
     }
 
     take:

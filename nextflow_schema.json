@@ -277,7 +277,7 @@
                 "colabfold2_compile_cache": {
                     "type": "string",
                     "format": "directory-path",
-                    "description": "Persistent compiled-kernel cache directory, private to the user by default (it caches compiled executables that runs load and execute, so treat it as code and keep it out of group-writable locations). It survives between tasks and runs so JIT compilation is paid once per machine; it is bound into the inference containers automatically. Passed to colabfold_batch as --compile-cache (effective for the AlphaFold2 backends together with --use-fast-kernels, see --colabfold2_kernel_backend) and exported as JAX_COMPILATION_CACHE_DIR, which the AlphaFold3-family backends use for their per-bucket JIT compilation.",
+                    "description": "Persistent compiled-kernel cache directory, private to the user by default (it caches compiled executables that runs load and execute, so treat it as code and keep it out of group-writable locations); relative paths resolve against the launch directory. It survives between tasks and runs so JIT compilation is paid once per machine; it is bound into the inference containers automatically. Passed to colabfold_batch as --compile-cache (effective for the AlphaFold2 backends together with --use-fast-kernels, see --colabfold2_kernel_backend) and exported as JAX_COMPILATION_CACHE_DIR, which the AlphaFold3-family backends use for their per-bucket JIT compilation.",
                     "fa_icon": "fas fa-microchip"
                 },
                 "esmfold2_model": {
