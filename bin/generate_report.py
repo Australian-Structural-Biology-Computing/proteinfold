@@ -153,19 +153,17 @@ def build_msa_payload(msa_path):
     # query at the top of the image
     shown = shown[::-1]
     shown_identities = shown_identities[::-1]
-    # NaN (gap) encodes to 0 exactly like a fully divergent covered column;
-    # the per-row gap masks are implicit because gaps are rare and the raw
-    # coverage overlay is derived from the matrix by the viewer.
-    flat = np.array([
-        0.0 if (isinstance(v, float) and np.isnan(v)) else v for row in shown for v in row
-    ])
-    seqid = shown_identities
+    # A covered cell holds exactly its row's identity, a gap is NaN; the
+    # viewer reconstructs the quantised matrix from the 1-bit mask (row-major,
+    # MSB first) plus the per-row identities
+    values = np.asarray(shown, dtype=float)
+    mask = np.packbits((~np.isnan(values)).astype(np.uint8).ravel())
     return {
-        "nSeq": int(len(rows)),
+        "nSeq": int(len(shown)),
         "nSeqShown": int(len(shown)),
         "nCol": int(n_cols),
-        "data": encode_u8_b64(flat),
-        "seqid": encode_u8_b64(seqid),
+        "mask": base64.b64encode(mask.tobytes()).decode("ascii"),
+        "seqid": encode_u8_b64(shown_identities),
     }
 
 def is_missing_input(path, placeholder_prefix="NO_FILE"):

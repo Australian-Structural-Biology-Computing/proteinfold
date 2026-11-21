@@ -1678,8 +1678,17 @@
     const nCol = payload.nCol;
     const nSeqShown = payload.nSeqShown;
     const nSeq = payload.nSeq;
-    const bytes = base64ToBytes(payload.data); // row-major, identity*coverage
     const seqid = base64ToBytes(payload.seqid); // per-row identity to query
+    // The matrix is stored as a 1-bit coverage mask plus the per-row
+    // identities: a covered cell's value IS that row's identity, so the
+    // byte matrix is reconstructed exactly while using 8x fewer bytes than
+    // one byte per cell. Bit i of the mask (row-major, MSB first) marks
+    // cell i; gaps and the reconstruced zeros both render white.
+    const maskBytes = base64ToBytes(payload.mask);
+    const bytes = new Uint8Array(nCol * nSeqShown);
+    for (let i = 0; i < nCol * nSeqShown; i++) {
+      if (maskBytes[i >> 3] & (0x80 >> (i & 7))) bytes[i] = seqid[(i / nCol) | 0];
+    }
     const linked = msaLinked;
 
     container.classList.add("relative");
