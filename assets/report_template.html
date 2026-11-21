@@ -48,19 +48,19 @@
         color: #9ca3af;
         line-height: 1.55;
       }
+      .seq-chainhead {
+        margin: 3px 0 1px;
+      }
       .seq-chip {
-        flex: 0 0 3ch;
-        margin-right: 4px;
+        display: inline-block;
+        min-width: 2.5ch;
+        padding: 0 3px;
         border-radius: 2px;
         text-align: center;
         font-family: system-ui, sans-serif;
         font-size: 10px;
         font-weight: 600;
-        line-height: 1.55;
-        visibility: hidden;
-      }
-      .seq-row.seq-chip-row .seq-chip {
-        visibility: visible;
+        line-height: 1.5;
       }
       .seq-residue {
         width: 1.3ch;
@@ -2205,22 +2205,25 @@
       gutter.className = "seq-gutter";
       gutter.textContent = String(RESIDUES[ix][1]);
       row.appendChild(gutter);
-      // Every row reserves the chip slot so residue columns stay aligned;
-      // the chip itself is only visible on the chain's first row. Ligand
-      // segments keep the rose lane colour used on the matrix axes.
+      frame.appendChild(row);
+      rowCount = 0;
+    };
+
+    // Chain label on its own heading line above the chain's rows - inline
+    // chips read like an extra residue character and shifted the count
+    const startChain = (seg) => {
       const { band, text } = chainColorPair(seg);
       chipBand = isLigandSeg(seg) ? "#fda4af" : band;
       chipFg = isLigandSeg(seg) ? "#9f1239" : text;
+      const head = document.createElement("div");
+      head.className = "seq-chainhead";
       const chip = document.createElement("span");
       chip.className = "seq-chip";
       chip.style.background = chipBand;
       chip.style.color = chipFg;
       chip.textContent = chainOf(seg);
-      row.appendChild(chip);
-      // The chip is visible only on the chain's first row
-      if (ix === seg.start) row.classList.add("seq-chip-row");
-      frame.appendChild(row);
-      rowCount = 0;
+      head.appendChild(chip);
+      frame.appendChild(head);
     };
 
     // The row length adapts to the panel width: measure the monospace cell
@@ -2233,8 +2236,11 @@
     const cellWidth = probe.getBoundingClientRect().width + 0.5; // + column gap
     const reservedWidth = 76; // gutter + chip slot
     probe.remove();
-    const residuesPerRow = () =>
-      Math.max(20, Math.min(160, Math.floor((container.clientWidth - reservedWidth) / cellWidth)));
+    const residuesPerRow = () => {
+      const fitted = Math.floor((container.clientWidth - reservedWidth) / cellWidth);
+      // Snap to a multiple of ten so row gutters land on predictable numbers
+      return Math.max(20, Math.min(160, Math.floor(fitted / 10) * 10));
+    };
 
     const render = () => {
       frame.replaceChildren();
@@ -2242,6 +2248,7 @@
       const perRow = residuesPerRow();
       CHAIN_SEGMENTS.forEach((seg) => {
         for (let ix = seg.start; ix <= seg.end; ix++) {
+          if (ix === seg.start) startChain(seg);
           if (!row || rowCount >= perRow || ix === seg.start) startRow(ix, seg);
           const r = RESIDUES[ix];
           const span = document.createElement("span");
