@@ -271,12 +271,23 @@
       <section id="sequence_container" class="min-w-0 space-y-2" aria-label="Sequence">
         <div class="flex flex-wrap items-baseline justify-between gap-4">
           <h2 class="text-sm font-semibold text-gray-900">Sequence</h2>
-          <p class="text-xs text-gray-500">
-            Click a residue to highlight it across views &middot; drag for a
-            range &middot; Shift adds to the selection &middot; Esc clears.
-          </p>
+          <div class="flex items-baseline gap-4">
+            <p class="text-xs text-gray-500">
+              Click a residue to highlight it across views &middot; drag for a
+              range &middot; Shift adds to the selection &middot; Esc clears.
+            </p>
+            <button
+              id="sequence-toggle"
+              type="button"
+              class="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600 shadow-sm transition-all hover:bg-gray-50"
+              aria-expanded="true"
+              aria-controls="sequence-card"
+            >
+              Hide
+            </button>
+          </div>
         </div>
-        <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white p-3">
+        <div id="sequence-card" class="overflow-x-auto rounded-lg border border-gray-200 bg-white p-3">
           <div id="sequence-root" class="w-full"></div>
         </div>
       </section>
@@ -2278,6 +2289,8 @@
     let lastWidth = container.clientWidth;
     const seqObserver = new ResizeObserver(() => {
       const width = container.clientWidth;
+      // Collapsed panels report zero width: nothing to re-flow
+      if (width === 0) return;
       if (Math.abs(width - lastWidth) < 12) return;
       lastWidth = width;
       previewBands.splice(0).forEach((band) => band.remove());
@@ -2506,6 +2519,15 @@
       widgets.push(createSequencePanel(sequenceRoot));
     } else if (sequenceContainer) {
       sequenceContainer.classList.add("hidden");
+    }
+    const sequenceToggle = document.getElementById("sequence-toggle");
+    const sequenceCard = document.getElementById("sequence-card");
+    if (sequenceToggle && sequenceCard) {
+      sequenceToggle.addEventListener("click", () => {
+        const hidden = sequenceCard.classList.toggle("hidden");
+        sequenceToggle.textContent = hidden ? "Show" : "Hide";
+        sequenceToggle.setAttribute("aria-expanded", String(!hidden));
+      });
     }
 
     if (MSA_PAYLOAD) {

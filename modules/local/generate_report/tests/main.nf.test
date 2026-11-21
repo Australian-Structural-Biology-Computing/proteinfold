@@ -60,6 +60,7 @@ nextflow_process {
             assert html.contains("id=\"molstar-root\"")
             assert html.contains("id=\"selection-readout\"")
             assert html.contains("id=\"sequence-root\"")
+            assert html.contains("id=\"sequence-toggle\"")
             assert html.contains("structureInteractivity")
             // SBP-portal-style layout: no per-model carousel, no pLDDT trace
             assert !html.contains("canvas_button_container") && !html.contains("plotly")
