@@ -7,7 +7,7 @@
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "3.12.16",
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT_BATCH:generate_report.py": "3.12.7",
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT_BATCH:python": "3.12.7",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD2:alphafold3_colabfold": "3.1.18",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD2:alphafold3_colabfold": "3.1.20",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD2:colabfold": "1.6.3",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD2:colabfold_commit": "38683c21700408b6a29cf395e8ef07cf109fcb91",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:ALPHAFOLD2:jax": "0.11.2",
@@ -55,7 +55,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:ROSETTAFOLD3:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-21T01:01:40.488858391",
+        "timestamp": "2026-11-21T22:26:24.087459872",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -69,7 +69,7 @@
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "3.12.16",
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT_BATCH:generate_report.py": "3.12.7",
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT_BATCH:python": "3.12.7",
-                "NFCORE_PROTEINFOLD:PROTEINFOLD:ESMFOLD2:alphafold3_colabfold": "3.1.18",
+                "NFCORE_PROTEINFOLD:PROTEINFOLD:ESMFOLD2:alphafold3_colabfold": "3.1.20",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:ESMFOLD2:colabfold": "1.6.3",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:ESMFOLD2:colabfold_commit": "38683c21700408b6a29cf395e8ef07cf109fcb91",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:ESMFOLD2:jax": "0.11.2",
@@ -77,7 +77,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_COLABFOLD_SEARCH:MMSEQS_COLABFOLDSEARCH_BATCH:mmseqs": "48f2a22d5f68f595afdfb5e601ca11721cf17449"
             }
         ],
-        "timestamp": "2026-11-21T01:02:03.35282137",
+        "timestamp": "2026-11-21T22:26:51.030974707",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
