@@ -154,6 +154,11 @@ def build_msa_payload(msa_path):
     else:
         shown = rows
         shown_identities = identities
+    # Row 0 is the most similar sequence (the query): the original coverage
+    # plot drew the identity-sorted rows with origin="lower", which puts the
+    # query at the top of the image
+    shown = shown[::-1]
+    shown_identities = shown_identities[::-1]
     # NaN (gap) encodes to 0 exactly like a fully divergent covered column;
     # the per-row gap masks are implicit because gaps are rare and the raw
     # coverage overlay is derived from the matrix by the viewer.

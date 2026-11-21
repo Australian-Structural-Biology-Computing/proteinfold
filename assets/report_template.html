@@ -212,17 +212,17 @@
               </button>
               <button
                 type="button"
-                data-mode="ipsae"
-                class="hidden rounded-md px-2.5 py-1 font-medium text-gray-500"
-              >
-                ipSAE
-              </button>
-              <button
-                type="button"
                 data-mode="iptm"
                 class="hidden rounded-md px-2.5 py-1 font-medium text-gray-500"
               >
                 ipTM
+              </button>
+              <button
+                type="button"
+                data-mode="ipsae"
+                class="hidden rounded-md px-2.5 py-1 font-medium text-gray-500"
+              >
+                ipSAE
               </button>
             </div>
           </div>
@@ -832,26 +832,24 @@
     ];
   };
 
-  // Rainbow colour scale for the MSA: value 1 (max identity) is red, 0 is violet
-  const rainbowColor = (t) => {
-    const hue = 300 * (1 - Math.max(0, Math.min(1, t)));
-    return hsvToRgb(hue, 1, 1);
-  };
+  // MSA colour scale: matplotlib's "rainbow_r", the palette of the original
+  // static coverage plot, sampled at nine stops. Low identity is red and the
+  // query (100% identity) is violet, as before.
+  const rainbowColor = (t) => sampleStops(
+    [
+      [255, 0, 0],
+      [255, 98, 50],
+      [254, 181, 98],
+      [190, 236, 142],
+      [126, 255, 181],
+      [63, 235, 213],
+      [1, 179, 236],
+      [66, 95, 250],
+      [128, 0, 255],
+    ],
+    t,
+  );
 
-  const hsvToRgb = (h, s, v) => {
-    const c = v * s;
-    const hp = h / 60;
-    const x = c * (1 - Math.abs((hp % 2) - 1));
-    let rgb;
-    if (hp < 1) rgb = [c, x, 0];
-    else if (hp < 2) rgb = [x, c, 0];
-    else if (hp < 3) rgb = [0, c, x];
-    else if (hp < 4) rgb = [0, x, c];
-    else if (hp < 5) rgb = [x, 0, c];
-    else rgb = [c, 0, x];
-    const m = v - c;
-    return rgb.map((u) => Math.round((u + m) * 255));
-  };
 
   const drawLegendBar = (ctx, rect, ramp, ticks) => {
     const gradient = ctx.createLinearGradient(rect.x, 0, rect.x + rect.width, 0);
@@ -878,6 +876,33 @@
   // plot must provide x, y and side (square plot area). coord maps an axis
   // index to { pos, width } in pixels; segments are {chain, start, end} runs
   // in axis space; tickLabel(ix) renders boundary residue numbers.
+  // Black separator lines across the plot where one chain's axis band
+  // hands over to the next; segments of the same chain colour (a chain id
+  // split by an interleaved ligand) get no line. horizontal adds the
+  // mirrored lines on the square PAE matrix.
+  const drawChainBoundaries = (ctx, origin, coord, segments, horizontal) => {
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 1; i < segments.length; i++) {
+      if (
+        CHAIN_COLOR_INDEX.get(segments[i].chain) ===
+        CHAIN_COLOR_INDEX.get(segments[i - 1].chain)
+      ) {
+        continue;
+      }
+      const p = coord.pos(segments[i].start);
+      ctx.moveTo(p, origin.y);
+      ctx.lineTo(p, origin.y + origin.side);
+      if (horizontal) {
+        const q = origin.y + (p - origin.x);
+        ctx.moveTo(origin.x, q);
+        ctx.lineTo(origin.x + origin.side, q);
+      }
+    }
+    ctx.stroke();
+  };
+
   const drawChainBands = (ctx, plot, horizontal, linked, segments, coord, tickLabel) => {
     if (!linked || !segments.length) return;
     const bandSize = 14;
@@ -1542,6 +1567,18 @@
             true,
           );
         }
+
+        drawChainBoundaries(
+          ctx,
+          plot,
+          {
+            count: n,
+            pos: (ix) => lanes.pos(ix),
+            end: (ix) => lanes.end(ix),
+          },
+          CHAIN_SEGMENTS,
+          true,
+        );
         drawChainBands(
           ctx,
           plot,
@@ -1764,7 +1801,7 @@
         );
 
         ctx.imageSmoothingEnabled = nCol > plot.width;
-        // Row 0 (lowest identity) at the bottom, like the previous plot
+        // Row 0 (the query, highest identity) at the top, like the previous plot
         ctx.drawImage(off, plot.x, plot.y, plot.width, plot.height);
         ctx.strokeStyle = "#d1d5db";
         ctx.lineWidth = 1;
@@ -1782,6 +1819,18 @@
             end: (ix) => plot.x + (ix + 1) * plot.cellX,
           },
           (ix) => (MSA_COL_TO_TOKEN ? RESIDUES[MSA_COL_TO_TOKEN[ix]][1] : ix + 1),
+        );
+
+        drawChainBoundaries(
+          ctx,
+          { x: plot.x, y: plot.y, side: plot.width },
+          {
+            count: nCol,
+            pos: (ix) => plot.x + ix * plot.cellX,
+            end: (ix) => plot.x + (ix + 1) * plot.cellX,
+          },
+          MSA_CHAIN_SEGMENTS,
+          false,
         );
 
         // Coverage overlay
@@ -1811,8 +1860,9 @@
         ctx.font = "10px system-ui, sans-serif";
         ctx.textAlign = "right";
         ctx.textBaseline = "middle";
-        ctx.fillText(String(nSeqShown), plot.x - 8, plot.y + 4);
-        ctx.fillText("1", plot.x - 8, plot.y + plot.height - 4);
+        // Row 1 (the query) is the top row of the plot
+        ctx.fillText("1", plot.x - 8, plot.y + 4);
+        ctx.fillText(String(nSeqShown), plot.x - 8, plot.y + plot.height - 4);
 
         // Cross-highlight columns coming from other views
         if (this.highlight.length) {
