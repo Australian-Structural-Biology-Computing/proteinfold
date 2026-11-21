@@ -626,22 +626,17 @@
   // chain's colour family: each element is a lightness/hue variant of the
   // chain colour instead of a global CPK colour, so the chain still reads
   // as one colour in the viewer.
-  // N leans to the blue side of the chain hue and O (and P) to the red
-  // side, following the hue wheel's natural path: blue gains hue through
-  // purple towards red, green loses hue through yellow. Warm chains shift
-  // N through green/cyan instead of through red. Sulfur is hard-set to
-  // yellow (see FIXED_ELEMENT_COLORS) so methionines/cysteines and
-  // sulfur-containing ligands stand out in every chain.
+  // N, O, P and S are hard-set to fixed atom-type colours (blue, red,
+  // orange, yellow - familiar CPK-like choices) so these atom types are
+  // instantly recognisable in every chain. Other heteroatoms and
+  // hydrogens stay within the chain colour family via ATOM_SHADES.
   const ATOM_SHADES = {
-    N: { toward: 240, deg: 24, ds: 1.0, dl: -0.3 },
-    O: { toward: 0, deg: 40, ds: 1.0, dl: -0.1 },
-    P: { toward: 0, deg: 40, ds: 0.95, dl: -0.22 },
     H: { dh: 0, ds: 0.25, dl: 0.1 },
     DEFAULT: { dh: 0, ds: 0.4, dl: -0.25 },
   };
 
   // Fixed element colours that override the chain-family shades
-  const FIXED_ELEMENT_COLORS = { S: 0xffd123 };
+  const FIXED_ELEMENT_COLORS = { N: 0x3050f8, O: 0xff0d0d, P: 0xff8000, S: 0xffd123 };
 
   const hslToHex = (h, s, l) => {
     const hue = ((h % 360) + 360) % 360;
@@ -654,23 +649,10 @@
     return (f(0) << 16) | (f(8) << 8) | f(4);
   };
 
-  // Rotate h towards a target hue along the shortest arc, capped at maxDeg.
-  // Warm hues (below ~120 deg) reach blue by increasing hue through
-  // green/cyan - the shortest arc would pass through red instead.
-  const shiftHueToward = (h, target, maxDeg) => {
-    if (h < 120 && target === 240) return Math.min(h + maxDeg, 240);
-    let d = (((target - h) % 360) + 360) % 360;
-    if (d > 180) d -= 360;
-    const step = d >= 0 ? Math.min(d, maxDeg) : -Math.min(-d, maxDeg);
-    return (((h + step) % 360) + 360) % 360;
-  };
-
   const chainAtomColour = (chainIx, symbol) => {
     const base = CHAIN_COLORS[chainIx % CHAIN_COLORS.length];
     const shade = ATOM_SHADES[symbol] || ATOM_SHADES.DEFAULT;
-    let h = base.h;
-    if (shade.toward !== undefined) h = shiftHueToward(base.h, shade.toward, shade.deg);
-    else if (shade.dh) h = base.h + shade.dh;
+    const h = base.h + (shade.dh || 0);
     return hslToHex(
       h,
       Math.min(1, base.s * shade.ds),
@@ -715,8 +697,8 @@
           if (symbol) {
             const el = symbol.toUpperCase();
             // Carbons carry the chain colour (shared with the legend chips
-            // and the matrix axis bands); sulfur is globally yellow; other
-            // elements get shades of the chain colour
+            // and the matrix axis bands); N/O/P/S use fixed atom-type
+            // colours; other elements get shades of the chain colour
             if (el === "C") return CHAIN_COLORS[ix].hex;
             if (FIXED_ELEMENT_COLORS[el] !== undefined) return FIXED_ELEMENT_COLORS[el];
             return chainAtomColour(ix, el);
