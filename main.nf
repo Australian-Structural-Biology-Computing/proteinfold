@@ -294,8 +294,7 @@ workflow NFCORE_PROTEINFOLD {
             .join(PROTEINFOLD.out.pae)
             .join(PROTEINFOLD.out.iptm)
             .join(PROTEINFOLD.out.ipsae)
-            .join(PROTEINFOLD.out.chainwise_iptm)
-            .join(PROTEINFOLD.out.chainwise_ipsae)
+            .join(PROTEINFOLD.out.chainwise)
     )
     //
     // POST PROCESSING: generate visualisation reports

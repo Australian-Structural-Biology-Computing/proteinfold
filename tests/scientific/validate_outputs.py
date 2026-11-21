@@ -19,7 +19,7 @@ warnings.filterwarnings("error", category=PDBConstructionWarning, message=".*dis
 warnings.filterwarnings("error", category=PDBConstructionWarning, message=".*duplicate.*")
 warnings.filterwarnings("error", category=PDBConstructionWarning, message=".*could not assign element.*")
 
-INTERFACE_SUFFIXES = ("_iptm.tsv", "_chainwise_iptm.tsv", "_ipsae.tsv", "_chainwise_ipsae.tsv")
+INTERFACE_SUFFIXES = ("_iptm.tsv", "_chainwise.tsv", "_ipsae.tsv")
 
 # Shorthand tokens baked into published file names (see workflows/proteinfold.nf).
 MODE_SHORTS = {
@@ -209,7 +209,7 @@ def validate_detailed_report(outdir: Path, identifier: str) -> None:
     assert config.get("sampleName") == identifier
     for key in ("programName", "models", "models_data", "lddt_averages"):
         assert config.get(key), f"report config is missing {key}"
-    for key in ("iptm_scores", "ipsae_scores", "chainwise_iptm", "chainwise_ipsae"):
+    for key in ("iptm_scores", "ipsae_scores", "chainwise"):
         assert key in config, f"report config is missing {key}"
     print(f"Validated detailed report: {reports[0].name}")
 

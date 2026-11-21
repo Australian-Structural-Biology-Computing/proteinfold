@@ -49,15 +49,18 @@ def clean_float(value):
 
 
 def classify_metric(filename):
-    """Map a metric file name to a routed metric, or None if not summarised."""
-    is_chainwise = "_chainwise_" in filename
+    """Map a metric file name to a routed metric, or None if not summarised.
+
+    The combined ``*_chainwise.tsv`` store (per-chain pTM on the diagonal,
+    pairwise ipTM off it) matches no routed suffix and is ignored here.
+    """
     if filename.endswith("_plddt.tsv"):
-        return None if is_chainwise else "plddt"
+        return "plddt"
     if filename.endswith("_msa.tsv"):
-        return None if is_chainwise else "msa"
-    if filename.endswith("_iptm.tsv") and not filename.endswith("_chainwise_iptm.tsv"):
+        return "msa"
+    if filename.endswith("_iptm.tsv"):
         return "iptm"
-    if filename.endswith("_ptm.tsv") and not filename.endswith("_chainwise_ptm.tsv"):
+    if filename.endswith("_ptm.tsv"):
         return "ptm"
     return None
 

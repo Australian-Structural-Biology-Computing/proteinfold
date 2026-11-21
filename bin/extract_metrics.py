@@ -136,28 +136,37 @@ def resolve_struct_for_model(struct_map, model_id):
 def parse_ipsae_text_report(report_path):
     pair_iptm_scores = []
     pair_ipsae_scores = []
+    per_chain_ptm = {}
     max_iptm = None
     max_ipsae = None
 
     with open(report_path) as handle:
         for line in handle:
             fields = line.split()
-            if len(fields) < 10 or fields[4] != "max":
+            if len(fields) < 10:
                 continue
 
-            pair_label = f"{fields[0]}:{fields[1]}"
-            ipsae_score = float(fields[5])
-            iptm_score = float(fields[9])
+            if fields[4] == "max":
+                pair_label = f"{fields[0]}:{fields[1]}"
+                ipsae_score = float(fields[5])
+                iptm_score = float(fields[9])
 
-            pair_iptm_scores.append((pair_label, iptm_score))
-            pair_ipsae_scores.append((pair_label, ipsae_score))
-            max_iptm = iptm_score if max_iptm is None else max(max_iptm, iptm_score)
-            max_ipsae = ipsae_score if max_ipsae is None else max(max_ipsae, ipsae_score)
+                pair_iptm_scores.append((pair_label, iptm_score))
+                pair_ipsae_scores.append((pair_label, ipsae_score))
+                max_iptm = iptm_score if max_iptm is None else max(max_iptm, iptm_score)
+                max_ipsae = ipsae_score if max_ipsae is None else max(max_ipsae, ipsae_score)
+            elif fields[4] == "self" and fields[0] == fields[1]:
+                # Per-chain pTM on the diagonal of the chain-pair matrix.
+                try:
+                    per_chain_ptm[fields[0]] = float(fields[9])
+                except ValueError:
+                    continue
 
     if max_iptm is None or max_ipsae is None:
         return None
 
-    return round(max_iptm, 3), pair_iptm_scores, round(max_ipsae, 3), pair_ipsae_scores
+    return (round(max_iptm, 3), pair_iptm_scores, round(max_ipsae, 3), pair_ipsae_scores,
+            per_chain_ptm)
 
 def derive_interface_scores(pae_matrix, struct_file, source_label):
     try:
@@ -287,8 +296,7 @@ def read_colabfold_metrics(name, colabfold_metrics_files, struct_files=None):
     ptm_rows = []
     iptm_rows = []
     ipsae_rows = []
-    chainwise_iptm = {}
-    chainwise_ipsae = {}
+    chainwise = {}
     struct_map = build_struct_map(struct_files) if struct_files else {}
     for fn in colabfold_metrics_files:
         with open(fn) as f:
@@ -306,24 +314,26 @@ def read_colabfold_metrics(name, colabfold_metrics_files, struct_files=None):
         if "pae" in data and struct_file:
             derived_scores = derive_interface_scores(np.array(data['pae']), struct_file, fn)
             if derived_scores:
-                max_iptm, pair_iptm_scores, max_ipsae, pair_scores = derived_scores
-                if pair_iptm_scores:
-                    chainwise_iptm[rank_id] = pair_iptm_scores
+                max_iptm, pair_iptm_scores, max_ipsae, _pair_ipsae_scores, per_chain_ptm = derived_scores
+                # One chainwise store: the off-diagonal rows carry the pairwise
+                # interface ipTM, the on-diagonal (A:A) rows the per-chain pTM.
+                chainwise_entries = list(pair_iptm_scores)
+                chainwise_entries.extend(
+                    (f"{chain_id}:{chain_id}", value) for chain_id, value in per_chain_ptm.items()
+                )
+                if chainwise_entries:
+                    chainwise[rank_id] = chainwise_entries
                 if not any(row[0] == f"{rank_id}" for row in iptm_rows) and max_iptm > 0:
                     iptm_rows.append((f"{rank_id}", f"{max_iptm:.3f}"))
                 ipsae_rows.append((f"{rank_id}", f"{max_ipsae:.3f}"))
-                if pair_scores:
-                    chainwise_ipsae[rank_id] = pair_scores
     if len(ptm_rows)>0:
         write_tsv(f"{name}_ptm.tsv", sorted(ptm_rows, key = lambda x: x[0]))
     if len(iptm_rows)>0:
         write_tsv(f"{name}_iptm.tsv", sorted(iptm_rows, key = lambda x: x[0]))
-    if len(chainwise_iptm)>0:
-        write_tsv(f"{name}_chainwise_iptm.tsv", format_pair_score_rows(dict(sorted(chainwise_iptm.items(), key=lambda x: x[0]))))
     if len(ipsae_rows)>0:
         write_tsv(f"{name}_ipsae.tsv", sorted(ipsae_rows, key = lambda x: x[0]))
-    if len(chainwise_ipsae)>0:
-        write_tsv(f"{name}_chainwise_ipsae.tsv", format_pair_score_rows(dict(sorted(chainwise_ipsae.items(), key=lambda x: x[0]))))
+    if len(chainwise)>0:
+        write_tsv(f"{name}_chainwise.tsv", format_pair_score_rows(dict(sorted(chainwise.items(), key=lambda x: x[0]))))
 
 def main():
     parser = argparse.ArgumentParser()

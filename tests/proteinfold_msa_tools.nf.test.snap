@@ -5,8 +5,7 @@
             [
                 "metrics",
                 "metrics/T1024_odde_server_1_pae.tsv",
-                "metrics/T1024_odde_server_chainwise_ipsae.tsv",
-                "metrics/T1024_odde_server_chainwise_iptm.tsv",
+                "metrics/T1024_odde_server_chainwise.tsv",
                 "metrics/T1024_odde_server_confidence.tsv",
                 "metrics/T1024_odde_server_ipsae.tsv",
                 "metrics/T1024_odde_server_iptm.tsv",
@@ -14,8 +13,7 @@
                 "metrics/T1024_odde_server_plddt.tsv",
                 "metrics/T1024_odde_server_ptm.tsv",
                 "metrics/T1026_odde_server_1_pae.tsv",
-                "metrics/T1026_odde_server_chainwise_ipsae.tsv",
-                "metrics/T1026_odde_server_chainwise_iptm.tsv",
+                "metrics/T1026_odde_server_chainwise.tsv",
                 "metrics/T1026_odde_server_confidence.tsv",
                 "metrics/T1026_odde_server_ipsae.tsv",
                 "metrics/T1026_odde_server_iptm.tsv",
@@ -39,8 +37,7 @@
             ],
             [
                 "T1024_odde_server_1_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_odde_server_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_odde_server_chainwise_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1024_odde_server_chainwise.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_server_confidence.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_server_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_server_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -48,8 +45,7 @@
                 "T1024_odde_server_plddt.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_server_ptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_server_1_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_odde_server_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_odde_server_chainwise_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026_odde_server_chainwise.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_server_confidence.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_server_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_server_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -64,7 +60,7 @@
                 "T1026_odde_server.cif:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-21T12:39:10.722354976",
+        "timestamp": "2026-11-21T14:24:51.540419369",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -76,8 +72,7 @@
             [
                 "metrics",
                 "metrics/T1024_odde_mmseqs_1_pae.tsv",
-                "metrics/T1024_odde_mmseqs_chainwise_ipsae.tsv",
-                "metrics/T1024_odde_mmseqs_chainwise_iptm.tsv",
+                "metrics/T1024_odde_mmseqs_chainwise.tsv",
                 "metrics/T1024_odde_mmseqs_confidence.tsv",
                 "metrics/T1024_odde_mmseqs_ipsae.tsv",
                 "metrics/T1024_odde_mmseqs_iptm.tsv",
@@ -85,8 +80,7 @@
                 "metrics/T1024_odde_mmseqs_plddt.tsv",
                 "metrics/T1024_odde_mmseqs_ptm.tsv",
                 "metrics/T1026_odde_mmseqs_1_pae.tsv",
-                "metrics/T1026_odde_mmseqs_chainwise_ipsae.tsv",
-                "metrics/T1026_odde_mmseqs_chainwise_iptm.tsv",
+                "metrics/T1026_odde_mmseqs_chainwise.tsv",
                 "metrics/T1026_odde_mmseqs_confidence.tsv",
                 "metrics/T1026_odde_mmseqs_ipsae.tsv",
                 "metrics/T1026_odde_mmseqs_iptm.tsv",
@@ -118,8 +112,7 @@
             ],
             [
                 "T1024_odde_mmseqs_1_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_odde_mmseqs_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_odde_mmseqs_chainwise_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1024_odde_mmseqs_chainwise.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_mmseqs_confidence.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_mmseqs_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_mmseqs_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -127,8 +120,7 @@
                 "T1024_odde_mmseqs_plddt.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_mmseqs_ptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_mmseqs_1_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_odde_mmseqs_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_odde_mmseqs_chainwise_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026_odde_mmseqs_chainwise.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_mmseqs_confidence.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_mmseqs_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_mmseqs_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -162,7 +154,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-21T12:36:51.709574502",
+        "timestamp": "2026-11-21T14:22:44.178259423",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -174,8 +166,7 @@
             [
                 "metrics",
                 "metrics/T1024_odde_af2msa_1_pae.tsv",
-                "metrics/T1024_odde_af2msa_chainwise_ipsae.tsv",
-                "metrics/T1024_odde_af2msa_chainwise_iptm.tsv",
+                "metrics/T1024_odde_af2msa_chainwise.tsv",
                 "metrics/T1024_odde_af2msa_confidence.tsv",
                 "metrics/T1024_odde_af2msa_ipsae.tsv",
                 "metrics/T1024_odde_af2msa_iptm.tsv",
@@ -183,8 +174,7 @@
                 "metrics/T1024_odde_af2msa_plddt.tsv",
                 "metrics/T1024_odde_af2msa_ptm.tsv",
                 "metrics/T1026_odde_af2msa_1_pae.tsv",
-                "metrics/T1026_odde_af2msa_chainwise_ipsae.tsv",
-                "metrics/T1026_odde_af2msa_chainwise_iptm.tsv",
+                "metrics/T1026_odde_af2msa_chainwise.tsv",
                 "metrics/T1026_odde_af2msa_confidence.tsv",
                 "metrics/T1026_odde_af2msa_ipsae.tsv",
                 "metrics/T1026_odde_af2msa_iptm.tsv",
@@ -211,8 +201,7 @@
             ],
             [
                 "T1024_odde_af2msa_1_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_odde_af2msa_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_odde_af2msa_chainwise_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1024_odde_af2msa_chainwise.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_af2msa_confidence.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_af2msa_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_af2msa_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -220,8 +209,7 @@
                 "T1024_odde_af2msa_plddt.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_af2msa_ptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_af2msa_1_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_odde_af2msa_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_odde_af2msa_chainwise_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026_odde_af2msa_chainwise.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_af2msa_confidence.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_af2msa_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_af2msa_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -250,7 +238,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-21T12:37:17.567699835",
+        "timestamp": "2026-11-21T14:23:08.539092483",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -262,8 +250,7 @@
             [
                 "metrics",
                 "metrics/rich_sample_odde_af2msa_1_pae.tsv",
-                "metrics/rich_sample_odde_af2msa_chainwise_ipsae.tsv",
-                "metrics/rich_sample_odde_af2msa_chainwise_iptm.tsv",
+                "metrics/rich_sample_odde_af2msa_chainwise.tsv",
                 "metrics/rich_sample_odde_af2msa_confidence.tsv",
                 "metrics/rich_sample_odde_af2msa_ipsae.tsv",
                 "metrics/rich_sample_odde_af2msa_iptm.tsv",
@@ -287,8 +274,7 @@
             ],
             [
                 "rich_sample_odde_af2msa_1_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "rich_sample_odde_af2msa_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "rich_sample_odde_af2msa_chainwise_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "rich_sample_odde_af2msa_chainwise.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "rich_sample_odde_af2msa_confidence.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "rich_sample_odde_af2msa_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "rich_sample_odde_af2msa_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -315,7 +301,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-21T12:38:06.640385665",
+        "timestamp": "2026-11-21T14:23:54.072521967",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -330,8 +316,7 @@
                 "fasta/T1026.json",
                 "metrics",
                 "metrics/T1024_odde_af3msa_1_pae.tsv",
-                "metrics/T1024_odde_af3msa_chainwise_ipsae.tsv",
-                "metrics/T1024_odde_af3msa_chainwise_iptm.tsv",
+                "metrics/T1024_odde_af3msa_chainwise.tsv",
                 "metrics/T1024_odde_af3msa_confidence.tsv",
                 "metrics/T1024_odde_af3msa_ipsae.tsv",
                 "metrics/T1024_odde_af3msa_iptm.tsv",
@@ -339,8 +324,7 @@
                 "metrics/T1024_odde_af3msa_plddt.tsv",
                 "metrics/T1024_odde_af3msa_ptm.tsv",
                 "metrics/T1026_odde_af3msa_1_pae.tsv",
-                "metrics/T1026_odde_af3msa_chainwise_ipsae.tsv",
-                "metrics/T1026_odde_af3msa_chainwise_iptm.tsv",
+                "metrics/T1026_odde_af3msa_chainwise.tsv",
                 "metrics/T1026_odde_af3msa_confidence.tsv",
                 "metrics/T1026_odde_af3msa_ipsae.tsv",
                 "metrics/T1026_odde_af3msa_iptm.tsv",
@@ -374,8 +358,7 @@
                 "T1024.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_af3msa_1_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_odde_af3msa_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_odde_af3msa_chainwise_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1024_odde_af3msa_chainwise.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_af3msa_confidence.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_af3msa_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_af3msa_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -383,8 +366,7 @@
                 "T1024_odde_af3msa_plddt.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_af3msa_ptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_af3msa_1_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_odde_af3msa_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_odde_af3msa_chainwise_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
+                "T1026_odde_af3msa_chainwise.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_af3msa_confidence.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_af3msa_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_af3msa_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -413,7 +395,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-21T12:37:42.975203551",
+        "timestamp": "2026-11-21T14:23:32.658706287",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"

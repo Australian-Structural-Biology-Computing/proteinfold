@@ -903,6 +903,20 @@ for chain1 in unique_chains:
             d0res_max[chain2][chain1]=maxd0
 
 
+# Per-chain pTM (the diagonal of the chain-pair matrix): the same
+# estimator as the chain-pair ipTM applied within each chain — the maximum
+# over residues of the mean PAE kernel, with d0 from the chain's own
+# length. The ipSAE statistics are undefined for a self-alignment and are
+# reported as zeros in the "self" rows.
+ptm_chn_asym = {}
+for chain1 in unique_chains:
+    chain_res = (chains == chain1)
+    nres_chain = int(np.sum(chain_res))
+    d0_chn_self = calc_d0(nres_chain, chain_dict[chain1])
+    ptm_matrix_self = ptm_func_vec(pae_matrix, d0_chn_self)
+    self_values = [ptm_matrix_self[i, chain_res].mean() for i in np.where(chain_res)[0]]
+    ptm_chn_asym[chain1] = float(max(self_values)) if self_values else 0.0
+
 chaincolor={'A':'magenta',   'B':'marine',   'C':'lime',        'D':'orange',
             'E':'yellow',    'F':'cyan',     'G':'lightorange', 'H':'pink',
             'I':'deepteal',  'J':'forest',   'K':'lightblue',   'L':'slate',
@@ -1009,4 +1023,30 @@ for pair in sorted(chainpairs):
         chain1_residues = f'chain  {chain1} and resi {contiguous_ranges(unique_residues_chain1[chain1][chain2])}'
         chain2_residues = f'chain  {chain2} and resi {contiguous_ranges(unique_residues_chain2[chain1][chain2])}'
         PML.write(f'alias {chain_pair}, color gray80, all; color {color1}, {chain1_residues}; color {color2}, {chain2_residues}\n\n')
+
+# Per-chain pTM rows (Chn1 == Chn2, Type "self"): the diagonal of the
+# chain-pair matrix. Only the ipTM_d0chn column carries a value.
+for chain1 in sorted(unique_chains):
+    outstring=f'{chain1}    {chain1}     {pae_string:3}  {dist_string:3}  {"self":5} ' + (
+        f'{0.0:8.6f}    '
+        f'{0.0:8.6f}    '
+        f'{0.0:8.6f}    '
+        f'{0.0:5.3f}    '
+        f'{ptm_chn_asym[chain1]:8.6f}    '
+        f'{0.0:8.4f}   '
+        f'{0.0:8.4f}   '
+        f'{0.0:8.4f}   '
+        f'{int(np.sum(chains == chain1)):5d}  '
+        f'{int(np.sum(chains == chain1)):5d}  '
+        f'{int(np.sum(chains == chain1)):5d}  '
+        f'{0.0:6.2f}  '
+        f'{0.0:6.2f}  '
+        f'{0.0:6.2f}  '
+        f'{int(np.sum(chains == chain1)):5d}   '
+        f'{int(np.sum(chains == chain1)):5d}   '
+        f'{0:5d}   '
+        f'{0:5d}   '
+        f'{pdb_stem}\n')
+    OUT.write(outstring)
+    PML.write("# " + outstring)
     OUT.write("\n")
