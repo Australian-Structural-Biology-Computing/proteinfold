@@ -1634,16 +1634,22 @@
       },
 
       setMode(next) {
-        // A selection has no meaning in the chain-block score colourings,
-        // so entering them clears it. Returning to the PAE colouring keeps
-        // whatever selection is current - including one made while a score
-        // colouring suppressed the bands - and re-applies its highlight.
-        if (next !== mode && next !== "pae" && hub.selection.length) hub.clear(this.id);
+        // The selection itself persists across colouring switches (the
+        // structure, MSA and sequence keep their highlights); the PAE
+        // matrix just does not draw residue-level bands in the chain-block
+        // score colourings. Returning to the PAE colouring re-applies the
+        // current selection's highlight.
         mode = next;
         // A tooltip rendered for the previous colouring would be stale
         tooltip.classList.add("hidden");
-        if (next === "pae" && hub.selection.length) this.setHighlight([...hub.selection], "other");
-        else this.draw();
+        if (next === "pae" && hub.selection.length) {
+          this.setHighlight([...hub.selection], "other");
+        } else {
+          this.highlightRows = [];
+          this.highlightCols = [];
+          this.pendingSplit = null;
+          this.draw();
+        }
       },
       setScores(next) {
         scores = next;
