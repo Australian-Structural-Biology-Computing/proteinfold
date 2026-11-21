@@ -626,13 +626,17 @@
   // chain's colour family: each element is a lightness/hue variant of the
   // chain colour instead of a global CPK colour, so the chain still reads
   // as one colour in the viewer.
+  // Hue shifts stay small on purpose: large shifts push blue/violet chains'
+  // heteroatoms onto the CPK colours (blue N, red-ish O) and the atoms then
+  // read as Molstar's default scheme instead of the chain family. Atom
+  // types are separated by lightness and saturation primarily.
   const ATOM_SHADES = {
-    N: { dh: -12, ds: 1.05, dl: -0.3 },
-    O: { dh: 32, ds: 1.0, dl: -0.04 },
-    S: { dh: -40, ds: 0.85, dl: -0.26 },
-    P: { dh: 54, ds: 0.95, dl: -0.2 },
-    H: { dh: 0, ds: 0.3, dl: 0.12 },
-    DEFAULT: { dh: 0, ds: 0.5, dl: -0.35 },
+    N: { dh: 0, ds: 1.0, dl: -0.3 },
+    O: { dh: 14, ds: 0.6, dl: -0.12 },
+    S: { dh: -14, ds: 0.4, dl: -0.24 },
+    P: { dh: 20, ds: 0.9, dl: -0.2 },
+    H: { dh: 0, ds: 0.25, dl: 0.1 },
+    DEFAULT: { dh: 0, ds: 0.4, dl: -0.25 },
   };
 
   const hslToHex = (h, s, l) => {
@@ -733,7 +737,34 @@
     await viewer.plugin.clear();
     await viewer.loadStructureFromData(MODEL_DATA, STRUCT_FORMAT);
     await applyStructureTheme(viewer, PLDDT_THEME_NAME);
+    await updateFocusVisualTheme(PLDDT_THEME_NAME);
   }
+
+  // Molstar's click-to-focus behaviour builds its own ball-and-stick visuals
+  // (focus target + surroundings) with default theme params; keep them on the
+  // active colour theme so a clicked residue matches the rest of the viewer
+  const updateFocusVisualTheme = async (themeName) => {
+    if (!viewer || !viewer.plugin.state || typeof viewer.plugin.state.updateBehavior !== "function") return;
+    let cell = null;
+    viewer.plugin.state.behaviors.cells.forEach((c) => {
+      const id = c.transform && c.transform.transformer && c.transform.transformer.id;
+      if (id && id.endsWith("create-structure-focus-representation")) cell = c;
+    });
+    if (!cell) return;
+    const values = cell.params.values;
+    const withTheme = (group) =>
+      group && group.colorTheme ? { ...group, colorTheme: { name: themeName, params: {} } } : group;
+    const params = {
+      ...values,
+      targetParams: withTheme(values.targetParams),
+      surroundingsParams: withTheme(values.surroundingsParams),
+    };
+    try {
+      await viewer.plugin.state.updateBehavior(cell.transform.transformer, params);
+    } catch (e) {
+      console.error("Failed to update focus visual colouring:", e);
+    }
+  };
 
   async function applyStructureTheme(target, themeName) {
     const structures = target.plugin.managers.structure.hierarchy.current.structures;
@@ -1964,7 +1995,9 @@
           });
           document.getElementById("plddt-legend").classList.toggle("hidden", mode !== "plddt");
           chainLegend.classList.toggle("hidden", mode !== "chain");
-          await applyStructureTheme(viewer, mode === "chain" ? CHAIN_THEME_NAME : PLDDT_THEME_NAME);
+          const themeName = mode === "chain" ? CHAIN_THEME_NAME : PLDDT_THEME_NAME;
+          await applyStructureTheme(viewer, themeName);
+          await updateFocusVisualTheme(themeName);
         });
       });
     }
