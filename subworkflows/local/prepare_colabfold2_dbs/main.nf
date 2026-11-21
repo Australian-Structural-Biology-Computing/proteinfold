@@ -15,7 +15,7 @@ process DOWNLOAD_COLABFOLD2_WEIGHTS {
     tuple val(colabfold2_model), path('colabfold2_models'), emit: params_path
 
     script:
-    def markerRevision = colabfold2_model == 'chai1' ? '_r3' : (colabfold2_model == 'boltz2' ? '_r1' : '')
+    def markerRevision = af3MarkerRevision(colabfold2_model)
     """
     set -euo pipefail
     mkdir -p colabfold2_models
@@ -63,15 +63,27 @@ process DOWNLOAD_COLABFOLD2_AF2_WEIGHTS {
     """
 }
 
-// ColabFold's AlphaFold2 parameter cache: <root>/params holds the npz
-// files plus the success markers its own downloader writes and skips on.
+// ColabFold's AF3-family blobs carry a revision when they were republished
+// with a change the model code depends on (colabfold.alphafold3.weights
+// BLOB_REVISION): the success marker name embeds it, so the discovery and
+// the download process must expect the same revision suffix.
+def af3MarkerRevision(model) {
+    def revisions = [chai1: '_r3', boltz2: '_r1', rosettafold3: '_r1',
+                     esmfold2: '_r1', esmfold2_fast: '_r1',
+                     esmfold2_lm600m: '_r1', esmfold2_lm300m: '_r1']
+    return revisions[model] ?: ''
+}
+
+// ColabFold's AlphaFold2 parameter cache: <root>/params holds the
+// params_model_*.npz files plus the success markers its own downloader
+// writes and skips on.
 def af2CacheReady(root, variant) {
     def markers = [
-        'alphafold2_ptm'        : ['download_finished.txt', 'alphafold_params'],
-        'alphafold2'            : ['download_finished.txt', 'alphafold_params'],
-        'alphafold2_multimer_v3': ['download_complexes_multimer_v3_finished.txt', 'alphafold_multimer_params'],
-        'alphafold2_multimer_v2': ['download_complexes_multimer_v2_finished.txt', 'alphafold_multimer_params'],
-        'alphafold2_multimer_v1': ['download_complexes_multimer_v1_finished.txt', 'alphafold_multimer_params'],
+        'alphafold2_ptm'        : ['download_finished.txt', 'params_model_'],
+        'alphafold2'            : ['download_finished.txt', 'params_model_'],
+        'alphafold2_multimer_v3': ['download_complexes_multimer_v3_finished.txt', 'params_model_'],
+        'alphafold2_multimer_v2': ['download_complexes_multimer_v2_finished.txt', 'params_model_'],
+        'alphafold2_multimer_v1': ['download_complexes_multimer_v1_finished.txt', 'params_model_'],
     ]
     def entry = markers[variant]
     if (entry == null) {
@@ -166,7 +178,7 @@ workflow PREPARE_COLABFOLD2_DBS {
     if (af3Models) {
         def weightsRoot = colabfold2_params_path ?: (localModels ? localModels : null)
         if (colabfold2_params_path || (localModels && af3Models.every { model ->
-            def markerRevision = model == 'chai1' ? '_r3' : (model == 'boltz2' ? '_r1' : '')
+            def markerRevision = af3MarkerRevision(model)
             def marker = "params/af3/${model}${suffix}/download_${model}_${colabfold2_precision}${markerRevision}_finished.txt"
             def ready = new File(localModels, marker).isFile() && new File(localModels, 'params/af3/libcifpp/components.cif').isFile()
             if (ready && model == 'rosettafold3' && colabfold2_precision == 'fp32') {
@@ -181,7 +193,7 @@ workflow PREPARE_COLABFOLD2_DBS {
             def root = weightsRoot
             if (!workflow.stubRun) {
                 af3Models.each { model ->
-                    def markerRevision = model == 'chai1' ? '_r3' : (model == 'boltz2' ? '_r1' : '')
+                    def markerRevision = af3MarkerRevision(model)
                     def model_dir = "${root}/params/af3/${model}${suffix}"
                     file(model_dir, type: 'dir', checkIfExists: true)
                     file("${model_dir}/download_${model}_${colabfold2_precision}${markerRevision}_finished.txt", checkIfExists: true)
