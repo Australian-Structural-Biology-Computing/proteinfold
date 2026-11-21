@@ -127,7 +127,13 @@ def validate_plddt(path: Path, structure_only: bool = False) -> tuple[int, int, 
 
 
 def validate_pae(path: Path, structure_only: bool = False) -> tuple[int, int]:
-    rows = [line.split("\t") for line in path.read_text().splitlines() if line]
+    # '# token_chains' metadata rows written by extract_metrics.py precede
+    # the matrix and are not part of it
+    rows = [
+        line.split("\t")
+        for line in path.read_text().splitlines()
+        if line and not line.startswith("#")
+    ]
     assert rows, f"Empty PAE matrix: {path}"
     assert all(len(row) == len(rows) for row in rows), f"PAE matrix is not square: {path}"
     if structure_only:

@@ -65,6 +65,27 @@ def format_msa_rows(msa_data):
 def format_pae_rows(pae_data):
     return [[f"{num:.4f}" for num in row] for row in pae_data]
 
+def format_token_chain_rows(token_chain_ids, pae_data):
+    """Header rows describing the PAE token space, or [] when unavailable.
+
+    AF3-dialect outputs score one token per polymer residue but one token per
+    atom for ligands, so the matrix can cover more positions than the
+    structure has residues. The per-token chain ids let the report draw
+    correct chain boundaries (ligand chains included) and map tokens back
+    onto structure residues. Encoded as run-length pairs so the header stays
+    short even for wide matrices; consumers must verify that the run lengths
+    sum to the matrix size before trusting it.
+    """
+    if not isinstance(token_chain_ids, list) or len(token_chain_ids) != len(pae_data):
+        return []
+    runs = []
+    for chain_id in token_chain_ids:
+        if runs and runs[-1][0] == chain_id:
+            runs[-1][1] += 1
+        else:
+            runs.append([str(chain_id), 1])
+    return [["# token_chains", json.dumps(runs)]]
+
 def format_pair_score_rows(pair_score_entries, pair_labels=None):
     if pair_labels is None:
         pair_labels = sorted({label for score_values in pair_score_entries.values() for label, _ in score_values})
@@ -230,7 +251,9 @@ def read_colabfold_metrics(name, colabfold_metrics_files):
         if rank_id is None:
             raise ValueError(f"Unable to infer ColabFold rank from metrics filename: {fn}")
         if "pae" in data:
-            write_tsv(f"{name}_{rank_id}_pae.tsv", format_pae_rows(data["pae"]))
+            pae_rows = format_pae_rows(data["pae"])
+            token_rows = format_token_chain_rows(data.get("token_chain_ids"), data["pae"])
+            write_tsv(f"{name}_{rank_id}_pae.tsv", token_rows + pae_rows)
         if "ptm" in data:
             ptm_rows.append((f"{rank_id}", data["ptm"]))
         if "iptm" in data:

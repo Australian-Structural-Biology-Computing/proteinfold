@@ -297,10 +297,81 @@
 
   const residueCount = RESIDUES.length;
 
-  // Cross-highlighting between plots and the 3D view is only meaningful when
-  // the matrix axes line up with the residue label list; mismatches are
-  // expected e.g. when ligand atoms are scored as separate PAE tokens.
-  const paeLinked = !!PAE_PAYLOAD && residueCount > 0 && PAE_PAYLOAD.size === residueCount;
+  // Runs of consecutive residues sharing a chain. Hoisted helper: it feeds
+  // both the structure-level segments and the PAE fallback below.
+  function chainSegmentsOfResidues() {
+    const segments = [];
+    RESIDUES.forEach((r, ix) => {
+      const last = segments[segments.length - 1];
+      if (last && last.chain === r[0]) last.end = ix;
+      else segments.push({ chain: r[0], start: ix, end: ix });
+    });
+    return segments;
+  }
+
+  // Cross-highlighting between plots and the 3D view needs every matrix
+  // token to map onto a residue list entry: either the matrix covers exactly
+  // the residues (token ix == residue ix) or the payload carries an explicit
+  // token-to-residue map (AF3-dialect outputs score ligand atoms per token,
+  // so their matrices cover more positions than the structure has residues).
+  const PAE_TOKEN_RES = (() => {
+    if (!PAE_PAYLOAD || !PAE_PAYLOAD.tokenRes) return null;
+    try {
+      const raw = atob(PAE_PAYLOAD.tokenRes);
+      if (raw.length !== PAE_PAYLOAD.size * 2) return null;
+      const out = new Uint16Array(PAE_PAYLOAD.size);
+      for (let i = 0; i < PAE_PAYLOAD.size; i++) {
+        out[i] = raw.charCodeAt(2 * i) | (raw.charCodeAt(2 * i + 1) << 8);
+        if (out[i] >= residueCount) return null;
+      }
+      return out;
+    } catch (err) {
+      return null;
+    }
+  })();
+  const paeLinked = !!PAE_PAYLOAD && residueCount > 0 && (!!PAE_TOKEN_RES || PAE_PAYLOAD.size === residueCount);
+
+  // Chain segments in PAE token space: from the payload's token_chains when
+  // present (correct boundaries even for per-atom ligand tokens), otherwise
+  // the structure-derived segments when the matrix is aligned with residues.
+  const PAE_CHAIN_SEGMENTS = (() => {
+    if (!PAE_PAYLOAD) return [];
+    if (PAE_PAYLOAD.chains && PAE_PAYLOAD.chains.length) {
+      return PAE_PAYLOAD.chains.map(([chain, start, end]) => ({ chain, start, end }));
+    }
+    return paeLinked ? chainSegmentsOfResidues() : [];
+  })();
+  const PAE_TOKEN_TO_RESIDUE = PAE_TOKEN_RES ? (ix) => PAE_TOKEN_RES[ix] : (ix) => ix;
+
+  // Contiguous token ranges per residue, so selections coming back from the
+  // hub can be drawn on the matrix axes (a ligand residue owns every atom
+  // token of its chain)
+  const RESIDUE_TOKEN_RANGES = (() => {
+    const ranges = new Map();
+    if (PAE_TOKEN_RES) {
+      let cur = null;
+      for (let t = 0; t < PAE_TOKEN_RES.length; t++) {
+        const r = PAE_TOKEN_RES[t];
+        if (cur && cur.residue === r && cur.end === t - 1) {
+          cur.end = t;
+        } else {
+          cur = { residue: r, start: t, end: t };
+          if (!ranges.has(r)) ranges.set(r, []);
+          ranges.get(r).push(cur);
+        }
+      }
+    } else if (paeLinked) {
+      for (let r = 0; r < residueCount; r++) ranges.set(r, [{ start: r, end: r }]);
+    }
+    return ranges;
+  })();
+  const residueTokens = (r) => {
+    const out = [];
+    (RESIDUE_TOKEN_RANGES.get(r) || []).forEach(({ start, end }) => {
+      for (let t = start; t <= end; t++) out.push(t);
+    });
+    return out;
+  };
 
   // Ligand tokens (HETATM residues) are flagged by the Python side. They get
   // a fixed lane width on the PAE axes so they stay visible and selectable.
@@ -311,9 +382,33 @@
   const LIGAND_RUN_WIDTH = 16;
   const LIGAND_RUNS = (() => {
     // Structure-derived ligand lanes are only meaningful when the PAE is
-    // aligned with the residue list; a mismatched matrix (e.g. one PAE
-    // token per ligand atom) would place them at arbitrary tokens
+    // aligned with the residue list; a mismatched matrix without a token
+    // map would place them at arbitrary tokens
     if (!paeLinked) return [];
+    if (PAE_PAYLOAD.chains && PAE_PAYLOAD.chains.length) {
+      // Token-space chain segments: a segment becomes a ligand lane when
+      // every token maps to a ligand residue, so a per-atom ligand chain
+      // and a single-token ligand both get one fixed-width lane
+      const runs = [];
+      PAE_CHAIN_SEGMENTS.forEach((seg) => {
+        let allLigand = true;
+        for (let t = seg.start; t <= seg.end; t++) {
+          if (!isLigandToken(PAE_TOKEN_TO_RESIDUE(t))) {
+            allLigand = false;
+            break;
+          }
+        }
+        if (allLigand) {
+          runs.push({
+            start: seg.start,
+            end: seg.end,
+            chain: seg.chain,
+            label: RESIDUES[PAE_TOKEN_TO_RESIDUE(seg.start)][2],
+          });
+        }
+      });
+      return runs;
+    }
     const runs = [];
     RESIDUES.forEach((r, ix) => {
       if (!isLigandToken(ix)) return;
@@ -392,15 +487,7 @@
   });
 
   // Runs of consecutive residues sharing a chain, used to annotate axes
-  const CHAIN_SEGMENTS = (() => {
-    const segments = [];
-    RESIDUES.forEach((r, ix) => {
-      const last = segments[segments.length - 1];
-      if (last && last.chain === r[0]) last.end = ix;
-      else segments.push({ chain: r[0], start: ix, end: ix });
-    });
-    return segments;
-  })();
+  const CHAIN_SEGMENTS = chainSegmentsOfResidues();
 
   // Shared chain palette: the 3D viewer (chain colouring mode) and the
   // matrix axis bands use the same colours, so a chain reads as the same
@@ -1039,6 +1126,15 @@
     const paeMax = payload.max;
     const bytes = base64ToBytes(payload.data);
     const linked = paeLinked;
+    // Chain boundaries and bands are drawn whenever correct token-space
+    // segments exist, even when the tokens cannot be mapped onto residues
+    const annotated = PAE_CHAIN_SEGMENTS.length > 0;
+    const cellLabel = (ix) =>
+      linked ? residueLabel(PAE_TOKEN_TO_RESIDUE(ix)) : `Pos ${ix + 1}`;
+    const tokenChain = (ix) => {
+      const seg = PAE_CHAIN_SEGMENTS.find((s) => ix >= s.start && ix <= s.end);
+      return seg ? seg.chain : null;
+    };
 
     container.classList.add("relative");
     const canvas = document.createElement("canvas");
@@ -1188,8 +1284,8 @@
     const drawScoreBlocks = () => {
       const table = scores[mode];
       if (!table) return;
-      for (const segA of CHAIN_SEGMENTS) {
-        for (const segB of CHAIN_SEGMENTS) {
+      for (const segA of PAE_CHAIN_SEGMENTS) {
+        for (const segB of PAE_CHAIN_SEGMENTS) {
           const x0 = lanes.pos(segA.start);
           const x1 = lanes.end(segA.end);
           const y0 = plot.y + lanes.starts[segB.start];
@@ -1256,7 +1352,7 @@
         tooltip.innerHTML = "";
         const sub = document.createElement("div");
         sub.className = "text-gray-500";
-        sub.textContent = `${axisLabel(cell.row, linked)} \u2194 ${axisLabel(cell.col, linked)}`;
+        sub.textContent = `${cellLabel(cell.row)} \u2194 ${cellLabel(cell.col)}`;
         if (mode === "pae") {
           const value = (bytes[cell.row * n + cell.col] / 255) * paeMax;
           const strong = document.createElement("div");
@@ -1265,7 +1361,7 @@
           tooltip.appendChild(strong);
         } else {
           const table = scores[mode] || {};
-          const value = table[`${RESIDUES[cell.row][0]}|${RESIDUES[cell.col][0]}`];
+          const value = table[`${tokenChain(cell.row)}|${tokenChain(cell.col)}`];
           const strong = document.createElement("div");
           strong.className = "font-semibold text-gray-900 tabular-nums";
           strong.textContent =
@@ -1283,8 +1379,9 @@
       },
 
       singleCellIndices(cell) {
-        // A PAE cell couples the aligned and the scored residue
-        return [cell.row, cell.col];
+        // A PAE cell couples the aligned and the scored residue (hub indices
+        // are residue indices; the matrix works in token space)
+        return [PAE_TOKEN_TO_RESIDUE(cell.row), PAE_TOKEN_TO_RESIDUE(cell.col)];
       },
 
       // Score modes colour whole chain-pair blocks, so a click targets
@@ -1293,20 +1390,18 @@
       // cells outside any chain so the caller can fall back to the
       // single-residue behaviour.
       chainBlockIndices(cell) {
-        const chainOf = (ix) => {
-          const seg = CHAIN_SEGMENTS.find((s) => ix >= s.start && ix <= s.end);
-          return seg ? seg.chain : null;
-        };
-        const rowChain = chainOf(cell.row);
-        const colChain = chainOf(cell.col);
+        const rowChain = tokenChain(cell.row);
+        const colChain = tokenChain(cell.col);
         if (rowChain === null || colChain === null) return null;
         // All tokens of a chain, not just the clicked segment: a chain id
-        // split by an interleaved ligand forms several segments but stays
-        // one chain in the viewer, the legend and the axis bands
+        // split into several segments stays one chain in the viewer, the
+        // legend and the axis bands
         const tokensOf = (chain) => {
           const out = [];
-          RESIDUES.forEach((r, ix) => {
-            if (r[0] === chain) out.push(ix);
+          PAE_CHAIN_SEGMENTS.forEach((s) => {
+            if (s.chain === chain) {
+              for (let t = s.start; t <= s.end; t++) out.push(t);
+            }
           });
           return out;
         };
@@ -1347,14 +1442,19 @@
           const rows = indicesFromRange(anchor.row, current.row);
           const cols = indicesFromRange(anchor.col, current.col);
           this.pendingSplit = { rows, cols };
-          hub.set([...rows, ...cols], this.id);
+          hub.set(this.toResidueIndices([...rows, ...cols]), this.id);
         }
+      },
+
+      // Matrix selections are token indices; the hub speaks residue indices
+      toResidueIndices(tokens) {
+        return [...new Set(tokens.map(PAE_TOKEN_TO_RESIDUE))].sort((a, b) => a - b);
       },
 
       toggleSelection(indices, split) {
         // Dedupe before comparing: for a diagonal block rows and cols
         // list the same tokens twice
-        const sorted = [...new Set(indices)].sort((a, b) => a - b);
+        const sorted = this.toResidueIndices(indices);
         if (sameIndexSet(hub.selection, sorted)) {
           this.pendingSplit = { rows: [], cols: [] };
           hub.clear(this.id);
@@ -1367,11 +1467,7 @@
       // True when both cells sit in the same row chain and the same column
       // chain, so a pointer wiggle inside one block still counts as a click
       sameBlock(a, b) {
-        const chainOf = (ix) => {
-          const seg = CHAIN_SEGMENTS.find((s) => ix >= s.start && ix <= s.end);
-          return seg ? seg.chain : null;
-        };
-        return chainOf(a.row) === chainOf(b.row) && chainOf(a.col) === chainOf(b.col);
+        return tokenChain(a.row) === tokenChain(b.row) && tokenChain(a.col) === tokenChain(b.col);
       },
 
       setMode(next) {
@@ -1408,8 +1504,12 @@
           }
           return;
         } else {
-          this.highlightRows = indices;
-          this.highlightCols = indices;
+          // Hub indices are residue indices; expand them to the tokens that
+          // represent them on the matrix axes
+          const tokens = [];
+          indices.forEach((r) => residueTokens(r).forEach((t) => tokens.push(t)));
+          this.highlightRows = tokens;
+          this.highlightCols = tokens;
         }
         this.draw();
       },
@@ -1461,14 +1561,14 @@
           ctx,
           plot,
           true,
-          linked,
-          CHAIN_SEGMENTS,
+          annotated,
+          PAE_CHAIN_SEGMENTS,
           {
             count: n,
             pos: (ix) => lanes.pos(ix),
             end: (ix) => lanes.end(ix),
           },
-          (ix) => RESIDUES[ix][1],
+          (ix) => (linked ? RESIDUES[PAE_TOKEN_TO_RESIDUE(ix)][1] : String(ix + 1)),
         );
         drawChainBoundaries(
           ctx,
@@ -1478,21 +1578,21 @@
             pos: (ix) => lanes.pos(ix),
             end: (ix) => lanes.end(ix),
           },
-          linked ? CHAIN_SEGMENTS : [],
+          annotated ? PAE_CHAIN_SEGMENTS : [],
           true,
         );
         drawChainBands(
           ctx,
           plot,
           false,
-          linked,
-          CHAIN_SEGMENTS,
+          annotated,
+          PAE_CHAIN_SEGMENTS,
           {
             count: n,
             pos: (ix) => plot.y + lanes.starts[ix],
             end: (ix) => plot.y + lanes.starts[ix] + lanes.widths[ix],
           },
-          (ix) => RESIDUES[ix][1],
+          (ix) => (linked ? RESIDUES[PAE_TOKEN_TO_RESIDUE(ix)][1] : String(ix + 1)),
         );
         ctx.fillStyle = "#374151";
         ctx.font = "12px system-ui, sans-serif";
@@ -1929,7 +2029,10 @@
             "mb-3 rounded border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800";
           warn.textContent =
             `The structure accounts for ${residueCount} residues but the matrix covers ` +
-            `${PAE_PAYLOAD.size} positions, so labels may be offset and cross-highlighting ` +
+            `${PAE_PAYLOAD.size} positions` +
+            (PAE_PAYLOAD.chains && PAE_PAYLOAD.chains.length
+              ? "; chain boundaries are shown, but cross-highlighting "
+              : ", so labels may be offset and cross-highlighting ") +
             "with the structure is turned off.";
           root.appendChild(warn);
         }

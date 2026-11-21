@@ -31,27 +31,108 @@ def encode_u8_b64(values):
     arr = np.clip(np.round(np.asarray(values, dtype=float) * 255.0), 0, 255).astype(np.uint8)
     return base64.b64encode(arr.tobytes()).decode("ascii")
 
-def encode_pae_payload(pae_path):
+def encode_pae_payload(pae_path, struct_file=None, residue_list=None):
     """Load a PAE matrix and pack it for the interactive report viewer.
+
+    A '# token_chains' header row (written by extract_metrics.py when the
+    prediction output carries per-token chain ids) is decoded into token-space
+    chain segments. When the tokens can be mapped onto the structure's
+    residues - 1:1 for polymer chains of equal length, all-tokens-to-one
+    residue for single-residue chains, and by per-residue atom counts for
+    ligand chains scored one token per atom - a tokenRes uint16 array is
+    embedded as well, so the viewer can cross-highlight between the matrix
+    and the structure even though the matrix covers more positions than the
+    structure has residues.
 
     Returns None if the matrix is missing, empty or not square.
     """
     if is_missing_input(pae_path):
         return None
+    token_runs = []
     try:
-        pae = np.genfromtxt(pae_path, delimiter="\t")
-    except (ValueError, IOError):
+        with open(pae_path) as handle:
+            first = handle.readline()
+        if first.startswith("# token_chains"):
+            header = next(csv.reader([first], delimiter="\t"))
+            token_runs = json.loads(header[1])
+        pae = np.genfromtxt(pae_path, delimiter="\t", comments="#")
+    except (ValueError, IOError, json.JSONDecodeError):
         return None
     if pae.ndim != 2 or pae.shape[0] == 0 or pae.shape[0] != pae.shape[1]:
         return None
     if not np.isfinite(pae).all():
         pae = np.nan_to_num(pae, nan=PAE_MAX, posinf=PAE_MAX, neginf=0.0)
     scaled = np.clip(pae, 0.0, PAE_MAX) / PAE_MAX
-    return {
+    payload = {
         "size": int(pae.shape[0]),
         "max": PAE_MAX,
         "data": encode_u8_b64(scaled.ravel(order="C")),
     }
+    if token_runs:
+        payload.update(
+            build_token_payload(token_runs, int(pae.shape[0]), struct_file, residue_list)
+        )
+    return payload
+
+
+def build_token_payload(token_runs, pae_size, struct_file, residue_list):
+    """Token-space chain segments plus an optional token-to-residue map.
+
+    The chain segments come straight from the run-length header. The residue
+    map is only emitted when every token can be assigned unambiguously:
+    within a chain, equal token and residue counts map 1:1 in order, a single
+    residue absorbs all of its chain's tokens, and otherwise the tokens are
+    distributed over the chain's residues by atom count when the totals match
+    (ligand atoms are scored one token per atom in AF3-dialect outputs).
+    """
+    payload = {}
+    segments = []
+    cursor = 0
+    for chain_id, count in token_runs:
+        count = int(count)
+        if count <= 0 or cursor + count > pae_size:
+            return {"chains": []}
+        segments.append({"chain": str(chain_id), "start": cursor, "end": cursor + count - 1})
+        cursor += count
+    if cursor != pae_size:
+        return {"chains": []}
+    payload["chains"] = [[seg["chain"], seg["start"], seg["end"]] for seg in segments]
+    if residue_list is None or struct_file is None:
+        return payload
+
+    residues_by_chain = {}
+    for ix, residue in enumerate(residue_list):
+        residues_by_chain.setdefault(residue[0], []).append(ix)
+
+    token_to_residue = [None] * pae_size
+    for seg in segments:
+        chain_residues = residues_by_chain.get(seg["chain"], [])
+        tokens = list(range(seg["start"], seg["end"] + 1))
+        if len(tokens) == len(chain_residues):
+            for token, residue_ix in zip(tokens, chain_residues):
+                token_to_residue[token] = residue_ix
+        elif len(chain_residues) == 1:
+            for token in tokens:
+                token_to_residue[token] = chain_residues[0]
+        else:
+            # Ligand chains scored per atom: hand out tokens in residue order
+            # by cumulative atom count, matching the tokenizer's atom ordering
+            atom_counts = get_residue_atom_counts(struct_file)
+            chain_atoms = sum(atom_counts[ix] for ix in chain_residues)
+            if chain_atoms == len(tokens) and all(atom_counts[ix] > 0 for ix in chain_residues):
+                cursor = 0
+                for residue_ix in chain_residues:
+                    for token in tokens[cursor:cursor + atom_counts[residue_ix]]:
+                        token_to_residue[token] = residue_ix
+                    cursor += atom_counts[residue_ix]
+            else:
+                return payload  # ambiguous chain: ship segments without the map
+    if any(ix is None for ix in token_to_residue):
+        return payload
+    payload["tokenRes"] = base64.b64encode(
+        np.asarray(token_to_residue, dtype="<u2").tobytes()
+    ).decode("ascii")
+    return payload
 
 def get_residue_list(struct_file):
     """Ordered [chain id, residue number, residue name, insertion code, is_ligand]
@@ -81,6 +162,23 @@ def get_residue_list(struct_file):
                 ])
         break  # first model only - predictions carry a single model
     return residues
+
+def get_residue_atom_counts(struct_file):
+    """Atom count per non-water residue, in get_residue_list order.
+
+    Used to distribute per-atom PAE tokens over the residues of a multi-
+    residue ligand chain.
+    """
+    structure = parse_structure(struct_file, "report_ref")
+    counts = []
+    for model in structure:
+        for chain in model:
+            for residue in chain:
+                if residue.id[0] == "W":
+                    continue
+                counts.append(len(residue))
+        break  # first model only - predictions carry a single model
+    return counts
 
 def load_msa_matrix(msa_path):
     """Parse an MSA and compute the sorted identity-scaled coverage matrix.
@@ -434,7 +532,7 @@ chainwise_ipsae_matrix = build_pair_score_matrices(
 # Cross-highlighting between the PAE/MSA and the structure is only enabled
 # when this list length matches the matrix dimensions (checked client-side).
 residue_list = get_residue_list(top_structure)
-pae_payload = encode_pae_payload(args.pae)
+pae_payload = encode_pae_payload(args.pae, top_structure, residue_list)
 msa_payload = build_msa_payload(args.msa)
 
 proteinfold_template = open(args.html_template, "r").read()

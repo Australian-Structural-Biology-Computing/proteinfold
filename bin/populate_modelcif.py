@@ -382,6 +382,10 @@ def _read_pae_tsv(pae_tsv):
         for row in csv.reader(fh, delimiter='\t'):
             if not row:
                 continue
+            # '# token_chains' metadata rows written by extract_metrics.py
+            # describe the PAE token space; the matrix itself has no header
+            if row[0].startswith('#'):
+                continue
             matrix.append([float(v) for v in row])
 
     if not matrix:
