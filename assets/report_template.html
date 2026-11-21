@@ -19,11 +19,26 @@
         background: transparent;
       }
       .seq-row {
+        position: relative;
         display: flex;
         align-items: flex-end;
         gap: 1px;
         margin-bottom: 3px;
         width: max-content;
+      }
+      .seq-band,
+      .seq-band-preview {
+        position: absolute;
+        bottom: -3px;
+        height: 3px;
+        border-radius: 2px;
+        pointer-events: none;
+      }
+      .seq-band {
+        background: #c2410c;
+      }
+      .seq-band-preview {
+        background: rgba(194, 65, 12, 0.4);
       }
       .seq-gutter {
         flex: 0 0 4ch;
@@ -55,12 +70,6 @@
       }
       .seq-residue:hover {
         filter: brightness(0.88);
-      }
-      .seq-residue.seq-highlight {
-        box-shadow: inset 0 0 0 1.5px #c2410c;
-      }
-      .seq-residue.seq-preview {
-        box-shadow: inset 0 0 0 1.5px rgba(194, 65, 12, 0.45);
       }
     </style>
   </head>
@@ -2090,6 +2099,37 @@
     container.appendChild(frame);
 
     const spans = []; // token index -> residue span
+    const bands = []; // active selection bands
+    const previewBands = []; // bands for the drag preview
+
+    // Selections render as one continuous band under the covered residues
+    // (split per row), not as per-character rings: the band keeps the
+    // sequence readable. Contiguous token runs are split again at row
+    // boundaries so each row draws a single band for its part of the run.
+    const drawBands = (store, indices, className) => {
+      store.splice(0).forEach((band) => band.remove());
+      const sorted = [...indices].sort((a, b) => a - b);
+      // Scan run ends from i = 1: a run is [start .. i-1], and an empty
+      // selection simply produces no bands
+      let start = 0;
+      for (let i = 1; i <= sorted.length; i++) {
+        const boundary =
+          i === sorted.length ||
+          sorted[i] !== sorted[i - 1] + 1 ||
+          spans[sorted[i]].parentNode !== spans[sorted[i - 1]].parentNode;
+        if (!boundary) continue;
+        const first = spans[sorted[start]];
+        const last = spans[sorted[i - 1]];
+        const band = document.createElement("span");
+        band.className = className;
+        band.style.left = `${first.offsetLeft}px`;
+        band.style.width = `${last.offsetLeft + last.offsetWidth - first.offsetLeft}px`;
+        first.parentNode.appendChild(band);
+        store.push(band);
+        start = i;
+      }
+    };
+
     const chainOf = (seg) => RESIDUES[seg.start][0];
     const isLigandSeg = (seg) => !!RESIDUES[seg.start][4];
 
@@ -2175,7 +2215,7 @@
       const width = container.clientWidth;
       if (Math.abs(width - lastWidth) < 12) return;
       lastWidth = width;
-      previewed = new Set();
+      previewBands.splice(0).forEach((band) => band.remove());
       render();
       if (widgetRef) widgetRef.setHighlight(hub.selection);
     });
@@ -2185,16 +2225,6 @@
       const el = document.elementFromPoint(ev.clientX, ev.clientY);
       const target = el && el.closest ? el.closest(".seq-residue") : null;
       return target ? Number(target.dataset.ix) : null;
-    };
-
-    // Highlight bookkeeping: only touch the spans whose state changes
-    let highlighted = new Set();
-    let previewed = new Set();
-    const applyClass = (set, cls, on) => {
-      set.forEach((ix) => {
-        const span = spans[ix];
-        if (span) span.classList.toggle(cls, on);
-      });
     };
 
     let drag = null; // { anchor, current }
@@ -2211,17 +2241,13 @@
       const ix = spanAt(ev);
       if (ix === null || ix === drag.current) return;
       drag.current = ix;
-      const next = new Set(indicesFromRange(drag.anchor, drag.current));
-      applyClass(previewed, "seq-preview", false);
-      applyClass(next, "seq-preview", true);
-      previewed = next;
+      drawBands(previewBands, indicesFromRange(drag.anchor, drag.current), "seq-band-preview");
     });
     const finish = () => {
       if (!drag) return;
       const { anchor, current } = drag;
       drag = null;
-      applyClass(previewed, "seq-preview", false);
-      previewed = new Set();
+      previewBands.splice(0).forEach((band) => band.remove());
       if (anchor === current) {
         // Plain click toggles the single residue
         if (sameIndexSet(hub.selection, [anchor])) hub.clear("seq");
@@ -2236,18 +2262,7 @@
     const widget = {
       id: "seq",
       setHighlight(indices) {
-        const next = new Set(indices);
-        const gone = new Set();
-        highlighted.forEach((ix) => {
-          if (!next.has(ix)) gone.add(ix);
-        });
-        const fresh = new Set();
-        next.forEach((ix) => {
-          if (!highlighted.has(ix)) fresh.add(ix);
-        });
-        applyClass(gone, "seq-highlight", false);
-        applyClass(fresh, "seq-highlight", true);
-        highlighted = next;
+        drawBands(bands, indices, "seq-band");
       },
     };
     widgetRef = widget;
