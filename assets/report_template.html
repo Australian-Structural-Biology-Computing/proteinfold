@@ -233,6 +233,7 @@
 
         <section id="chain_iptm_container" class="min-w-0 space-y-2">
           <h3 class="text-sm font-semibold text-gray-900">Chainwise ipTM</h3>
+          <p class="text-xs text-gray-500">Diagonal entries (A:A) are the per-chain pTM.</p>
           <div
             class="max-h-84 overflow-auto rounded-lg border border-gray-200 bg-white p-3 text-xs"
             id="chainwise-iptm-table"
@@ -1362,10 +1363,13 @@
         } else {
           const table = scores[mode] || {};
           const value = table[`${tokenChain(cell.row)}|${tokenChain(cell.col)}`];
+          // The chainwise iPTM store carries the per-chain pTM on its
+          // diagonal, so a same-chain cell reports pTM rather than ipTM
+          const metric = tokenChain(cell.row) === tokenChain(cell.col) ? "pTM" : metricLabel();
           const strong = document.createElement("div");
           strong.className = "font-semibold text-gray-900 tabular-nums";
           strong.textContent =
-            value !== undefined && value !== "" ? `${metricLabel()} ${value}` : `${metricLabel()} not reported`;
+            value !== undefined && value !== "" ? `${metric} ${value}` : `${metric} not reported`;
           const pae = document.createElement("div");
           pae.className = "text-gray-500";
           pae.textContent = `PAE ${((bytes[cell.row * n + cell.col] / 255) * paeMax).toFixed(2)} \u00C5`;
