@@ -47,10 +47,9 @@ nextflow_process {
             assert config.chainwise_ipsae.chains == []
             assert !html.contains("<img src=x onerror=alert(1)>")
             assert !((html =~ /(?s)const renderScoreMatrix = .*?const buildInteractivePanels/)[0]).contains("innerHTML")
-            assert html.contains('onclick="downloadStructure()"') && !html.contains("downloadPdb")
-            def downloader = (html =~ /(?s)const downloadStructure = .*?const makeDownload/)[0]
-            assert downloader.contains("config.model")
-            assert !downloader.contains(".pdb.pdb") && !downloader.contains(".cif.cif") && !downloader.contains("SAMPLE_NAME")
+            // The viewer's custom floating action buttons (reset view,
+            // download) were dropped in favour of Molstar's own controls
+            assert !html.contains("downloadStructure") && !html.contains("makeDownload")
             // Molstar-based viewer with cross-highlighting scaffolding
             assert config.residues && config.residues[0][0] == "A"
             assert config.pae == null && config.msa == null
