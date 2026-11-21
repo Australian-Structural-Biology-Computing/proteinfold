@@ -1110,23 +1110,6 @@
     const M = { top: 72, right: 20, bottom: 48, left: 72 };
     const plot = { x: M.left, y: M.top, side: 0, cell: 0 };
 
-    // Offscreen n x n heatmap in token space
-    const off = document.createElement("canvas");
-    off.width = n;
-    off.height = n;
-    const offCtx = off.getContext("2d");
-    const image = offCtx.createImageData(n, n);
-    for (let r = 0; r < n; r++) {
-      for (let c = 0; c < n; c++) {
-        const [cr, cg, cb] = sampleStops(GREENS_R_STOPS, bytes[r * n + c] / 255);
-        const o = (r * n + c) * 4;
-        image.data[o] = cr;
-        image.data[o + 1] = cg;
-        image.data[o + 2] = cb;
-        image.data[o + 3] = 255;
-      }
-    }
-    offCtx.putImageData(image, 0, 0);
 
     // --- Lane layout -------------------------------------------------------
     // Polymer tokens get equal lanes; each ligand run gets one fixed-width
@@ -1180,32 +1163,63 @@
       };
     };
 
-    // Lane-mapped heatmap: copy each token column of the token-space image
-    // into its lane, so one drawImage call renders the whole matrix.
+    // Lane-mapped heatmap, rasterised directly from the byte array.
+    // Each destination pixel averages the PAE values of every token whose
+    // lane overlaps it (area average): a proper box-filter downscale when
+    // lanes are narrower than a pixel, and plain replication when a lane
+    // spans several pixels. drawImage-based warping would instead blend
+    // only the two tokens at each fractional lane edge (canvas
+    // antialiases fractional destination rects even with smoothing
+    // disabled), which smears the matrix; picking a single token per
+    // pixel subsamples and aliases. Row prefix sums make each block
+    // average O(1).
     let laneCanvas = null;
+    let lanePrefix = null;
     const buildLaneCanvas = () => {
       if (!lanes) return;
-      const size = Math.max(1, Math.ceil(lanes.total));
-      // Pass 1: warp token columns into lane columns (rows stay tokens)
-      // The canvas is already lane-sized on both axes: after pass 2 the
-      // warped rows span `size` pixels, and anything shorter would clip the
-      // ligand tail and stretch the blit
+      const size = Math.max(1, Math.round(lanes.total));
       laneCanvas = document.createElement("canvas");
       laneCanvas.width = size;
       laneCanvas.height = size;
       const lctx = laneCanvas.getContext("2d");
-      lctx.imageSmoothingEnabled = false;
-      for (let ix = 0; ix < n; ix++) {
-        lctx.drawImage(off, ix, 0, 1, n, lanes.starts[ix], 0, Math.max(lanes.widths[ix], 0.02), n);
+      lanePrefix = new Int32Array(n * (n + 1));
+      for (let r = 0; r < n; r++) {
+        const base = r * (n + 1);
+        let acc = 0;
+        for (let c = 0; c < n; c++) {
+          acc += bytes[r * n + c];
+          lanePrefix[base + c + 1] = acc;
+        }
       }
-      // Pass 2: warp the remaining token rows into lane rows
-      const intermediate = document.createElement("canvas");
-      intermediate.width = size;
-      intermediate.height = size;
-      intermediate.getContext("2d").drawImage(laneCanvas, 0, 0);
-      for (let ix = 0; ix < n; ix++) {
-        lctx.drawImage(intermediate, 0, ix, size, 1, 0, lanes.starts[ix], size, Math.max(lanes.widths[ix], 0.02));
+      // First and last token whose lane overlaps destination pixel [px, px+1)
+      const rangeAt = (px) => {
+        let lo = lanes.indexAt(px);
+        if (lo === null) return [n - 1, n - 1];
+        let hi = lo;
+        while (hi + 1 < n && lanes.starts[hi + 1] < px + 1) hi++;
+        return [lo, hi];
+      };
+      const img = lctx.createImageData(size, size);
+      const out = img.data;
+      for (let y = 0; y < size; y++) {
+        const [r0, r1] = rangeAt(y);
+        let o = y * size * 4;
+        for (let x = 0; x < size; x++) {
+          const [c0, c1] = rangeAt(x);
+          let sum = 0;
+          for (let r = r0; r <= r1; r++) {
+            const base = r * (n + 1);
+            sum += lanePrefix[base + c1 + 1] - lanePrefix[base + c0];
+          }
+          const [cr, cg, cb] = sampleStops(GREENS_R_STOPS, sum / (r1 - r0 + 1) / (c1 - c0 + 1) / 255);
+          out[o] = cr;
+          out[o + 1] = cg;
+          out[o + 2] = cb;
+          out[o + 3] = 255;
+          o += 4;
+        }
       }
+      lctx.putImageData(img, 0, 0);
     };
 
     // --- Chainwise score overlay -------------------------------------------
@@ -1421,7 +1435,8 @@
 
         ctx.imageSmoothingEnabled = false;
         if (mode === "pae") {
-          ctx.drawImage(laneCanvas, plot.x, plot.y, lanes.total, lanes.total);
+          // Natural size: laneCanvas is already rounded to the lane extent
+          ctx.drawImage(laneCanvas, plot.x, plot.y);
         } else {
           drawScoreBlocks();
         }
