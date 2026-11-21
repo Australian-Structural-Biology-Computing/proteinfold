@@ -129,7 +129,7 @@
                 "modelcif_software_details": {
                     "type": ["string", "null"],
                     "default": null,
-                    "description": "Optional YAML with software/protocol metadata (e.g. template search attribution).",
+                    "description": "Optional YAML overriding the built-in software/protocol metadata used for ModelCIF population (e.g. template search attribution).",
                     "help_text": "Passed to populate_modelcif.py --software_details."
                 }
             }

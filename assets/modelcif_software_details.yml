@@ -1,8 +1,8 @@
-# Placeholder protocol/software metadata for modelCIF population.
-# Pass this file explicitly to bin/populate_modelcif.py with --software_details.
+# Default protocol/software metadata for modelCIF population, used unless
+# --modelcif_software_details points at a custom YAML.
 # Structure:
 #   defaults: used for every mode unless overridden
-#   programs.<mode>: per-mode overrides keyed by meta.model values
+#   programs.<mode>: per-mode overrides keyed by the --mode token
 
 defaults:
   modeling_software:
@@ -69,32 +69,42 @@ programs:
         template_search_software:
           name: hmmsearch
 
-  boltz:
+  boltz2:
     modeling_software:
-      name: Boltz
+      name: Boltz2
       location: https://github.com/jwohlwend/boltz
 
-  colabfold:
+  chai1:
     modeling_software:
-      name: ColabFold
-      location: https://github.com/sokrypton/ColabFold
+      name: Chai-1
+      location: https://github.com/chaidiscovery/chai-lab
 
-  esmfold:
+  esmfold2:
     modeling_software:
-      name: ESMFold
-      location: https://github.com/facebookresearch/esm
+      name: ESMFold2
 
-  helixfold3:
+  intellifold2:
     modeling_software:
-      name: HelixFold3
-      location: https://github.com/PaddlePaddle/PaddleHelix
+      name: IntelliFold2
 
-  rosettafold2na:
+  openbind0:
     modeling_software:
-      name: RoseTTAFold2NA
-      location: https://github.com/uw-ipd/RoseTTAFold2NA
+      name: OpenBind
 
-  rosettafold_all_atom:
+  opendde:
     modeling_software:
-      name: RoseTTAFold-All-Atom
-      location: https://github.com/baker-laboratory/RoseTTAFold-All-Atom
+      name: OpenDDE
+
+  openfold3:
+    modeling_software:
+      name: OpenFold3
+      location: https://github.com/aqlaboratory/openfold3
+
+  protenix2:
+    modeling_software:
+      name: Protenix
+      location: https://github.com/bytedance/Protenix
+
+  rosettafold3:
+    modeling_software:
+      name: RoseTTAFold3

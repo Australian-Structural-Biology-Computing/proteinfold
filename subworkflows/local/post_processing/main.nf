@@ -34,7 +34,6 @@ workflow POST_PROCESSING {
     write_modelcif
     modelcif_binary
     modelcif_pae_embed
-    modelcif_software_details
 
     main:
     def ch_multiqc_files = channel.empty()
