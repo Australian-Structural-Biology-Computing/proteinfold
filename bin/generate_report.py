@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import math
 import os
 import argparse
 import csv
@@ -451,9 +452,15 @@ def read_pair_score_tsv(tsv_path, model_count):
             if not (0 <= rank < model_count):
                 continue
             try:
-                scores[rank][pair_label] = f"{float(value):.4f}"
+                parsed = float(value)
             except ValueError:
                 continue
+            # Native scores can be NaN for chains without an interface
+            # (e.g. ligands); a NaN cell would render as an unreportable
+            # block, so it is dropped here like any other missing value
+            if not math.isfinite(parsed):
+                continue
+            scores[rank][pair_label] = f"{parsed:.4f}"
 
     return scores
 
