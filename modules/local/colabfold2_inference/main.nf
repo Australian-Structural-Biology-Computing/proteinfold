@@ -3,7 +3,7 @@ process COLABFOLD2_INFERENCE {
     label 'process_medium'
     label 'process_gpu'
 
-    container "ghcr.io/jscgh/proteinfold_colabfold:af3-preview-e9e8bd0"
+    container "ghcr.io/jscgh/proteinfold_colabfold:af3-preview-38683c2"
 
     input:
     tuple val(meta), path(input), val(model_type), val(use_esm), path(params_path)
@@ -25,7 +25,7 @@ process COLABFOLD2_INFERENCE {
     tuple val(meta), path("${meta.id}_confidence.tsv")        , optional: true, emit: confidence
     tuple val(meta), path("raw/*_scores_rank_*.json")         , optional: true, emit: scores
     tuple val("${task.process}"), val('colabfold'), eval("python3 -c 'import importlib.metadata; print(importlib.metadata.version(\"colabfold\"))' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold, topic: versions
-    tuple val("${task.process}"), val('colabfold_commit'), val('e9e8bd0b8b6c26f9865808070342d0d785dada2e'), emit: versions_colabfold_commit, topic: versions
+    tuple val("${task.process}"), val('colabfold_commit'), val('38683c21700408b6a29cf395e8ef07cf109fcb91'), emit: versions_colabfold_commit, topic: versions
     tuple val("${task.process}"), val('alphafold3_colabfold'), eval("python3 -c 'import importlib.metadata; print(importlib.metadata.version(\"alphafold3-colabfold\"))' 2>/dev/null || echo \"unknown\""), emit: versions_alphafold3_colabfold, topic: versions
     tuple val("${task.process}"), val('jax'), eval("python3 -c 'import jax; print(jax.__version__)' 2>/dev/null || echo \"unknown\""), emit: versions_jax, topic: versions
 
@@ -162,7 +162,7 @@ process COLABFOLD2_INFERENCE {
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         colabfold: \$(python3 -c 'import importlib.metadata; print(importlib.metadata.version("colabfold"))' 2>/dev/null || echo unknown)
-        colabfold_commit: e9e8bd0b8b6c26f9865808070342d0d785dada2e
+        colabfold_commit: 38683c21700408b6a29cf395e8ef07cf109fcb91
         alphafold3_colabfold: \$(python3 -c 'import importlib.metadata; print(importlib.metadata.version("alphafold3-colabfold"))' 2>/dev/null || echo unknown)
         jax: \$(python3 -c 'import jax; print(jax.__version__)' 2>/dev/null || echo unknown)
     END_VERSIONS
@@ -188,7 +188,7 @@ process COLABFOLD2_INFERENCE {
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         colabfold: 1.6.3
-        colabfold_commit: e9e8bd0b8b6c26f9865808070342d0d785dada2e
+        colabfold_commit: 38683c21700408b6a29cf395e8ef07cf109fcb91
         alphafold3_colabfold: 3.1.18
         jax: unknown
     END_VERSIONS
