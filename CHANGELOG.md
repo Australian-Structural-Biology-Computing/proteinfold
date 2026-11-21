@@ -3,7 +3,9 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## v2.1.0dev - [unreleased<!-- TODO nf-core: replace with date on release -->]
+## v2.1.0dev - The chainwise score blocks on the PAE matrix label themselves legibly: the value's text colour is chosen by the block fill's luminance (dark text on the light end of the score ramp, white on the dark end), and a value is only painted when the block can hold it - small blocks such as the fixed-width ligand lanes no longer overflow; their score is reported by the hover tooltip instead.
+
+- [unreleased<!-- TODO nf-core: replace with date on release -->]
 
 ### Fixed
 
