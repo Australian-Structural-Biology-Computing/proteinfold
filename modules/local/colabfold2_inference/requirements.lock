@@ -1,18 +1,18 @@
 absl-py==2.5.0
 aiofiles==25.1.0
-alphafold-colabfold==2.3.27
-alphafold3-colabfold==3.1.18
+alphafold-colabfold==2.3.28
+alphafold3-colabfold==3.1.20
 annotated-types==0.8.0
 appdirs==1.4.4
 attrs==26.1.0
 biopython==1.85
 certifi==2026.7.22
 charset-normalizer==3.5.1
-colabfold @ git+https://github.com/sokrypton/ColabFold.git@e9e8bd0b8b6c26f9865808070342d0d785dada2e
+colabfold @ git+https://github.com/sokrypton/ColabFold.git@38683c21700408b6a29cf395e8ef07cf109fcb91
 colabfold-binaries==0.1.0
-colabfold-cuda-kernels==0.2.2
-colabfold-kernels==0.9.0
-colabfold-legacy-kernels==0.6.0
+colabfold-cuda-kernels==0.3.0
+colabfold-kernels==0.10.0
+colabfold-legacy-kernels==0.7.0
 contourpy==1.4.0
 cycler==0.12.1
 dm-haiku==0.0.17
