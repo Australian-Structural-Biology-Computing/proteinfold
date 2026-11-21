@@ -47,6 +47,36 @@ The `alphafold2` modes run the classic AlphaFold2 models through `colabfold_batc
 > [!NOTE]
 > Local MSA generation occurs in a separate module to model inference, so inference can be re-run without repeating the MSA search.
 
+## Compiled-kernel cache
+
+JIT compilation dominates the wall clock of short predictions: every task that
+sees a new input shape pays the full compile cost again. `--colabfold2_compile_cache`
+points the pipeline at a persistent directory that survives between tasks and
+runs, so a shape compiles once per machine:
+
+```bash
+nextflow run nf-core/proteinfold \
+    --colabfold2_compile_cache /scratch/share/colabfold_compile_cache \
+    ...
+```
+
+Two mechanisms share the directory:
+
+- The AlphaFold2 backends keep colabfold's own per-shape executable cache
+  (`--compile-cache`). Entries are keyed by GPU, driver and package versions
+  and by the model config and input shapes, and are only written when fused
+  kernels are enabled (`--use-fast-kernels`, e.g. via
+  `--colabfold2_kernel_backend pallas`); the bundled `colabfold_compile`
+  utility can pre-fill or prune the directory (`colabfold_compile --clean`
+  removes entries left behind by upgrades).
+- The AlphaFold3-family backends compile once per sequence-length bucket; the
+  directory is exported as `JAX_COMPILATION_CACHE_DIR` so JAX's persistent
+  compilation cache reuses those compiled kernels across tasks and runs.
+
+The directory must be writable inside the container. If your container engine
+does not mount host paths by default, bind it explicitly, e.g.
+`--singularity-args '--bind /scratch/share/colabfold_compile_cache'`.
+
 ## File Structure
 
 If `--colabfold2_params_path` is not set and no weights cache is available under a local `--db`/`--colabfold_db`, the pipeline downloads the required weights in a separate Nextflow process. The weights root has this structure:
@@ -91,5 +121,6 @@ See the [ColabFold2](https://github.com/sokrypton/ColabFold) documentation for a
 | `--esmfold2_model`               | `msa`   | ESMFold2 checkpoint: `msa`, `lm300m` or `lm600m`. The language-model selections pass `--use-esm` automatically; confidence output depends on the upstream checkpoint and runtime version.                                                    |
 | `--colabfold2_kernel_backend`    | `auto`  | Fused-kernel implementation used by `colabfold_batch`; `auto` is the upstream default, but on GPUs missing from the bundled JAX device table (e.g. L40S, V100) it fails with `No supported GPU devices found` and `cuda_legacy` must be set. |
 | `--colabfold_num_recycles`       | `3`     | The number of times model outputs are recycled as iterative refinement input. This parameter is shared with the ColabFold mode.                                                                                                              |
+| `--colabfold2_compile_cache`     | none    | Persistent compiled-kernel cache directory, shared across tasks and runs so JIT compilation is paid once per machine. Passed to `colabfold_batch` as `--compile-cache` (effective for the AlphaFold2 backends together with `--use-fast-kernels`, see `--colabfold2_kernel_backend`) and exported as `JAX_COMPILATION_CACHE_DIR`, which the AlphaFold3-family backends use for their per-bucket JIT compilation. |
 
 > You can override any of these parameters via the command line or a params file.

@@ -10,7 +10,10 @@
             "type": "object",
             "fa_icon": "fas fa-coins",
             "description": "Define where the pipeline should find input data and save output data.",
-            "required": ["input", "outdir"],
+            "required": [
+                "input",
+                "outdir"
+            ],
             "properties": {
                 "input": {
                     "type": "string",
@@ -41,7 +44,11 @@
                     "type": "string",
                     "default": "colabfold_search",
                     "description": "MSA generation module used to produce the input MSAs for structure prediction. One of colabfold_search (local MMseqs2 ColabFold search), alphafold2_msa (AlphaFold2 jackhmmer data pipeline, incl. species pairing), alphafold3_msa (AlphaFold3 data pipeline), or set --use_msa_server to use the ColabFold MSA server.",
-                    "enum": ["colabfold_search", "alphafold2_msa", "alphafold3_msa"],
+                    "enum": [
+                        "colabfold_search",
+                        "alphafold2_msa",
+                        "alphafold3_msa"
+                    ],
                     "fa_icon": "fas fa-search"
                 },
                 "use_gpu": {
@@ -89,7 +96,11 @@
                     "type": "string",
                     "default": "UniRef30_2023_02",
                     "description": "UniRef major release",
-                    "enum": ["UniRef30_2023_02", "UniRef30_2022_02", "UniRef30_2021_03"],
+                    "enum": [
+                        "UniRef30_2023_02",
+                        "UniRef30_2022_02",
+                        "UniRef30_2021_03"
+                    ],
                     "fa_icon": "fas fa-database"
                 },
                 "use_msa_server": {
@@ -127,7 +138,10 @@
                     "help_text": "Adds --pae-embed to populate_modelcif.py."
                 },
                 "modelcif_software_details": {
-                    "type": ["string", "null"],
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "default": null,
                     "description": "Optional YAML overriding the built-in software/protocol metadata used for ModelCIF population (e.g. template search attribution).",
                     "help_text": "Passed to populate_modelcif.py --software_details."
@@ -200,7 +214,12 @@
                     "type": "integer",
                     "description": "Specify the way that MMSeqs2 will load the required databases in memory",
                     "fa_icon": "fas fa-download",
-                    "enum": [0, 1, 2, 3],
+                    "enum": [
+                        0,
+                        1,
+                        2,
+                        3
+                    ],
                     "errorMessage": "DB load mode must be 0, 1, 2, or 3"
                 },
                 "colabfold_create_index": {
@@ -236,21 +255,38 @@
                 },
                 "colabfold2_weights_precision": {
                     "type": "string",
-                    "enum": ["fp32", "int8"],
+                    "enum": [
+                        "fp32",
+                        "int8"
+                    ],
                     "default": "fp32",
                     "description": "Weights precision for the selected ColabFold2 backend. int8 selects the '-int8' weight variant upstream stages for backends that provide one.",
                     "fa_icon": "fas fa-sliders-h"
                 },
                 "colabfold2_kernel_backend": {
                     "type": "string",
-                    "enum": ["auto", "pallas", "cuda_legacy"],
+                    "enum": [
+                        "auto",
+                        "pallas",
+                        "cuda_legacy"
+                    ],
                     "default": "auto",
                     "description": "Fused-kernel implementation used by colabfold_batch. 'auto' is the upstream default (tokamax/Pallas on sm_80+); on GPUs missing from the bundled JAX/Pallas device table (e.g. L40S, V100) 'auto' fails with 'No supported GPU devices found' and 'cuda_legacy' enables the colabfold-kernels shim with legacy float16 kernels instead.",
                     "fa_icon": "fas fa-microchip"
                 },
+                "colabfold2_compile_cache": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Persistent compiled-kernel cache directory, shared across tasks and runs so JIT compilation is paid once per machine. Passed to colabfold_batch as --compile-cache (effective for the AlphaFold2 backends together with --use-fast-kernels, see --colabfold2_kernel_backend) and exported as JAX_COMPILATION_CACHE_DIR, which the AlphaFold3-family backends use for their per-bucket JIT compilation. The directory must be writable inside the container; bind it with --singularity-args '--bind <dir>' if your container engine does not mount it by default.",
+                    "fa_icon": "fas fa-microchip"
+                },
                 "esmfold2_model": {
                     "type": "string",
-                    "enum": ["msa", "lm300m", "lm600m"],
+                    "enum": [
+                        "msa",
+                        "lm300m",
+                        "lm600m"
+                    ],
                     "default": "msa",
                     "description": "ESMFold2 model used by --mode esmfold2. msa uses the normal MSA model; lm300m and lm600m use the ESM-C language-model variants with --use-esm; confidence output depends on the upstream checkpoint and runtime version.",
                     "fa_icon": "fas fa-dna"
@@ -715,7 +751,14 @@
                     "description": "Method used to save pipeline results to output directory.",
                     "help_text": "The Nextflow `publishDir` option specifies which intermediate files should be saved to the output directory. This option tells the pipeline what method should be used to move these files. See [Nextflow docs](https://www.nextflow.io/docs/latest/process.html#publishdir) for details.",
                     "fa_icon": "fas fa-copy",
-                    "enum": ["symlink", "rellink", "link", "copy", "copyNoFollow", "move"],
+                    "enum": [
+                        "symlink",
+                        "rellink",
+                        "link",
+                        "copy",
+                        "copyNoFollow",
+                        "move"
+                    ],
                     "hidden": true
                 },
                 "email_on_fail": {
@@ -800,7 +843,10 @@
                     "hidden": true
                 },
                 "help": {
-                    "type": ["boolean", "string"],
+                    "type": [
+                        "boolean",
+                        "string"
+                    ],
                     "description": "Display the help message."
                 },
                 "help_full": {

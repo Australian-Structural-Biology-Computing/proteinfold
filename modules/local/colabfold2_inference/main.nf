@@ -41,6 +41,11 @@ process COLABFOLD2_INFERENCE {
     def precision = task.ext.weights_precision ?: 'fp32'
     // Forward the global --random_seed; colabfold_batch defaults to 0 anyway.
     def random_seed_arg = params.random_seed != null ? "--random-seed ${params.random_seed}" : ''
+    // Persistent JIT cache for the AF3-family backends: their pinned build has no
+    // native compile-cache consumption, so jax's own persistent compilation cache
+    // (JAX_COMPILATION_CACHE_DIR) covers them. The AlphaFold2 backends get
+    // colabfold's per-shape executable cache via the --compile-cache ext.args entry.
+    def compile_cache = params.colabfold2_compile_cache ?: ''
     def input_files = input instanceof Collection ? input.collect { file_path -> file_path.name } : [input.name]
     if (input_files.size() != 1) {
         error("COLABFOLD2_INFERENCE received multiple inputs for sample '${meta.id}'. Use --split_fasta to run each FASTA record independently.")
@@ -87,6 +92,10 @@ process COLABFOLD2_INFERENCE {
     _register_missing_gpu_kinds()
     EOF
     export PYTHONPATH="\$PWD\${PYTHONPATH:+:\$PYTHONPATH}"
+    if [ '${compile_cache}' != '' ]; then
+        mkdir -p '${compile_cache}'
+        export JAX_COMPILATION_CACHE_DIR='${compile_cache}'
+    fi
 
     mkdir raw
     colabfold_batch_af3_chainwise.py \
