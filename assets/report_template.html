@@ -1687,7 +1687,14 @@
     const maskBytes = base64ToBytes(payload.mask);
     const bytes = new Uint8Array(nCol * nSeqShown);
     for (let i = 0; i < nCol * nSeqShown; i++) {
-      if (maskBytes[i >> 3] & (0x80 >> (i & 7))) bytes[i] = seqid[(i / nCol) | 0];
+      if (maskBytes[i >> 3] & (0x80 >> (i & 7))) {
+        // A covered cell renders with its row's identity. The legacy static
+        // plot coloured every covered cell with rainbow_r(identity), so a
+        // cell whose identity quantises to zero takes the lowest colour step
+        // instead of collapsing into the white gap colour - that also keeps
+        // the coverage overlay counting raw non-gaps like the legacy plot.
+        bytes[i] = Math.max(seqid[(i / nCol) | 0], 1);
+      }
     }
     const linked = msaLinked;
 
@@ -1701,7 +1708,9 @@
     const M = { top: 72, right: 24, bottom: 48, left: 72 };
     const plot = { x: M.left, y: M.top, width: 0, height: 0, cellX: 0, cellY: 0 };
 
-    // Column coverage counts (rows with a non-gap alignment at that position)
+    // Column coverage counts (rows with a non-gap alignment at that
+    // position). Covered cells reconstruct to at least 1, so byte > 0 is
+    // exactly the legacy non-gap count.
     const coverage = new Array(nCol).fill(0);
     for (let r = 0; r < nSeqShown; r++) {
       for (let c = 0; c < nCol; c++) {
