@@ -87,9 +87,7 @@ with the privileges of every user whose runs consume it. Keep the cache
 per-user (e.g. `~/.cache/proteinfold/compile`, mode `0700`) and only share it
 within a group of mutually trusting accounts that runs under the same
 account boundary.
-The directory must be writable inside the container. If your container engine
-does not mount host paths by default, bind it explicitly, e.g.
-`--singularity-args '--bind /scratch/share/colabfold_compile_cache'`.
+
 ## Batching
 
 Both expensive stages can process several samples in a single task:

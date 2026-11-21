@@ -8,28 +8,17 @@
     prediction step runs through the colabfold2 backends.
 */
 
-include { COLABFOLD2_INFERENCE as ALPHAFOLD2      } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE as ALPHAFOLD3      } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE as BOLTZ2          } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE as OPENFOLD3       } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE as OPENBIND0       } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE as PROTEINX2       } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE as CHAI1           } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE as INTELLIFOLD2    } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE as OPENDDE         } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE as ROSETTAFOLD3    } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE as ESMFOLD2        } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE_BATCH as ALPHAFOLD2_BATCH } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE_BATCH as ALPHAFOLD3_BATCH } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE_BATCH as BOLTZ2_BATCH     } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE_BATCH as OPENFOLD3_BATCH  } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE_BATCH as OPENBIND0_BATCH  } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE_BATCH as PROTEINX2_BATCH  } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE_BATCH as CHAI1_BATCH      } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE_BATCH as INTELLIFOLD2_BATCH } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE_BATCH as OPENDDE_BATCH    } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE_BATCH as ROSETTAFOLD3_BATCH } from '../modules/local/colabfold2_inference'
-include { COLABFOLD2_INFERENCE_BATCH as ESMFOLD2_BATCH   } from '../modules/local/colabfold2_inference'
+include { COLABFOLD2_INFERENCE_BATCH as ALPHAFOLD2 } from '../modules/local/colabfold2_inference'
+include { COLABFOLD2_INFERENCE_BATCH as ALPHAFOLD3 } from '../modules/local/colabfold2_inference'
+include { COLABFOLD2_INFERENCE_BATCH as BOLTZ2 } from '../modules/local/colabfold2_inference'
+include { COLABFOLD2_INFERENCE_BATCH as OPENFOLD3 } from '../modules/local/colabfold2_inference'
+include { COLABFOLD2_INFERENCE_BATCH as OPENBIND0 } from '../modules/local/colabfold2_inference'
+include { COLABFOLD2_INFERENCE_BATCH as PROTEINX2 } from '../modules/local/colabfold2_inference'
+include { COLABFOLD2_INFERENCE_BATCH as CHAI1 } from '../modules/local/colabfold2_inference'
+include { COLABFOLD2_INFERENCE_BATCH as INTELLIFOLD2 } from '../modules/local/colabfold2_inference'
+include { COLABFOLD2_INFERENCE_BATCH as OPENDDE } from '../modules/local/colabfold2_inference'
+include { COLABFOLD2_INFERENCE_BATCH as ROSETTAFOLD3 } from '../modules/local/colabfold2_inference'
+include { COLABFOLD2_INFERENCE_BATCH as ESMFOLD2 } from '../modules/local/colabfold2_inference'
 
 include { TO_COLABFOLD_FASTA } from '../modules/local/to_colabfold_fasta'
 include { ALPHAFOLD3_JSON_TO_COLABFOLD_A3M   } from '../modules/local/af3_msa_json_to_a3m'
@@ -399,124 +388,67 @@ workflow PROTEINFOLD {
         )
     }
 
-    // Inference batching mirrors --msa_batch_size: N samples share one
-    // colabfold_batch task (one model/weight load for the whole batch).
-    // -1 runs all samples of a backend's model in a single task; 1 (default)
-    // runs per sample.
+    // Inference batching: N samples share one colabfold_batch task (one
+    // model/weight load for the whole batch); 1 runs one sample per task.
+    // Every backend runs the single batched process, for batch size 1 too.
     def inference_batch = inference_batch_size instanceof Number ?
         inference_batch_size : inference_batch_size.toString().toInteger()
     if (inference_batch == 0 || inference_batch < -1) {
         error("Inference batch size must be -1 or a positive integer, got ${inference_batch}")
     }
-    def batched_inference = inference_batch != 1
-    if (batched_inference && msa_tool == 'msa_server') {
+    def effective_inference_batch = msa_tool == 'msa_server' ? 1 : inference_batch
+    if (msa_tool == 'msa_server' && inference_batch != 1) {
         log.warn "Inference batching is not supported with --use_msa_server; running inference per sample."
-        batched_inference = false
     }
 
     def ch_backend_inputs = ch_backends.collectEntries { backend, ch ->
-        [backend, batched_inference ? batchInferenceInputs(ch, inference_batch) : ch]
+        [backend, batchInferenceInputs(ch, effective_inference_batch)]
     }
 
     def backends_out = [:]
     if (af2_specs) {
-        if (batched_inference) {
-            ALPHAFOLD2_BATCH(ch_backend_inputs['ALPHAFOLD2'], num_recycles)
-            backends_out['ALPHAFOLD2'] = splitBatchOutputs(ALPHAFOLD2_BATCH.out)
-        } else {
-            ALPHAFOLD2(ch_backend_inputs['ALPHAFOLD2'], num_recycles)
-            backends_out['ALPHAFOLD2'] = ALPHAFOLD2.out
-        }
+        ALPHAFOLD2(ch_backend_inputs['ALPHAFOLD2'], num_recycles)
+        backends_out['ALPHAFOLD2'] = splitBatchOutputs(ALPHAFOLD2.out)
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'ALPHAFOLD3' }) {
-        if (batched_inference) {
-            ALPHAFOLD3_BATCH(ch_backend_inputs['ALPHAFOLD3'], num_recycles)
-            backends_out['ALPHAFOLD3'] = splitBatchOutputs(ALPHAFOLD3_BATCH.out)
-        } else {
-            ALPHAFOLD3(ch_backend_inputs['ALPHAFOLD3'], num_recycles)
-            backends_out['ALPHAFOLD3'] = ALPHAFOLD3.out
-        }
+        ALPHAFOLD3(ch_backend_inputs['ALPHAFOLD3'], num_recycles)
+        backends_out['ALPHAFOLD3'] = splitBatchOutputs(ALPHAFOLD3.out)
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'BOLTZ2' }) {
-        if (batched_inference) {
-            BOLTZ2_BATCH(ch_backend_inputs['BOLTZ2'], num_recycles)
-            backends_out['BOLTZ2'] = splitBatchOutputs(BOLTZ2_BATCH.out)
-        } else {
-            BOLTZ2(ch_backend_inputs['BOLTZ2'], num_recycles)
-            backends_out['BOLTZ2'] = BOLTZ2.out
-        }
+        BOLTZ2(ch_backend_inputs['BOLTZ2'], num_recycles)
+        backends_out['BOLTZ2'] = splitBatchOutputs(BOLTZ2.out)
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'OPENFOLD3' }) {
-        if (batched_inference) {
-            OPENFOLD3_BATCH(ch_backend_inputs['OPENFOLD3'], num_recycles)
-            backends_out['OPENFOLD3'] = splitBatchOutputs(OPENFOLD3_BATCH.out)
-        } else {
-            OPENFOLD3(ch_backend_inputs['OPENFOLD3'], num_recycles)
-            backends_out['OPENFOLD3'] = OPENFOLD3.out
-        }
+        OPENFOLD3(ch_backend_inputs['OPENFOLD3'], num_recycles)
+        backends_out['OPENFOLD3'] = splitBatchOutputs(OPENFOLD3.out)
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'OPENBIND0' }) {
-        if (batched_inference) {
-            OPENBIND0_BATCH(ch_backend_inputs['OPENBIND0'], num_recycles)
-            backends_out['OPENBIND0'] = splitBatchOutputs(OPENBIND0_BATCH.out)
-        } else {
-            OPENBIND0(ch_backend_inputs['OPENBIND0'], num_recycles)
-            backends_out['OPENBIND0'] = OPENBIND0.out
-        }
+        OPENBIND0(ch_backend_inputs['OPENBIND0'], num_recycles)
+        backends_out['OPENBIND0'] = splitBatchOutputs(OPENBIND0.out)
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'PROTEINX2' }) {
-        if (batched_inference) {
-            PROTEINX2_BATCH(ch_backend_inputs['PROTEINX2'], num_recycles)
-            backends_out['PROTEINX2'] = splitBatchOutputs(PROTEINX2_BATCH.out)
-        } else {
-            PROTEINX2(ch_backend_inputs['PROTEINX2'], num_recycles)
-            backends_out['PROTEINX2'] = PROTEINX2.out
-        }
+        PROTEINX2(ch_backend_inputs['PROTEINX2'], num_recycles)
+        backends_out['PROTEINX2'] = splitBatchOutputs(PROTEINX2.out)
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'CHAI1' }) {
-        if (batched_inference) {
-            CHAI1_BATCH(ch_backend_inputs['CHAI1'], num_recycles)
-            backends_out['CHAI1'] = splitBatchOutputs(CHAI1_BATCH.out)
-        } else {
-            CHAI1(ch_backend_inputs['CHAI1'], num_recycles)
-            backends_out['CHAI1'] = CHAI1.out
-        }
+        CHAI1(ch_backend_inputs['CHAI1'], num_recycles)
+        backends_out['CHAI1'] = splitBatchOutputs(CHAI1.out)
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'INTELLIFOLD2' }) {
-        if (batched_inference) {
-            INTELLIFOLD2_BATCH(ch_backend_inputs['INTELLIFOLD2'], num_recycles)
-            backends_out['INTELLIFOLD2'] = splitBatchOutputs(INTELLIFOLD2_BATCH.out)
-        } else {
-            INTELLIFOLD2(ch_backend_inputs['INTELLIFOLD2'], num_recycles)
-            backends_out['INTELLIFOLD2'] = INTELLIFOLD2.out
-        }
+        INTELLIFOLD2(ch_backend_inputs['INTELLIFOLD2'], num_recycles)
+        backends_out['INTELLIFOLD2'] = splitBatchOutputs(INTELLIFOLD2.out)
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'OPENDDE' }) {
-        if (batched_inference) {
-            OPENDDE_BATCH(ch_backend_inputs['OPENDDE'], num_recycles)
-            backends_out['OPENDDE'] = splitBatchOutputs(OPENDDE_BATCH.out)
-        } else {
-            OPENDDE(ch_backend_inputs['OPENDDE'], num_recycles)
-            backends_out['OPENDDE'] = OPENDDE.out
-        }
+        OPENDDE(ch_backend_inputs['OPENDDE'], num_recycles)
+        backends_out['OPENDDE'] = splitBatchOutputs(OPENDDE.out)
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'ROSETTAFOLD3' }) {
-        if (batched_inference) {
-            ROSETTAFOLD3_BATCH(ch_backend_inputs['ROSETTAFOLD3'], num_recycles)
-            backends_out['ROSETTAFOLD3'] = splitBatchOutputs(ROSETTAFOLD3_BATCH.out)
-        } else {
-            ROSETTAFOLD3(ch_backend_inputs['ROSETTAFOLD3'], num_recycles)
-            backends_out['ROSETTAFOLD3'] = ROSETTAFOLD3.out
-        }
+        ROSETTAFOLD3(ch_backend_inputs['ROSETTAFOLD3'], num_recycles)
+        backends_out['ROSETTAFOLD3'] = splitBatchOutputs(ROSETTAFOLD3.out)
     }
     if (mode_specs.any { COLABFOLD2_BACKENDS[it.model_type] == 'ESMFOLD2' }) {
-        if (batched_inference) {
-            ESMFOLD2_BATCH(ch_backend_inputs['ESMFOLD2'], num_recycles)
-            backends_out['ESMFOLD2'] = splitBatchOutputs(ESMFOLD2_BATCH.out)
-        } else {
-            ESMFOLD2(ch_backend_inputs['ESMFOLD2'], num_recycles)
-            backends_out['ESMFOLD2'] = ESMFOLD2.out
-        }
+        ESMFOLD2(ch_backend_inputs['ESMFOLD2'], num_recycles)
+        backends_out['ESMFOLD2'] = splitBatchOutputs(ESMFOLD2.out)
     }
 
     // Combine every backend's emits. The metas already carry the public
