@@ -3,9 +3,7 @@
 import os
 import argparse
 import json
-import subprocess
 import sys
-import tempfile
 import warnings
 #import torch moved to a conditional import since too bulky import if not used
 import numpy as np
@@ -115,110 +113,37 @@ def sort_paths_by_rank(paths):
 
     return sorted(paths, key=sort_key)
 
-def build_struct_map(struct_files):
-    struct_map = {}
-    for idx, struct_file in enumerate(sort_paths_by_rank(struct_files)):
-        rank = infer_model_rank(struct_file)
-        if rank is None:
-            warnings.warn(f"Unable to infer model rank from path: {struct_file}; falling back to index {idx}")
-        struct_map[rank if rank is not None else idx] = struct_file
-    return struct_map
+def colabfold_chainwise_rows(data):
+    """Read the chainwise metrics surfaced in a colabfold scores JSON.
 
-def resolve_struct_for_model(struct_map, model_id):
-    if model_id in struct_map:
-        return struct_map[model_id]
-    try:
-        numeric_model_id = int(model_id)
-    except (TypeError, ValueError):
-        return None
-    return struct_map.get(numeric_model_id)
-
-def parse_ipsae_text_report(report_path):
-    pair_iptm_scores = []
-    pair_ipsae_scores = []
-    per_chain_ptm = {}
-    max_iptm = None
-    max_ipsae = None
-
-    with open(report_path) as handle:
-        for line in handle:
-            fields = line.split()
-            if len(fields) < 10:
-                continue
-
-            if fields[4] == "max":
-                pair_label = f"{fields[0]}:{fields[1]}"
-                ipsae_score = float(fields[5])
-                iptm_score = float(fields[9])
-
-                pair_iptm_scores.append((pair_label, iptm_score))
-                pair_ipsae_scores.append((pair_label, ipsae_score))
-                max_iptm = iptm_score if max_iptm is None else max(max_iptm, iptm_score)
-                max_ipsae = ipsae_score if max_ipsae is None else max(max_ipsae, ipsae_score)
-            elif fields[4] == "self" and fields[0] == fields[1]:
-                # Per-chain pTM on the diagonal of the chain-pair matrix.
-                try:
-                    per_chain_ptm[fields[0]] = float(fields[9])
-                except ValueError:
-                    continue
-
-    if max_iptm is None or max_ipsae is None:
-        return None
-
-    return (round(max_iptm, 3), pair_iptm_scores, round(max_ipsae, 3), pair_ipsae_scores,
-            per_chain_ptm)
-
-def derive_interface_scores(pae_matrix, struct_file, source_label):
-    try:
-        if len(get_chain_ids(struct_file)) < 2:
-            print(f"Skipping derived interface scores for {source_label}: fewer than 2 chains in {struct_file}")
-            return None
-    except Exception as e:
-        print(f"Skipping derived interface scores for {source_label}: failed to inspect chains in {struct_file}: {e}")
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory(prefix="ipsae_") as temp_dir:
-            struct_basename = os.path.basename(struct_file)
-            staged_struct = os.path.join(temp_dir, struct_basename)
-            pae_json = os.path.join(temp_dir, "pae.json")
-
-            try:
-                os.symlink(os.path.abspath(struct_file), staged_struct)
-            except OSError:
-                with open(struct_file, "rb") as src, open(staged_struct, "wb") as dst:
-                    dst.write(src.read())
-
-            with open(pae_json, "w") as handle:
-                json.dump({"pae": np.asarray(pae_matrix).tolist()}, handle)
-
-            subprocess.run(
-                [
-                    sys.executable,
-                    os.path.join(os.path.dirname(__file__), "ipsae.py"),
-                    pae_json,
-                    staged_struct,
-                    "10",
-                    "15",
-                ],
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-
-            report_path = os.path.join(
-                temp_dir,
-                f"{os.path.splitext(struct_basename)[0]}_10_15.txt",
-            )
-            return parse_ipsae_text_report(report_path)
-    except subprocess.CalledProcessError as e:
-        stderr = e.stderr.strip() if e.stderr else "no stderr"
-        print(f"Skipping derived interface scores for {source_label}: ipsae.py failed for {struct_file}: {stderr}")
-        return None
-    except (OSError, ValueError, json.JSONDecodeError) as e:
-        print(f"Skipping derived interface scores for {source_label}: {e}")
-        return None
+    The chain-pair metrics come from the scores JSON: the AF3-family
+    backends write their confidence head's chain_pair_iptm values and
+    per-chain pTM (via the colabfold_batch_af3_chainwise.py wrapper), the
+    AlphaFold2 backends write the --calc-extra-ptm pairwise metrics. Both
+    report one entry per unordered pair: the on-diagonal (A:A) rows are
+    the per-chain pTM and the off-diagonal (A:B) rows the pairwise
+    interface ipTM. Returns an empty list for monomer models, which have
+    no interface pairs.
+    """
+    entries = []
+    per_chain_ptm = data.get("per_chain_ptm") or {}
+    for chain_id, value in per_chain_ptm.items():
+        try:
+            entries.append((f"{chain_id}:{chain_id}", float(value)))
+        except (TypeError, ValueError):
+            continue
+    for pair_label, value in (data.get("pairwise_iptm") or {}).items():
+        chains = pair_label.split("-")
+        if len(chains) != 2:
+            continue
+        try:
+            entries.append((f"{chains[0]}:{chains[1]}", float(value)))
+        except (TypeError, ValueError):
+            continue
+    # No off-diagonal pairs means a monomer: nothing beyond the global
+    # scores is worth emitting.
+    has_pairs = any(label.split(":")[0] != label.split(":")[1] for label, _ in entries)
+    return entries if has_pairs else []
 
 def _scores_json_is_structure_only(scores_files):
     if not scores_files:
@@ -292,12 +217,11 @@ def read_paired_a3m(name, a3m_file):
     msa_rows = a3m_to_int(a3m_file)
     write_tsv(f"{name}_msa.tsv", format_msa_rows(msa_rows))
 
-def read_colabfold_metrics(name, colabfold_metrics_files, struct_files=None):
+def read_colabfold_metrics(name, colabfold_metrics_files):
     ptm_rows = []
     iptm_rows = []
     ipsae_rows = []
     chainwise = {}
-    struct_map = build_struct_map(struct_files) if struct_files else {}
     for fn in colabfold_metrics_files:
         with open(fn) as f:
             data = json.load(f)
@@ -310,22 +234,16 @@ def read_colabfold_metrics(name, colabfold_metrics_files, struct_files=None):
             ptm_rows.append((f"{rank_id}", data["ptm"]))
         if "iptm" in data:
             iptm_rows.append((f"{rank_id}", data["iptm"]))
-        struct_file = resolve_struct_for_model(struct_map, rank_id)
-        if "pae" in data and struct_file:
-            derived_scores = derive_interface_scores(np.array(data['pae']), struct_file, fn)
-            if derived_scores:
-                max_iptm, pair_iptm_scores, max_ipsae, _pair_ipsae_scores, per_chain_ptm = derived_scores
-                # One chainwise store: the off-diagonal rows carry the pairwise
-                # interface ipTM, the on-diagonal (A:A) rows the per-chain pTM.
-                chainwise_entries = list(pair_iptm_scores)
-                chainwise_entries.extend(
-                    (f"{chain_id}:{chain_id}", value) for chain_id, value in per_chain_ptm.items()
-                )
-                if chainwise_entries:
-                    chainwise[rank_id] = chainwise_entries
-                if not any(row[0] == f"{rank_id}" for row in iptm_rows) and max_iptm > 0:
-                    iptm_rows.append((f"{rank_id}", f"{max_iptm:.3f}"))
-                ipsae_rows.append((f"{rank_id}", f"{max_ipsae:.3f}"))
+        # Global ipSAE: colabfold's native per-chain-pair ipSAE dict from
+        # get_interface_scores (the AlphaFold2 backends run it natively;
+        # the AF3-family backends get it via
+        # colabfold_batch_af3_chainwise.py).
+        interface_ipsae = data.get("ipsae")
+        if isinstance(interface_ipsae, dict) and interface_ipsae:
+            ipsae_rows.append((f"{rank_id}", f"{max(interface_ipsae.values()):.3f}"))
+        chainwise_entries = colabfold_chainwise_rows(data)
+        if chainwise_entries:
+            chainwise[rank_id] = chainwise_entries
     if len(ptm_rows)>0:
         write_tsv(f"{name}_ptm.tsv", sorted(ptm_rows, key = lambda x: x[0]))
     if len(iptm_rows)>0:
@@ -348,7 +266,7 @@ def main():
     if args.structs:
         extract_structs_plddt_to_tsv(args.name, args.structs, args.colabfold_metrics_files)
     if args.colabfold_metrics_files:
-        read_colabfold_metrics(args.name, args.colabfold_metrics_files, args.structs)
+        read_colabfold_metrics(args.name, args.colabfold_metrics_files)
 
 if __name__ == "__main__":
     main()

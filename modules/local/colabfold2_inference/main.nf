@@ -55,7 +55,7 @@ process COLABFOLD2_INFERENCE {
         echo "COLABFOLD2_INFERENCE: colabfold_batch is missing or not executable on the container PATH" >&2
         exit 1
     fi
-    if ! python3 -c 'import colabfold, jax'; then
+    if ! python3 -c 'import colabfold, colabfold.alphafold3.predict, jax'; then
         echo "COLABFOLD2_INFERENCE: runtime import validation failed (colabfold/jax not importable, see traceback above)" >&2
         exit 1
     fi
@@ -88,9 +88,10 @@ process COLABFOLD2_INFERENCE {
     export PYTHONPATH="\$PWD\${PYTHONPATH:+:\$PYTHONPATH}"
 
     mkdir raw
-    colabfold_batch \
+    colabfold_batch_af3_chainwise.py \
         --model-type ${model_type} \
         ${use_esm_arg} \
+        --calc-extra-ptm \
         --num-recycle ${num_recycles} \
         --weights-precision ${precision} \
         --data "${params_path}" \
