@@ -30,7 +30,17 @@ process TO_COLABFOLD_FASTA {
     """
 
     stub:
+    // Stub runs must produce the real colon-joined query: downstream cache
+    // lookups key on the query content even in stub-mode test runs, where an
+    // empty placeholder would turn every cache hit into a miss. The stub
+    // therefore runs the same converter on the host (it only needs the
+    // standard library).
+    def staged = input_file instanceof Collection ? input_file[0].name : input_file.name
+    def input_name = staged.tokenize('/')[-1]
     """
-    touch ${meta.id}.fasta
+    to_colabfold_query_fasta.py \\
+        input/${input_name} \\
+        --id ${meta.id} \\
+        --output ${meta.id}.fasta
     """
 }
