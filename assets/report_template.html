@@ -1459,6 +1459,9 @@
       highlightRows: [],
       highlightCols: [],
       pendingSplit: null,
+      // Row/column provenance of the widget's own last selection, kept
+      // across colouring switches so the PAE re-applies the same bands
+      ownSplit: null,
       get mode() {
         return mode;
       },
@@ -1643,7 +1646,14 @@
         // A tooltip rendered for the previous colouring would be stale
         tooltip.classList.add("hidden");
         if (next === "pae" && hub.selection.length) {
-          this.setHighlight([...hub.selection], "other");
+          if (this.ownSplit) {
+            // Same bands as before the switch
+            this.highlightRows = this.ownSplit.rows;
+            this.highlightCols = this.ownSplit.cols;
+            this.draw();
+          } else {
+            this.setHighlight([...hub.selection], "other");
+          }
         } else {
           this.highlightRows = [];
           this.highlightCols = [];
@@ -1660,9 +1670,11 @@
         if (source === this.id && this.pendingSplit) {
           // Own selection: keep the row/column split so the PAE can draw a
           // horizontal band for the aligned block and a vertical one for the
-          // scored block instead of guessing from the flat index list
-          this.highlightRows = this.pendingSplit.rows;
-          this.highlightCols = this.pendingSplit.cols;
+          // scored block instead of guessing from the flat index list, and
+          // remember it so a colouring switch re-applies the same bands
+          this.ownSplit = this.pendingSplit;
+          this.highlightRows = this.ownSplit.rows;
+          this.highlightCols = this.ownSplit.cols;
           this.pendingSplit = null;
         } else if (mode !== "pae") {
           // The score colourings read as chain blocks: residue-level bands
@@ -1674,12 +1686,14 @@
             this.highlightCols = [];
             this.draw();
           }
+          this.ownSplit = null;
           return;
         } else {
           // Hub indices are residue indices; expand them to the tokens that
           // represent them on the matrix axes
           const tokens = [];
           indices.forEach((r) => residueTokens(r).forEach((t) => tokens.push(t)));
+          this.ownSplit = null;
           this.highlightRows = tokens;
           this.highlightCols = tokens;
         }
