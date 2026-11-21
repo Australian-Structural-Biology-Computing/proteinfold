@@ -9,11 +9,10 @@
  * non-protein entities intact).
  */
 
-include { MERGE_ALPHAFOLD3_MSA } from '../../../modules/local/merge_alphafold3_msa'
-include { MMSEQS_COLABFOLDSEARCH } from '../../../modules/local/mmseqs_colabfoldsearch'
-include { MMSEQS_COLABFOLDSEARCH_BATCH } from '../../../modules/local/mmseqs_colabfoldsearch'
-include { MSA_CACHE_LOOKUP } from '../../../modules/local/msa_cache_lookup'
 include { TO_COLABFOLD_FASTA } from '../../../modules/local/to_colabfold_fasta'
+include { MERGE_ALPHAFOLD3_MSA               } from '../../../modules/local/merge_alphafold3_msa'
+include { MMSEQS_COLABFOLDSEARCH_BATCH       } from '../../../modules/local/mmseqs_colabfoldsearch'
+include { MSA_CACHE_LOOKUP                   } from '../../../modules/local/msa_cache_lookup'
 
 workflow MSA_COLABFOLD_SEARCH {
 
@@ -67,39 +66,34 @@ workflow MSA_COLABFOLD_SEARCH {
         ch_cached_json = channel.empty()
     }
 
-    if (batch_size == 1) {
-        MMSEQS_COLABFOLDSEARCH (
-            ch_search_input,
-            ch_colabfold_db,
-            ch_uniref30,
-            cache_dir
-        )
-        ch_generated_json = MMSEQS_COLABFOLDSEARCH.out.json
-    } else {
-        ch_batches = ch_search_input
-            .map { meta, csv -> [meta.id, meta, csv] }
-            .collect(flat: false)
-            .flatMap { rows ->
-                def sorted = rows.sort { a, b -> a[0] <=> b[0] }
-                def ids = sorted.collect { row -> row[0] }
-                if (ids.toSet().size() != ids.size()) error("Duplicate sample IDs are not allowed")
-                def effective_batch_size = batch_size == -1 ? Math.max(1, sorted.size()) : batch_size
-                sorted.collate(effective_batch_size).collect { batch ->
-                    [batch.collect { item -> item[1] }, batch.collect { item -> item[2] }]
-                }
+    // One batched search path serves every batch size: 1 runs one sample per
+    // task, -1 runs all samples of the run in a single task. Each input is a
+    // colon-delimited FASTA holding exactly one record whose header is the
+    // sample id, so a batch is a plain concatenation and colabfold_search
+    // names every result after its record header.
+    ch_batches = ch_search_input
+        .map { meta, csv -> [meta.id, meta, csv] }
+        .collect(flat: false)
+        .flatMap { rows ->
+            def sorted = rows.sort { a, b -> a[0] <=> b[0] }
+            def ids = sorted.collect { row -> row[0] }
+            if (ids.toSet().size() != ids.size()) error("Duplicate sample IDs are not allowed")
+            def effective_batch_size = batch_size == -1 ? Math.max(1, sorted.size()) : batch_size
+            sorted.collate(effective_batch_size).collect { batch ->
+                [batch.collect { item -> item[1] }, batch.collect { item -> item[2] }]
             }
-        MMSEQS_COLABFOLDSEARCH_BATCH(ch_batches, ch_colabfold_db, ch_uniref30, cache_dir)
-        ch_generated_json = MMSEQS_COLABFOLDSEARCH_BATCH.out.json
-            .flatMap { batch_meta, files ->
-                def batch_files = files instanceof List ? files : [files]
-                batch_files.collect { file ->
-                    def sample_id = file.name.endsWith('.json') ? file.name[0..-6] : file.name
-                    def sample = batch_meta.find { meta -> meta.get('id') == sample_id }
-                    if (sample == null) error("MMseqs batch output ${file.name} does not match input samples ${batch_meta.collect { meta -> meta.id }}")
-                    [sample, file]
-                }
+        }
+    MMSEQS_COLABFOLDSEARCH_BATCH(ch_batches, ch_colabfold_db, ch_uniref30, cache_dir)
+    ch_generated_json = MMSEQS_COLABFOLDSEARCH_BATCH.out.json
+        .flatMap { batch_meta, files ->
+            def batch_files = files instanceof List ? files : [files]
+            batch_files.collect { file ->
+                def sample_id = file.name.endsWith('.json') ? file.name[0..-6] : file.name
+                def sample = batch_meta.find { meta -> meta.get('id') == sample_id }
+                if (sample == null) error("MMseqs batch output ${file.name} does not match input samples ${batch_meta.collect { meta -> meta.id }}")
+                [sample, file]
             }
-    }
+        }
 
     // Cached hits and freshly generated results are treated uniformly.
     ch_search_result_all = ch_generated_json.mix(ch_cached_json)

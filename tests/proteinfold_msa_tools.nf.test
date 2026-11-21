@@ -19,7 +19,7 @@ nextflow_pipeline {
     // msaProcess  = the MSA-generation process that must run
     // adaptor     = optional adaptor process that must run
     def tools = [
-        [msa_tool: 'colabfold_search', msaProcess: 'MMSEQS_COLABFOLDSEARCH',      adaptor: null],
+        [msa_tool: 'colabfold_search', msaProcess: 'MMSEQS_COLABFOLDSEARCH_BATCH', adaptor: null],
         [msa_tool: 'alphafold2_msa',   msaProcess: 'RUN_ALPHAFOLD2_MSA',          adaptor: 'AF2_MSA_TO_COLABFOLD_JSON'],
         [msa_tool: 'alphafold3_msa',   msaProcess: 'RUN_ALPHAFOLD3_DATAPIPELINE', adaptor: 'VALIDATE_ALPHAFOLD3_MSA_JSON'],
     ]
