@@ -6,8 +6,6 @@
                 "multiqc",
                 "multiqc/multiqc_data",
                 "multiqc/multiqc_data/.stub",
-                "multiqc/multiqc_data/proteinfold_opendde_generalstats_mqc.json",
-                "multiqc/multiqc_data/proteinfold_opendde_plddt_lineplot_mqc.json",
                 "multiqc/multiqc_plots",
                 "multiqc/multiqc_plots/.stub",
                 "multiqc/multiqc_report.html",
@@ -22,8 +20,6 @@
             ],
             [
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "proteinfold_opendde_generalstats_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "proteinfold_opendde_plddt_lineplot_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_server_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_server_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -31,7 +27,7 @@
                 "T1026_odde_server.cif:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-21T01:06:42.939648722",
+        "timestamp": "2026-11-21T12:47:19.138898605",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -49,8 +45,6 @@
                 "multiqc",
                 "multiqc/multiqc_data",
                 "multiqc/multiqc_data/.stub",
-                "multiqc/multiqc_data/proteinfold_opendde_generalstats_mqc.json",
-                "multiqc/multiqc_data/proteinfold_opendde_plddt_lineplot_mqc.json",
                 "multiqc/multiqc_plots",
                 "multiqc/multiqc_plots/.stub",
                 "multiqc/multiqc_report.html",
@@ -87,8 +81,6 @@
                 "T1026_mmseqs.a3m:md5,2d5bea1d28ffa33dc01f46541bedc592",
                 "T1026_mmseqs.json:md5,da95d1d89a8dec9b6eaa666b64c74d66",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "proteinfold_opendde_generalstats_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "proteinfold_opendde_plddt_lineplot_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_mmseqs_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_mmseqs_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -124,8 +116,6 @@
                 "multiqc",
                 "multiqc/multiqc_data",
                 "multiqc/multiqc_data/.stub",
-                "multiqc/multiqc_data/proteinfold_opendde_generalstats_mqc.json",
-                "multiqc/multiqc_data/proteinfold_opendde_plddt_lineplot_mqc.json",
                 "multiqc/multiqc_plots",
                 "multiqc/multiqc_plots/.stub",
                 "multiqc/multiqc_report.html",
@@ -140,8 +130,6 @@
             ],
             [
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "proteinfold_opendde_generalstats_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "proteinfold_opendde_plddt_lineplot_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_af2msa_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_af2msa_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -163,7 +151,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-21T01:05:18.702016952",
+        "timestamp": "2026-11-21T12:45:27.811779528",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -178,8 +166,6 @@
                 "multiqc",
                 "multiqc/multiqc_data",
                 "multiqc/multiqc_data/.stub",
-                "multiqc/multiqc_data/proteinfold_opendde_generalstats_mqc.json",
-                "multiqc/multiqc_data/proteinfold_opendde_plddt_lineplot_mqc.json",
                 "multiqc/multiqc_plots",
                 "multiqc/multiqc_plots/.stub",
                 "multiqc/multiqc_report.html",
@@ -192,8 +178,6 @@
             ],
             [
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "proteinfold_opendde_generalstats_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "proteinfold_opendde_plddt_lineplot_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "rich_sample_odde_af2msa_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "rich_sample_odde_af2msa.cif:md5,d41d8cd98f00b204e9800998ecf8427e"
@@ -213,7 +197,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-21T01:06:01.773768072",
+        "timestamp": "2026-11-21T12:46:18.258262622",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -234,8 +218,6 @@
                 "multiqc",
                 "multiqc/multiqc_data",
                 "multiqc/multiqc_data/.stub",
-                "multiqc/multiqc_data/proteinfold_opendde_generalstats_mqc.json",
-                "multiqc/multiqc_data/proteinfold_opendde_plddt_lineplot_mqc.json",
                 "multiqc/multiqc_plots",
                 "multiqc/multiqc_plots/.stub",
                 "multiqc/multiqc_report.html",
@@ -257,8 +239,6 @@
                 "T1024_data.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_data.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "proteinfold_opendde_generalstats_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "proteinfold_opendde_plddt_lineplot_mqc.json:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_af3msa_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_af3msa_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -278,7 +258,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-21T01:05:41.515880183",
+        "timestamp": "2026-11-21T12:45:51.607557291",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
