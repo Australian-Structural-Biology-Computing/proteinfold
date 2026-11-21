@@ -258,7 +258,8 @@
           </div>
           <p class="text-xs text-gray-500">
             Drag to select a block of residues; click a cell to pair two
-            residues. Selections highlight in the structure and MSA.
+            residues; Shift adds to the selection. Selections highlight in
+            the structure and MSA.
           </p>
           <div class="rounded-lg border border-gray-200 bg-white p-3">
             <div id="pae_placeholder"></div>
@@ -293,6 +294,9 @@
           <h2 class="text-sm font-semibold text-gray-900">
             MSA sequence coverage
           </h2>
+          <p class="text-xs text-gray-500">
+            Drag to select a position range; Shift adds to the selection.
+          </p>
           <div class="rounded-lg border border-gray-200 bg-white p-3">
             <div id="seq_cov_placeholder"></div>
           </div>
@@ -1184,16 +1188,17 @@
     canvas.addEventListener("pointerdown", (ev) => {
       const cell = widget.cellAt(ev);
       if (!widget.inPlot(cell)) return;
-      widget.drag = { anchor: cell, current: cell };
+      // Shift held at press time adds the new selection to the existing one
+      widget.drag = { anchor: cell, current: cell, shift: ev.shiftKey };
       canvas.setPointerCapture(ev.pointerId);
       ev.preventDefault();
     });
 
     const finish = () => {
       if (!widget.drag) return;
-      const { anchor, current } = widget.drag;
+      const { anchor, current, shift } = widget.drag;
       widget.drag = null;
-      widget.commitSelection(anchor, current);
+      widget.commitSelection(anchor, current, shift);
       widget.draw();
     };
     canvas.addEventListener("pointerup", finish);
@@ -1202,16 +1207,18 @@
 
   // Shared selection commit: a drag selects the covered range, a plain click
   // toggles the single-cell selection (click again, Esc or empty space clears)
-  const commitRangeSelection = (widget, anchor, current, axisOf) => {
+  const commitRangeSelection = (widget, anchor, current, axisOf, shift) => {
     const axis = axisOf(anchor, current);
     const sameAsAnchor = anchor.row === current.row && anchor.col === current.col;
     if (sameAsAnchor) {
       const indices = widget.singleCellIndices(anchor);
       const sorted = [...indices].sort((a, b) => a - b);
-      if (sameIndexSet(hub.selection, sorted)) hub.clear(widget.id);
+      if (shift) hub.set([...hub.selection, ...indices], widget.id);
+      else if (sameIndexSet(hub.selection, sorted)) hub.clear(widget.id);
       else hub.set(indices, widget.id);
     } else {
-      hub.set(indicesFromRange(axis.from, axis.to), widget.id);
+      const range = indicesFromRange(axis.from, axis.to);
+      hub.set(shift ? [...hub.selection, ...range] : range, widget.id);
     }
   };
 
@@ -1537,7 +1544,7 @@
         return { rows, cols, indices: [...rows, ...cols] };
       },
 
-      commitSelection(anchor, current) {
+      commitSelection(anchor, current, shift) {
         // Without a matching label list the PAE indices cannot be mapped onto
         // the structure or the MSA, so selections stay local (tooltips only)
         if (!linked) return;
@@ -1547,7 +1554,16 @@
           // that leaves the pressed block selects nothing
           if (!this.sameBlock(anchor, current)) return;
           const block = this.chainBlockIndices(anchor);
-          if (block) {
+          const indices = block
+            ? block.indices
+            : this.singleCellIndices(anchor);
+          if (shift) {
+            // Additive: union with the current selection; the flat
+            // row+column highlight stands in for the block split
+            const union = [...new Set([...hub.selection, ...this.toResidueIndices(indices)])];
+            this.pendingSplit = { rows: this.tokensOfResidues(union), cols: this.tokensOfResidues(union) };
+            hub.set(union, this.id);
+          } else if (block) {
             this.toggleSelection(block.indices, { rows: block.rows, cols: block.cols });
           } else {
             this.toggleSelection(this.singleCellIndices(anchor), {
@@ -1559,24 +1575,43 @@
         }
         const sameCell = anchor.row === current.row && anchor.col === current.col;
         if (sameCell) {
-          this.toggleSelection(this.singleCellIndices(anchor), {
-            rows: snapToLigands([anchor.row]),
-            cols: snapToLigands([anchor.col]),
-          });
+          if (shift) {
+            const union = [...new Set([...hub.selection, ...this.toResidueIndices([anchor.row, anchor.col])])];
+            this.pendingSplit = { rows: this.tokensOfResidues(union), cols: this.tokensOfResidues(union) };
+            hub.set(union, this.id);
+          } else {
+            this.toggleSelection(this.singleCellIndices(anchor), {
+              rows: snapToLigands([anchor.row]),
+              cols: snapToLigands([anchor.col]),
+            });
+          }
         } else {
           // Off-diagonal drags select both the row and the column ranges:
           // the residues of the aligned block and of the scored block,
           // snapped so a range ending inside a ligand covers it fully
           const rows = snapToLigands(indicesFromRange(anchor.row, current.row));
           const cols = snapToLigands(indicesFromRange(anchor.col, current.col));
-          this.pendingSplit = { rows, cols };
-          hub.set(this.toResidueIndices([...rows, ...cols]), this.id);
+          if (shift) {
+            const union = [...new Set([...hub.selection, ...this.toResidueIndices([...rows, ...cols])])];
+            this.pendingSplit = { rows: this.tokensOfResidues(union), cols: this.tokensOfResidues(union) };
+            hub.set(union, this.id);
+          } else {
+            this.pendingSplit = { rows, cols };
+            hub.set(this.toResidueIndices([...rows, ...cols]), this.id);
+          }
         }
       },
 
       // Matrix selections are token indices; the hub speaks residue indices
       toResidueIndices(tokens) {
         return [...new Set(tokens.map(PAE_TOKEN_TO_RESIDUE))].sort((a, b) => a - b);
+      },
+
+      // ...and back again: the bands are drawn at token positions
+      tokensOfResidues(residues) {
+        const tokens = [];
+        residues.forEach((r) => residueTokens(r).forEach((t) => tokens.push(t)));
+        return tokens;
       },
 
       toggleSelection(indices, split) {
@@ -1918,14 +1953,14 @@
         return [MSA_COL_TO_TOKEN ? MSA_COL_TO_TOKEN[cell.col] : cell.col];
       },
 
-      commitSelection(anchor, current) {
+      commitSelection(anchor, current, shift) {
         // Positions cannot be mapped onto the structure when the query length
         // differs from the polymer, so selections stay local (tooltips only)
         if (!linked) return;
         commitRangeSelection(this, anchor, current, (a, c) => ({
           from: Math.min(a.col, c.col),
           to: Math.max(a.col, c.col),
-        }));
+        }), shift);
       },
 
       setHighlight(indices) {
