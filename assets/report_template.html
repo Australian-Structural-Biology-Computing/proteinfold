@@ -853,7 +853,7 @@
   ];
 
   const sampleStops = (stops, t) => {
-    const clamped = Math.max(0, Math.min(1, t));
+    const clamped = Number.isFinite(t) ? Math.max(0, Math.min(1, t)) : 0;
     const scaled = clamped * (stops.length - 1);
     const i = Math.min(Math.floor(scaled), stops.length - 2);
     const f = scaled - i;
@@ -1312,16 +1312,17 @@
           const y0 = plot.y + lanes.starts[segB.start];
           const y1 = plot.y + lanes.starts[segB.end] + lanes.widths[segB.end];
           const value = table[`${segA.chain}|${segB.chain}`];
-          const color =
-            value !== undefined && value !== null && value !== ""
-              ? scoreColor(parseFloat(value))
-              : segA === segB
-                ? SELF_BLOCK_COLOR
-                : UNREPORTED_BLOCK_COLOR;
+          const parsed = value !== undefined && value !== null && value !== "" ? parseFloat(value) : NaN;
+          const hasValue = Number.isFinite(parsed);
+          const color = hasValue
+            ? scoreColor(parsed)
+            : segA === segB
+              ? SELF_BLOCK_COLOR
+              : UNREPORTED_BLOCK_COLOR;
           // scoreColor returns an [r, g, b] array, which fillStyle rejects
           ctx.fillStyle = Array.isArray(color) ? `rgb(${color[0]},${color[1]},${color[2]})` : color;
           ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-          if (value !== undefined && value !== null && value !== "") {
+          if (hasValue) {
             // Report the number on the block itself - but only when the
             // block can hold it: small blocks (e.g. the fixed-width ligand
             // lanes) stay readable and report their value on hover instead
@@ -2096,7 +2097,8 @@
           matrix.rows.forEach((row, i) => {
             const rowChain = matrix.chains[i];
             row.forEach((value, j) => {
-              if (value !== "" && value !== null && value !== undefined) {
+              // Non-numeric cells ("n/a", stray NaN strings) stay unreported
+              if (value !== "" && value !== null && value !== undefined && Number.isFinite(parseFloat(value))) {
                 map[`${rowChain}|${matrix.chains[j]}`] = value;
               }
             });
