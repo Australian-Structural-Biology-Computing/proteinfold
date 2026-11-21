@@ -125,8 +125,10 @@ def _af3_interface_scores(inference_result):
     )
 
 
-def scores_of_with_chainwise(inference_result, ranking_score):
-    scores = _original_scores_of(inference_result, ranking_score)
+def scores_of_with_chainwise(inference_result, ranking_score, *args, **kwargs):
+    # Forward extra positional arguments (the af3-preview tip passes a
+    # has-confidence flag) so signature drift upstream stays harmless.
+    scores = _original_scores_of(inference_result, ranking_score, *args, **kwargs)
     if scores.get("failed"):
         return scores
     try:
