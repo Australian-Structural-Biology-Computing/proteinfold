@@ -18,10 +18,39 @@
       #molstar-root .msp-viewport {
         background: transparent;
       }
-      .seq-residue {
-        display: inline-block;
+      .seq-row {
+        display: flex;
+        align-items: flex-end;
+        gap: 1px;
+        margin-bottom: 3px;
+        width: max-content;
+      }
+      .seq-gutter {
+        flex: 0 0 4ch;
+        padding-right: 8px;
+        text-align: right;
+        font-size: 10px;
+        color: #9ca3af;
+        line-height: 1.55;
+      }
+      .seq-chip {
+        flex: 0 0 3ch;
+        margin-right: 4px;
         border-radius: 2px;
-        line-height: 1.3;
+        text-align: center;
+        font-family: system-ui, sans-serif;
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 1.55;
+        visibility: hidden;
+      }
+      .seq-row.seq-chip-row .seq-chip {
+        visibility: visible;
+      }
+      .seq-residue {
+        width: 1.5ch;
+        border-radius: 2px;
+        line-height: 1.45;
         text-align: center;
       }
       .seq-residue:hover {
@@ -32,9 +61,6 @@
       }
       .seq-residue.seq-preview {
         box-shadow: inset 0 0 0 1.5px rgba(194, 65, 12, 0.45);
-      }
-      .seq-ruler {
-        border-top: 2px solid rgba(0, 0, 0, 0.22);
       }
     </style>
   </head>
@@ -240,7 +266,7 @@
             range &middot; Esc clears.
           </p>
         </div>
-        <div class="rounded-lg border border-gray-200 bg-white p-3">
+        <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white p-3">
           <div id="sequence-root" class="w-full"></div>
         </div>
       </section>
@@ -2060,47 +2086,66 @@
   function createSequencePanel(container) {
     const frame = document.createElement("div");
     frame.className =
-      "select-none whitespace-normal break-all font-mono text-[11px] leading-[1.35] cursor-pointer";
+      "select-none font-mono text-xs leading-[1.45] cursor-pointer pt-1";
     container.appendChild(frame);
 
     const spans = []; // token index -> residue span
     const chainOf = (seg) => RESIDUES[seg.start][0];
     const isLigandSeg = (seg) => !!RESIDUES[seg.start][4];
+    const RESIDUES_PER_ROW = 100;
 
-    CHAIN_SEGMENTS.forEach((seg, segIx) => {
-      if (segIx > 0) {
-        const gap = document.createElement("span");
-        gap.className = "inline-block w-4";
-        gap.textContent = " ";
-        frame.appendChild(gap);
-      }
-      // Chain chip before each block; ligand segments keep the rose lane
-      // colour used on the matrix axes
+    let row = null;
+    let rowCount = 0;
+    let chipBand = null;
+    let chipFg = null;
+    const startRow = (ix, seg) => {
+      row = document.createElement("div");
+      row.className = "seq-row";
+      const gutter = document.createElement("span");
+      gutter.className = "seq-gutter";
+      gutter.textContent = String(RESIDUES[ix][1]);
+      row.appendChild(gutter);
+      // Every row reserves the chip slot so residue columns stay aligned;
+      // the chip itself is only visible on the chain's first row. Ligand
+      // segments keep the rose lane colour used on the matrix axes.
       const { band, text } = chainColorPair(seg);
-      const bandBg = isLigandSeg(seg) ? "#fda4af" : band;
-      const bandFg = isLigandSeg(seg) ? "#9f1239" : text;
+      chipBand = isLigandSeg(seg) ? "#fda4af" : band;
+      chipFg = isLigandSeg(seg) ? "#9f1239" : text;
       const chip = document.createElement("span");
-      chip.className = "mr-1 inline-block rounded-sm px-1 font-sans font-semibold";
-      chip.style.background = bandBg;
-      chip.style.color = bandFg;
+      chip.className = "seq-chip";
+      chip.style.background = chipBand;
+      chip.style.color = chipFg;
       chip.textContent = chainOf(seg);
-      frame.appendChild(chip);
+      row.appendChild(chip);
+      // The chip is visible only on the chain's first row
+      if (ix === seg.start) row.classList.add("seq-chip-row");
+      frame.appendChild(row);
+      rowCount = 0;
+    };
 
+    CHAIN_SEGMENTS.forEach((seg) => {
       for (let ix = seg.start; ix <= seg.end; ix++) {
+        if (!row || rowCount >= RESIDUES_PER_ROW || ix === seg.start) startRow(ix, seg);
         const r = RESIDUES[ix];
         const span = document.createElement("span");
         span.className = "seq-residue";
         const one = ONE_LETTER_CODES[r[2].toUpperCase()];
         span.textContent = r[4] ? r[2] : one || "?";
-        span.style.background = bandBg;
-        span.style.color = bandFg;
-        if (r[4]) span.style.fontWeight = "600";
-        // A subtle top tick every ten residues of the segment as a ruler
-        if ((ix - seg.start) % 10 === 0) span.classList.add("seq-ruler");
+        span.style.background = chipBand;
+        span.style.color = chipFg;
+        if (r[4]) {
+          // Ligand names are three-plus characters: let the cell grow so
+          // the name stays readable instead of overflowing the box
+          span.style.width = "auto";
+          span.style.minWidth = "1.5ch";
+          span.style.padding = "0 2px";
+          span.style.fontWeight = "600";
+        }
         span.title = `${r[0]}:${r[1]} ${r[2]}${r[4] ? " (ligand)" : ""}`;
         span.dataset.ix = String(ix);
-        frame.appendChild(span);
+        row.appendChild(span);
         spans[ix] = span;
+        rowCount++;
       }
     });
 
