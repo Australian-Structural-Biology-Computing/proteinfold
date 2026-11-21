@@ -6,7 +6,7 @@ include { ARIA2_UNCOMPRESS as ARIA2_UNIREF30     } from '../aria2_uncompress/mai
 process DOWNLOAD_COLABFOLD2_WEIGHTS {
     tag "$colabfold2_model ($colabfold2_precision)"
     label 'process_medium'
-    container "ghcr.io/jscgh/proteinfold_colabfold:af3-preview-e9e8bd0"
+    container "ghcr.io/tlitfin/proteinfold_colabfold:af3-preview-38683c2"
 
     input:
     tuple val(colabfold2_model), val(colabfold2_precision)
@@ -35,7 +35,7 @@ process DOWNLOAD_COLABFOLD2_WEIGHTS {
 process DOWNLOAD_COLABFOLD2_AF2_WEIGHTS {
     tag "alphafold2 (${colabfold2_variants.join(',')})"
     label 'process_medium'
-    container "ghcr.io/jscgh/proteinfold_colabfold:af3-preview-e9e8bd0"
+    container "ghcr.io/tlitfin/proteinfold_colabfold:af3-preview-38683c2"
 
     input:
     val colabfold2_variants

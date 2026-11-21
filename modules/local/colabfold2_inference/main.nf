@@ -3,7 +3,7 @@ process COLABFOLD2_INFERENCE {
     label 'process_medium'
     label 'process_gpu'
 
-    container "ghcr.io/jscgh/proteinfold_colabfold:af3-preview-38683c2"
+    container "ghcr.io/tlitfin/proteinfold_colabfold:af3-preview-38683c2"
 
     input:
     tuple val(meta), path(input), val(model_type), val(use_esm), path(params_path)
