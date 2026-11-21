@@ -374,6 +374,28 @@
     return out;
   };
 
+  // Token span of the ligand residue owning a PAE token (null for polymer
+  // tokens); single-token ligands span exactly themselves
+  const ligandTokenSpan = (ix) => {
+    const r = PAE_TOKEN_TO_RESIDUE(ix);
+    if (!RESIDUES[r] || !RESIDUES[r][4]) return null;
+    const ranges = RESIDUE_TOKEN_RANGES.get(r) || [];
+    if (!ranges.length) return null;
+    return [ranges[0].start, ranges[ranges.length - 1].end];
+  };
+
+  // A selection that ends partway into a multi-token ligand covers the
+  // whole ligand, like single-token ligands always have
+  const snapToLigands = (tokens) => {
+    const out = new Set();
+    tokens.forEach((t) => {
+      const span = ligandTokenSpan(t);
+      if (span) for (let i = span[0]; i <= span[1]; i++) out.add(i);
+      else out.add(t);
+    });
+    return [...out].sort((a, b) => a - b);
+  };
+
   // Ligand tokens (HETATM residues) are flagged by the Python side. They get
   // a fixed lane width on the PAE axes so they stay visible and selectable.
   const isLigandToken = (ix) => !!RESIDUES[ix] && !!RESIDUES[ix][4];
@@ -1454,8 +1476,8 @@
             this.toggleSelection(block.indices, { rows: block.rows, cols: block.cols });
           } else {
             this.toggleSelection(this.singleCellIndices(anchor), {
-              rows: [anchor.row],
-              cols: [anchor.col],
+              rows: snapToLigands([anchor.row]),
+              cols: snapToLigands([anchor.col]),
             });
           }
           return;
@@ -1463,14 +1485,15 @@
         const sameCell = anchor.row === current.row && anchor.col === current.col;
         if (sameCell) {
           this.toggleSelection(this.singleCellIndices(anchor), {
-            rows: [anchor.row],
-            cols: [anchor.col],
+            rows: snapToLigands([anchor.row]),
+            cols: snapToLigands([anchor.col]),
           });
         } else {
           // Off-diagonal drags select both the row and the column ranges:
-          // the residues of the aligned block and of the scored block
-          const rows = indicesFromRange(anchor.row, current.row);
-          const cols = indicesFromRange(anchor.col, current.col);
+          // the residues of the aligned block and of the scored block,
+          // snapped so a range ending inside a ligand covers it fully
+          const rows = snapToLigands(indicesFromRange(anchor.row, current.row));
+          const cols = snapToLigands(indicesFromRange(anchor.col, current.col));
           this.pendingSplit = { rows, cols };
           hub.set(this.toResidueIndices([...rows, ...cols]), this.id);
         }
@@ -1653,10 +1676,20 @@
         if (this.drag && mode === "pae") {
           const a = this.drag.anchor;
           const c = this.drag.current;
-          const r0 = Math.min(a.row, c.row);
-          const r1 = Math.max(a.row, c.row);
-          const c0 = Math.min(a.col, c.col);
-          const c1 = Math.max(a.col, c.col);
+          // The preview snaps to full ligand tokens the same way the
+          // committed selection will, so what you see is what you get
+          const edgeLo = (t) => {
+            const span = ligandTokenSpan(t);
+            return span ? Math.min(t, span[0]) : t;
+          };
+          const edgeHi = (t) => {
+            const span = ligandTokenSpan(t);
+            return span ? Math.max(t, span[1]) : t;
+          };
+          const r0 = Math.min(edgeLo(a.row), edgeLo(c.row));
+          const r1 = Math.max(edgeHi(a.row), edgeHi(c.row));
+          const c0 = Math.min(edgeLo(a.col), edgeLo(c.col));
+          const c1 = Math.max(edgeHi(a.col), edgeHi(c.col));
           const x0 = lanes.pos(c0);
           const x1 = lanes.end(c1);
           const y0 = plot.y + lanes.starts[r0];
