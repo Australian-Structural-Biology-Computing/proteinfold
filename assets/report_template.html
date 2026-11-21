@@ -105,7 +105,7 @@
               <button
                 type="button"
                 data-mode="plddt"
-                class="rounded-md bg-gray-100 px-2.5 py-1 font-medium text-gray-900"
+                class="rounded-md bg-gray-900 px-2.5 py-1 font-medium text-white"
               >
                 pLDDT
               </button>
@@ -175,7 +175,7 @@
               <button
                 type="button"
                 data-mode="pae"
-                class="rounded-md px-2.5 py-1 font-medium text-gray-900"
+                class="rounded-md bg-gray-900 px-2.5 py-1 font-medium text-white"
               >
                 PAE
               </button>
@@ -1973,6 +1973,19 @@
 
   const hasScoreRows = (matrix) => !!matrix && !!matrix.chains?.length && !!matrix.rows?.length;
 
+  // Segmented toggles mark the selected tab with a dark pill - subtle
+  // backgrounds are too easy to miss against the white container
+  const markToggleActive = (container, activeBtn) => {
+    if (!container || !activeBtn) return;
+    container.querySelectorAll("button[data-mode]").forEach((btn) => {
+      const active = btn === activeBtn;
+      btn.classList.toggle("bg-gray-900", active);
+      btn.classList.toggle("text-white", active);
+      btn.classList.toggle("text-gray-500", !active);
+      btn.classList.remove("text-gray-900", "bg-gray-100");
+    });
+  };
+
   const renderScoreMatrix = (containerId, matrix, emptyText) => {
     const container = document.getElementById(containerId);
     const chains = matrix?.chains || [];
@@ -2100,16 +2113,12 @@
           toggle.querySelectorAll("button[data-mode]").forEach((btn) => {
             const metric = btn.dataset.mode;
             btn.classList.toggle("hidden", metric !== "pae" && !scoreMaps[metric]);
-            btn.classList.toggle("bg-gray-100", metric === "pae");
             btn.addEventListener("click", () => {
               paeWidget.setMode(metric);
-              toggle.querySelectorAll("button[data-mode]").forEach((other) => {
-                other.classList.toggle("bg-gray-100", other === btn);
-                other.classList.toggle("text-gray-900", other === btn);
-                other.classList.toggle("text-gray-500", other !== btn);
-              });
+              markToggleActive(toggle, btn);
             });
           });
+          markToggleActive(toggle, toggle.querySelector('button[data-mode="pae"]'));
         }
       }
     }
@@ -2175,12 +2184,7 @@
           const mode = btn.dataset.mode;
           if (mode === structureColorMode || !viewer) return;
           structureColorMode = mode;
-          colorToggle.querySelectorAll("button[data-mode]").forEach((other) => {
-            const active = other === btn;
-            other.classList.toggle("bg-gray-100", active);
-            other.classList.toggle("text-gray-900", active);
-            other.classList.toggle("text-gray-500", !active);
-          });
+          markToggleActive(colorToggle, btn);
           document.getElementById("plddt-legend").classList.toggle("hidden", mode !== "plddt");
           chainLegend.classList.toggle("hidden", mode !== "chain");
           const themeName = mode === "chain" ? CHAIN_THEME_NAME : PLDDT_THEME_NAME;
