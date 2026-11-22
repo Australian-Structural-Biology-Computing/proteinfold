@@ -65,7 +65,9 @@ def splitBatchGroupedFiles(out_channel) {
         def grouped = list
             .collect { file -> [matchBatchSample(batch_meta, file.name), file] }
             .groupBy { it[0] }
-        batch_meta.collect { meta ->
+        // Private copy: the batch metadata list is shared across concurrent
+        // consumers of the same task output.
+        new ArrayList(batch_meta).collect { meta ->
             def sample_files = (grouped[meta] ?: []).collect { it[1] }.sort { file ->
                 def matcher = file.name =~ /_rank_(\d+)_/
                 matcher.find() ? matcher.group(1).toInteger() : Integer.MAX_VALUE
@@ -224,7 +226,8 @@ workflow PROTEINFOLD {
             ch_input_by_ext.json,
             msa_batch_size,
             ch_colabfold_db,
-            ch_uniref30
+            ch_uniref30,
+            params.analysis_batch_size as Integer
         )
         ch_msa_input = MSA_COLABFOLD_SEARCH.out.msa_json.map { meta, input ->
             def tagged = meta.clone()
@@ -248,7 +251,8 @@ workflow PROTEINFOLD {
             ch_af2_uniref30,
             ch_af2_uniref90,
             ch_af2_pdb_seqres,
-            ch_af2_uniprot
+            ch_af2_uniprot,
+            params.analysis_batch_size as Integer
         )
         ch_msa_input = MSA_ALPHAFOLD2.out.msa_json.map { meta, input ->
             def tagged = meta.clone()

@@ -11,17 +11,19 @@
 
 include { TO_COLABFOLD_FASTA } from '../../../modules/local/to_colabfold_fasta'
 include { MERGE_ALPHAFOLD3_MSA               } from '../../../modules/local/merge_alphafold3_msa'
+include { batchMergeInputs                   } from '../utils_nfcore_proteinfold_pipeline'
 include { MMSEQS_COLABFOLDSEARCH_BATCH       } from '../../../modules/local/mmseqs_colabfoldsearch'
 include { MSA_CACHE_LOOKUP                   } from '../../../modules/local/msa_cache_lookup'
 
 workflow MSA_COLABFOLD_SEARCH {
 
     take:
-    ch_fasta         // channel: [meta, fasta] FASTA-origin samples
-    ch_json          // channel: [meta, json] AlphaFold3-JSON-origin samples
-    msa_batch_size   // int: number of samples processed together per search (-1 = one batch)
-    ch_colabfold_db  // channel: path(colabfold_db)
-    ch_uniref30      // channel: path(uniref30)
+    ch_fasta               // channel: [meta, fasta] FASTA-origin samples
+    ch_json                // channel: [meta, json] AlphaFold3-JSON-origin samples
+    msa_batch_size         // int: number of samples processed together per search (-1 = one batch)
+    ch_colabfold_db        // channel: path(colabfold_db)
+    ch_uniref30            // channel: path(uniref30)
+    analysis_batch_size    // int: number of JSON-origin samples merged together per task (-1 = one batch)
 
     main:
     // Mark JSON-origin samples so their search results are merged back into
@@ -116,8 +118,21 @@ workflow MSA_COLABFOLD_SEARCH {
         }
         .set { ch_json_merge_input }
 
-    MERGE_ALPHAFOLD3_MSA(ch_json_merge_input)
+    // One merge task per analysis batch: every row repopulates its sample's
+    // original AlphaFold3 JSON with the searched MSAs, and the merged JSONs
+    // are matched back to their samples by the sanitised-id file name.
+    MERGE_ALPHAFOLD3_MSA(batchMergeInputs(ch_json_merge_input, analysis_batch_size))
+    def sanitise = { id -> (id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_') }
+    ch_merged_json = MERGE_ALPHAFOLD3_MSA.out.json
+        .flatMap { batch_meta, files ->
+            def list = new ArrayList(files instanceof List ? files : [files])
+            list.collect { file ->
+                def sid = file.name.replaceAll(/\.json$/, '')
+                def meta = batch_meta.find { sanitise(it.id) == sid }
+                meta == null ? error("Merged MSA JSON ${file.name} does not match any sample in the batch") : [meta, file]
+            }
+        }
 
     emit:
-    msa_json = ch_search_result.fasta.mix(MERGE_ALPHAFOLD3_MSA.out.json)
+    msa_json = ch_search_result.fasta.mix(ch_merged_json)
 }

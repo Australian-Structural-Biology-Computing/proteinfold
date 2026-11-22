@@ -17,9 +17,10 @@ nextflow_process {
             process {
                 """
                 input[0] = [
-                    [ id: 'rich_sample' ],
-                    file('${searchedJson}', checkIfExists: true),
-                    file('${originalJson}', checkIfExists: true)
+                    [ [ id: 'rich_sample' ] ],
+                    [ file('${searchedJson}', checkIfExists: true) ],
+                    [ file('${originalJson}', checkIfExists: true) ],
+                    'rich_sample\tsearched.json\toriginal.json'
                 ]
                 """
             }

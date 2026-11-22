@@ -13,6 +13,7 @@ include { ALPHAFOLD3_JSON_TO_AF2_FASTA } from '../../../modules/local/alphafold3
 include { MERGE_ALPHAFOLD3_MSA         } from '../../../modules/local/merge_alphafold3_msa'
 include { RUN_ALPHAFOLD2_MSA           } from '../../../modules/local/run_alphafold2_msa'
 include { AF2_MSA_TO_COLABFOLD_JSON    } from '../../../modules/local/af2_msa_to_colabfold_json'
+include { batchMergeInputs             } from '../utils_nfcore_proteinfold_pipeline'
 
 workflow MSA_ALPHAFOLD2 {
 
@@ -33,6 +34,7 @@ workflow MSA_ALPHAFOLD2 {
     ch_af2_uniref90              // channel: path(uniref90)
     ch_af2_pdb_seqres            // channel: path(pdb_seqres)
     ch_af2_uniprot               // channel: path(uniprot)
+    analysis_batch_size          // int: number of JSON-origin samples merged together per task (-1 = one batch)
 
     main:
     // AlphaFold3 JSON inputs: extract their protein chains into a
@@ -101,8 +103,20 @@ workflow MSA_ALPHAFOLD2 {
         }
         .set { ch_af2_json_merge_input }
 
-    MERGE_ALPHAFOLD3_MSA(ch_af2_json_merge_input)
+    // One merge task per analysis batch, mirroring the colabfold_search flow;
+    // the merged JSONs are matched back to their samples by file name.
+    def sanitise = { id -> (id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_') }
+    MERGE_ALPHAFOLD3_MSA(batchMergeInputs(ch_af2_json_merge_input, analysis_batch_size))
+    ch_merged_json = MERGE_ALPHAFOLD3_MSA.out.json
+        .flatMap { batch_meta, files ->
+            def list = new ArrayList(files instanceof List ? files : [files])
+            list.collect { file ->
+                def sid = file.name.replaceAll(/\.json$/, '')
+                def meta = batch_meta.find { sanitise(it.id) == sid }
+                meta == null ? error("Merged MSA JSON ${file.name} does not match any sample in the batch") : [meta, file]
+            }
+        }
 
     emit:
-    msa_json = ch_af2_adaptor_result.fasta.mix(MERGE_ALPHAFOLD3_MSA.out.json)
+    msa_json = ch_af2_adaptor_result.fasta.mix(ch_merged_json)
 }

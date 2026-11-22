@@ -1,5 +1,7 @@
+include { batchTag } from '../../../subworkflows/local/utils_nfcore_proteinfold_pipeline'
+
 process MERGE_ALPHAFOLD3_MSA {
-    tag   "$meta.id"
+    tag   "${batchTag(batch_meta)}"
     label 'process_single'
 
     conda "${moduleDir}/environment.yml"
@@ -8,37 +10,55 @@ process MERGE_ALPHAFOLD3_MSA {
         'community.wave.seqera.io/library/biopython_python:06582b7b722f3db3' }"
 
     input:
-    tuple val(meta), path(msa_json, stageAs: 'searched_msa.json'), path(original_json, stageAs: 'original_input.json')
+    tuple val(batch_meta), path(msa_jsons, stageAs: 'searched/*'), path(original_jsons, stageAs: 'original/*'), val(manifest)
+    // manifest: one '<sample id>\t<searched MSA file>\t<original input file>' line per sample
 
     output:
-    tuple val(meta), path("${meta.id}.json"), emit: json
-    path "versions.yml"                       , emit: versions
+    tuple val(batch_meta), path("*.json"), emit: json
+    path "versions.yml"                   , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
+    // One task merges a whole batch: each row repopulates the sample's
+    // original (possibly rich) AlphaFold3 JSON with its searched MSAs, and
+    // the merged JSON is named after the sanitised sample id.
+    def safe = { name -> "'" + (name as String).replaceAll("'", "'\\''") + "'" }
     """
-    merge_alphafold3_msa.py \
-        ${msa_json} \
-        ${original_json} \
-        --output ${meta.id}.json
+cat > manifest.tsv <<'MERGE_MANIFEST'
+${manifest}
+MERGE_MANIFEST
 
-    cat <<-END_VERSIONS > versions.yml
+while IFS=\$'\\t' read -r sid msa_name original_name <&3; do
+    merge_alphafold3_msa.py \\
+        "searched/\${msa_name}" \\
+        "original/\${original_name}" \\
+        --output "\${sid}.json"
+done 3< manifest.tsv
+
+cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         python: \$(python3 --version | sed 's/Python //g')
     END_VERSIONS
-    """
+"""
 
     stub:
+    // The merge is pure-python JSON repopulation; the original input is a
+    // real staged file even in stub runs, so hand it through unchanged to
+    // keep downstream consumers (a3m conversion, inference) honest.
     """
-    # The merge is pure-python JSON repopulation; the original input is a
-    # real staged file even in stub runs, so hand it through unchanged to
-    # keep downstream consumers (a3m conversion, inference) honest.
-    cp original_input.json ${meta.id}.json
-    cat <<-END_VERSIONS > versions.yml
+cat > manifest.tsv <<'MERGE_MANIFEST'
+${manifest}
+MERGE_MANIFEST
+
+while IFS=\$'\\t' read -r sid msa_name original_name <&3; do
+    cp "original/\${original_name}" "\${sid}.json"
+done 3< manifest.tsv
+
+cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         python: \$(python3 --version | sed 's/Python //g')
     END_VERSIONS
-    """
+"""
 }
