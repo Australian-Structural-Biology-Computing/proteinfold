@@ -1,7 +1,7 @@
 {
     "--use_msa_server bypasses local MSA generation": {
         "content": [
-            6,
+            5,
             [
                 "metrics",
                 "metrics/T1024_odde_server_1_pae.tsv",
@@ -64,7 +64,7 @@
                 "T1026_odde_server.cif:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-23T00:16:28.45017815",
+        "timestamp": "2026-11-22T13:08:24.348156947",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -72,7 +72,7 @@
     },
     "--msa_tool colabfold_search": {
         "content": [
-            11,
+            10,
             [
                 "metrics",
                 "metrics/T1024_odde_mmseqs_1_pae.tsv",
@@ -146,8 +146,8 @@
             {
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "3.12.16",
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "3.12.16",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:generate_report.py": "3.12.7",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:python": "3.12.7",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT_BATCH:generate_report.py": "3.12.7",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT_BATCH:python": "3.12.7",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_COLABFOLD_SEARCH:MMSEQS_COLABFOLDSEARCH_BATCH:colabfold_search": "1.6.3",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_COLABFOLD_SEARCH:MMSEQS_COLABFOLDSEARCH_BATCH:mmseqs": "48f2a22d5f68f595afdfb5e601ca11721cf17449",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:alphafold3_colabfold": "3.1.20",
@@ -156,7 +156,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-23T00:14:36.763847179",
+        "timestamp": "2026-11-22T13:06:56.56908305",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -164,7 +164,7 @@
     },
     "--msa_tool alphafold2_msa": {
         "content": [
-            10,
+            9,
             [
                 "metrics",
                 "metrics/T1024_odde_af2msa_1_pae.tsv",
@@ -232,8 +232,8 @@
             {
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "3.12.16",
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "3.12.16",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:generate_report.py": "3.12.7",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:python": "3.12.7",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT_BATCH:generate_report.py": "3.12.7",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT_BATCH:python": "3.12.7",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:alphafold2": "c77e5d2a8961d1a353632c462914ff0a32a950f6",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:biopython": 1.79,
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:numpy": "1.24.3",
@@ -244,7 +244,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-23T00:15:13.401344965",
+        "timestamp": "2026-11-22T13:07:14.722544814",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -297,8 +297,8 @@
             {
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "3.12.16",
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "3.12.16",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:generate_report.py": "3.12.7",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:python": "3.12.7",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT_BATCH:generate_report.py": "3.12.7",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT_BATCH:python": "3.12.7",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:alphafold2": "c77e5d2a8961d1a353632c462914ff0a32a950f6",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:biopython": 1.79,
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_ALPHAFOLD2:RUN_ALPHAFOLD2_MSA:numpy": "1.24.3",
@@ -309,7 +309,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-23T00:15:57.20571759",
+        "timestamp": "2026-11-22T13:07:51.803950536",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -317,7 +317,7 @@
     },
     "--msa_tool alphafold3_msa": {
         "content": [
-            12,
+            11,
             [
                 "fasta",
                 "fasta/T1024.json",
@@ -399,15 +399,15 @@
             {
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "3.12.16",
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "3.12.16",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:generate_report.py": "3.12.7",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:python": "3.12.7",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT_BATCH:generate_report.py": "3.12.7",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT_BATCH:python": "3.12.7",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:alphafold3_colabfold": "3.1.20",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:colabfold": "1.6.3",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:colabfold_commit": "38683c21700408b6a29cf395e8ef07cf109fcb91",
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-23T00:15:38.858856604",
+        "timestamp": "2026-11-22T13:07:33.698268839",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"

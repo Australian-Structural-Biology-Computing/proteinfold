@@ -1,7 +1,7 @@
 {
     "-profile test_split_fasta": {
         "content": [
-            11,
+            10,
             [
                 "metrics",
                 "metrics/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_odde_mmseqs_1_pae.tsv",
@@ -73,7 +73,7 @@
                 "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs.cif:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-23T02:08:22.002567352",
+        "timestamp": "2026-11-23T11:14:40.304638344",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
