@@ -1,7 +1,7 @@
 {
     "--use_msa_server bypasses local MSA generation": {
         "content": [
-            5,
+            6,
             [
                 "multiqc",
                 "multiqc/multiqc_data",
@@ -27,7 +27,7 @@
                 "T1026_odde_server.cif:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-22T16:12:23.259790197",
+        "timestamp": "2026-11-22T18:35:40.314197729",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -82,7 +82,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-22T16:10:15.78510585",
+        "timestamp": "2026-11-22T18:32:56.596705702",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -133,7 +133,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-22T16:10:40.097700916",
+        "timestamp": "2026-11-22T18:33:21.062893067",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -179,7 +179,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-22T16:11:40.095168228",
+        "timestamp": "2026-11-22T18:34:47.730419007",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -240,7 +240,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-22T16:11:13.101907042",
+        "timestamp": "2026-11-22T18:34:08.0052508",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"

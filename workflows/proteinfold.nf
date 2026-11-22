@@ -196,12 +196,45 @@ workflow PROTEINFOLD {
     //
 
     if (msa_tool == 'msa_server') {
-        // colabfold_batch performs the MSA search against the webserver itself.
-        ch_msa_input = ch_input_by_ext.fasta.mix(ch_input_by_ext.json).map { meta, input ->
+        // colabfold_batch performs the MSA search against the webserver
+        // itself. Every sample still gets a per-sample single-query FASTA:
+        // colabfold_batch's directory input folds only the first record of a
+        // multi-record FASTA, so multifasta samples must be colon-joined into
+        // one complex query first. JSON inputs stay raw for the AF3 backends
+        // (their ligands and nucleic acids must not be dropped); the AF2
+        // backends consume the converted queries for both input kinds.
+        // --msa_batch_size is accepted for symmetry but inert here: the
+        // converter runs with per-sample query emission, and colabfold_batch
+        // batches whatever it is given, server or not.
+        TO_COLABFOLD_FASTA(
+            ch_input_by_ext.fasta.mix(ch_input_by_ext.json)
+                .collect(flat: false)
+                .filter { rows -> !rows.isEmpty() }
+                .map { rows -> [rows, rows.collect { it[1] }.unique { it.toString() }] },
+            msa_batch_size,
+            '',
+            true
+        )
+        ch_server_queries = TO_COLABFOLD_FASTA.out.queries
+            .flatMap { pairs, files ->
+                def list = new ArrayList(files instanceof List ? files : [files])
+                list.collect { file ->
+                    def sid = file.name.replaceAll(/\.fasta$/, '')
+                    def pair = pairs.find { (it[0].id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_') == sid }
+                    pair == null ? error("Converted query ${file.name} does not match any input sample") : [pair[0], file]
+                }
+            }
+            .map { meta, input ->
+                def tagged = meta.clone()
+                tagged.msa_short = 'server'
+                [tagged, input]
+            }
+        ch_server_raw_json = ch_input_by_ext.json.map { meta, input ->
             def tagged = meta.clone()
             tagged.msa_short = 'server'
             [tagged, input]
         }
+        ch_msa_input = ch_server_queries.mix(ch_server_raw_json)
     } else if (msa_tool == 'colabfold_search') {
         MSA_COLABFOLD_SEARCH(
             ch_input_by_ext.fasta,
@@ -302,36 +335,9 @@ workflow PROTEINFOLD {
 
     if (af2_specs) {
         if (msa_tool == 'msa_server') {
-            // Server mode: colabfold_batch runs the webserver search itself;
-            // JSON inputs are reduced to their protein chains first. One
-            // conversion task converts every JSON sample and keeps one query
-            // FASTA per sample for the per-sample inference.
-            TO_COLABFOLD_FASTA(
-                ch_input_by_ext.json
-                    .collect(flat: false)
-                    .filter { rows -> !rows.isEmpty() }
-                    .map { rows -> [rows, rows.collect { it[1] }.unique { it.toString() }] },
-                1,
-                '',
-                true
-            )
-            ch_af2_inference_input = ch_input_by_ext.fasta
-                .mix(
-                    TO_COLABFOLD_FASTA.out.queries
-                        .flatMap { pairs, files ->
-                            (files instanceof List ? files : [files]).collect { file ->
-                                def sid = file.name.replaceAll(/\.fasta$/, '')
-                                def pair = pairs.find { (it[0].id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_') == sid }
-                                pair == null ? error("Converted query ${file.name} does not match any input sample") : [pair[0], file]
-                            }
-                        }
-                )
-                .map { meta, input ->
-                    def tagged = meta.clone()
-                    tagged.msa_short = 'server'
-                    [tagged, input]
-                }
-                .mix(ch_byo_msa)
+            // Server mode: every sample already has its per-sample
+            // single-query FASTA from the shared server conversion above.
+            ch_af2_inference_input = ch_server_queries.mix(ch_byo_msa)
         } else {
             // Convert the MSA JSON into ColabFold a3m queries. Samples whose
             // JSON cannot serve the AF2 graph (non-protein entities, no
@@ -407,10 +413,10 @@ workflow PROTEINFOLD {
     if (inference_batch == 0 || inference_batch < -1) {
         error("Inference batch size must be -1 or a positive integer, got ${inference_batch}")
     }
-    def effective_inference_batch = msa_tool == 'msa_server' ? 1 : inference_batch
-    if (msa_tool == 'msa_server' && inference_batch != 1) {
-        log.warn "Inference batching is not supported with --use_msa_server; running inference per sample."
-    }
+    // The MSA server needs no special casing: colabfold_batch fetches each
+    // query's MSA from the API inside the same per-query loop it runs for
+    // local searches, so a batch of queries works identically.
+    def effective_inference_batch = inference_batch
 
     def ch_backend_inputs = ch_backends.collectEntries { backend, ch ->
         [backend, batchInferenceInputs(ch, effective_inference_batch)]
