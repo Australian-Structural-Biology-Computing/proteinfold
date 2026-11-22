@@ -13,7 +13,6 @@ include { TO_COLABFOLD_FASTA } from '../../../modules/local/to_colabfold_fasta'
 include { MERGE_ALPHAFOLD3_MSA               } from '../../../modules/local/merge_alphafold3_msa'
 include { batchMergeInputs                   } from '../utils_nfcore_proteinfold_pipeline'
 include { MMSEQS_COLABFOLDSEARCH_BATCH       } from '../../../modules/local/mmseqs_colabfoldsearch'
-include { MSA_CACHE_LOOKUP                   } from '../../../modules/local/msa_cache_lookup'
 
 def sanitise(id) {
     (id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_')
@@ -47,10 +46,18 @@ workflow MSA_COLABFOLD_SEARCH {
     // Colon-join every sample into a single ColabFold query so complexes
     // are searched (and paired) as one entry: multi-chain FASTAs join
     // across their records, and AlphaFold3 JSONs reduce to their protein
-    // chains, matching the JSON extraction.
-    TO_COLABFOLD_FASTA(ch_fasta.mix(ch_json_for_search))
-
-    ch_search_input = TO_COLABFOLD_FASTA.out.query_fasta
+    // chains, matching the JSON extraction. The same task consults the MSA
+    // cache, so only cache misses continue to the search.
+    def cache_dir = MsaCache.directory(params) ?: ''
+    TO_COLABFOLD_FASTA(ch_fasta.mix(ch_json_for_search), cache_dir)
+    TO_COLABFOLD_FASTA.out.query.branch { meta, fasta, result ->
+        hit: cache_dir && result.resolve('hit.json').exists()
+        miss: true
+    }.set { ch_cache_results }
+    ch_search_input = ch_cache_results.miss.map { meta, fasta, result -> [meta, fasta] }
+    ch_cached_json = cache_dir
+        ? ch_cache_results.hit.map { meta, fasta, result -> [meta, result.resolve('hit.json')] }
+        : channel.empty()
 
     def batch_size = msa_batch_size instanceof Number ? msa_batch_size : msa_batch_size.toString().toInteger()
     if (batch_size == 0 || batch_size < -1) {
@@ -58,19 +65,6 @@ workflow MSA_COLABFOLD_SEARCH {
     }
 
     ch_generated_json = null
-    def cache_dir = MsaCache.directory(params) ?: ''
-    if (cache_dir) {
-        // Cache lookups return the AF3-format MSA JSON directly.
-        MSA_CACHE_LOOKUP(ch_search_input, cache_dir)
-        MSA_CACHE_LOOKUP.out.branch { meta, csv, result ->
-            hit: result.resolve('hit.json').exists()
-            miss: true
-        }.set { ch_cache_results }
-        ch_search_input = ch_cache_results.miss.map { meta, csv, result -> [meta, csv] }
-        ch_cached_json = ch_cache_results.hit.map { meta, csv, result -> [meta, result.resolve('hit.json')] }
-    } else {
-        ch_cached_json = channel.empty()
-    }
 
     // One batched search path serves every batch size: 1 runs one sample per
     // task, -1 runs all samples of the run in a single task. Each input is a

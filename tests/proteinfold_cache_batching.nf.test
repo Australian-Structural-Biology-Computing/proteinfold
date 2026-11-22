@@ -19,7 +19,7 @@ nextflow_pipeline {
             query.text = 'id,sequence\nhit,ACDEFG\n'
             def payload = file("$outputDir/hit.a3m")
             payload.text = '>hit\nACDEFG\n'
-            def jsonPayload = file(projectDir + '/modules/local/msa_cache_lookup/tests/multimer.json')
+            def jsonPayload = file(projectDir + '/tests/fixtures/multimer.json')
             def cache = file("$outputDir/cache")
             def command = ['python3', file(projectDir + '/bin/msa_cache.py').toString(), 'store', query.toString(), 'revision', 'sha256:test-image', '', cache.toString(), jsonPayload.toString(), payload.toString()]
             assert command.execute().waitFor() == 0
@@ -35,7 +35,7 @@ nextflow_pipeline {
         }
         then {
             assert workflow.success
-            assert workflow.trace.succeeded().count { it.name.contains('MSA_CACHE_LOOKUP') } == 2
+            assert workflow.trace.succeeded().count { it.name.contains('TO_COLABFOLD_FASTA') } == 2
             def searches = workflow.trace.succeeded().findAll { it.name.contains('MMSEQS_COLABFOLDSEARCH_BATCH') }
             assert searches.size() == 1
             assert searches[0].name.contains('batch_miss')
@@ -48,7 +48,7 @@ nextflow_pipeline {
         tag "cache"
         setup {
             def sheet = file("$outputDir/samples.csv")
-            def jsonPayload = file(projectDir + '/modules/local/msa_cache_lookup/tests/multimer.json')
+            def jsonPayload = file(projectDir + '/tests/fixtures/multimer.json')
             def cache = file("$outputDir/cache")
             def rows = ['hit': 'ACDEFG', 'miss': 'MNPQRS']
             sheet.text = 'id,fasta\n' + rows.collect { id, sequence ->
@@ -74,7 +74,7 @@ nextflow_pipeline {
         }
         then {
             assert workflow.success
-            assert workflow.trace.succeeded().count { it.name.contains('MSA_CACHE_LOOKUP') } == 2
+            assert workflow.trace.succeeded().count { it.name.contains('TO_COLABFOLD_FASTA') } == 2
             assert workflow.trace.succeeded().count { it.name.contains('MMSEQS_COLABFOLDSEARCH') } == 0
             assert workflow.trace.succeeded().count { it.name.contains('OPENDDE') } == 2
         }
