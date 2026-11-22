@@ -23,7 +23,6 @@ workflow MSA_COLABFOLD_SEARCH {
     msa_batch_size         // int: number of samples processed together per search (-1 = one batch)
     ch_colabfold_db        // channel: path(colabfold_db)
     ch_uniref30            // channel: path(uniref30)
-    analysis_batch_size    // int: number of JSON-origin samples merged together per task (-1 = one batch)
 
     main:
     // Mark JSON-origin samples so their search results are merged back into
@@ -118,10 +117,12 @@ workflow MSA_COLABFOLD_SEARCH {
         }
         .set { ch_json_merge_input }
 
-    // One merge task per analysis batch: every row repopulates its sample's
+    // One merge task per MSA batch: every row repopulates its sample's
     // original AlphaFold3 JSON with the searched MSAs, and the merged JSONs
-    // are matched back to their samples by the sanitised-id file name.
-    MERGE_ALPHAFOLD3_MSA(batchMergeInputs(ch_json_merge_input, analysis_batch_size))
+    // are matched back to their samples by the sanitised-id file name. The
+    // merge belongs to the MSA stage, so it groups by --msa_batch_size like
+    // the search itself.
+    MERGE_ALPHAFOLD3_MSA(batchMergeInputs(ch_json_merge_input, batch_size))
     def sanitise = { id -> (id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_') }
     ch_merged_json = MERGE_ALPHAFOLD3_MSA.out.json
         .flatMap { batch_meta, files ->

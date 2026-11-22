@@ -226,8 +226,7 @@ workflow PROTEINFOLD {
             ch_input_by_ext.json,
             msa_batch_size,
             ch_colabfold_db,
-            ch_uniref30,
-            params.analysis_batch_size as Integer
+            ch_uniref30
         )
         ch_msa_input = MSA_COLABFOLD_SEARCH.out.msa_json.map { meta, input ->
             def tagged = meta.clone()
@@ -251,8 +250,7 @@ workflow PROTEINFOLD {
             ch_af2_uniref30,
             ch_af2_uniref90,
             ch_af2_pdb_seqres,
-            ch_af2_uniprot,
-            params.analysis_batch_size as Integer
+            ch_af2_uniprot
         )
         ch_msa_input = MSA_ALPHAFOLD2.out.msa_json.map { meta, input ->
             def tagged = meta.clone()

@@ -34,7 +34,6 @@ workflow MSA_ALPHAFOLD2 {
     ch_af2_uniref90              // channel: path(uniref90)
     ch_af2_pdb_seqres            // channel: path(pdb_seqres)
     ch_af2_uniprot               // channel: path(uniprot)
-    analysis_batch_size          // int: number of JSON-origin samples merged together per task (-1 = one batch)
 
     main:
     // AlphaFold3 JSON inputs: extract their protein chains into a
@@ -103,10 +102,11 @@ workflow MSA_ALPHAFOLD2 {
         }
         .set { ch_af2_json_merge_input }
 
-    // One merge task per analysis batch, mirroring the colabfold_search flow;
-    // the merged JSONs are matched back to their samples by file name.
+    // The alphafold2 path keeps its merge per sample (batch size 1) for now:
+    // it runs through the same batched process, but its granularity stays
+    // fixed and independent of --msa_batch_size and --analysis_batch_size.
     def sanitise = { id -> (id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_') }
-    MERGE_ALPHAFOLD3_MSA(batchMergeInputs(ch_af2_json_merge_input, analysis_batch_size))
+    MERGE_ALPHAFOLD3_MSA(batchMergeInputs(ch_af2_json_merge_input, 1))
     ch_merged_json = MERGE_ALPHAFOLD3_MSA.out.json
         .flatMap { batch_meta, files ->
             def list = new ArrayList(files instanceof List ? files : [files])
