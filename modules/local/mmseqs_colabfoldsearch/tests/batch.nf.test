@@ -42,9 +42,9 @@ nextflow_process {
 
         then {
             assert process.success
-            // The version evals depend on the executing environment; snapshot
-            // only the MSA outputs.
-            assert snapshot(process.out.a3m, process.out.json).match()
+            // Run with a container profile so the version evals report the
+            // real image's versions.
+            assert snapshot(process.out).match()
         }
     }
 }
