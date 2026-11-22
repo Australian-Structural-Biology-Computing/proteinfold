@@ -35,11 +35,11 @@ nextflow_pipeline {
         }
         then {
             assert workflow.success
-            assert workflow.trace.succeeded().count { it.name.contains('TO_COLABFOLD_FASTA') } == 2
+            // All samples are converted and looked up in one task; only the
+            // miss continues to a search task.
+            assert workflow.trace.succeeded().count { it.name.contains('TO_COLABFOLD_FASTA') } == 1
             def searches = workflow.trace.succeeded().findAll { it.name.contains('MMSEQS_COLABFOLDSEARCH_BATCH') }
             assert searches.size() == 1
-            assert searches[0].name.contains('batch_miss')
-            assert !searches[0].name.contains('batch_hit')
             assert workflow.trace.succeeded().count { it.name.contains('OPENDDE') } == 2
         }
     }
@@ -74,7 +74,7 @@ nextflow_pipeline {
         }
         then {
             assert workflow.success
-            assert workflow.trace.succeeded().count { it.name.contains('TO_COLABFOLD_FASTA') } == 2
+            assert workflow.trace.succeeded().count { it.name.contains('TO_COLABFOLD_FASTA') } == 1
             assert workflow.trace.succeeded().count { it.name.contains('MMSEQS_COLABFOLDSEARCH') } == 0
             assert workflow.trace.succeeded().count { it.name.contains('OPENDDE') } == 2
         }

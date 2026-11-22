@@ -43,56 +43,62 @@ workflow MSA_COLABFOLD_SEARCH {
         .map { meta, input_json -> [meta.id, input_json] }
         .set { ch_json_templates }
 
-    // Colon-join every sample into a single ColabFold query so complexes
-    // are searched (and paired) as one entry: multi-chain FASTAs join
-    // across their records, and AlphaFold3 JSONs reduce to their protein
-    // chains, matching the JSON extraction. The same task consults the MSA
-    // cache, so only cache misses continue to the search.
-    def cache_dir = MsaCache.directory(params) ?: ''
-    TO_COLABFOLD_FASTA(ch_fasta.mix(ch_json_for_search), cache_dir)
-    TO_COLABFOLD_FASTA.out.query.branch { meta, fasta, result ->
-        hit: cache_dir && result.resolve('hit.json').exists()
-        miss: true
-    }.set { ch_cache_results }
-    ch_search_input = ch_cache_results.miss.map { meta, fasta, result -> [meta, fasta] }
-    ch_cached_json = cache_dir
-        ? ch_cache_results.hit.map { meta, fasta, result -> [meta, result.resolve('hit.json')] }
-        : channel.empty()
-
+    // One conversion task converts every sample into its ColabFold query
+    // FASTA and consults the MSA cache in the same task. It emits the miss
+    // queries pre-batched: each chunk FASTA concatenates msa_batch_size
+    // sample records and feeds exactly one search task, and every cache hit
+    // leaves only its cached AF3-format MSA JSON behind.
     def batch_size = msa_batch_size instanceof Number ? msa_batch_size : msa_batch_size.toString().toInteger()
     if (batch_size == 0 || batch_size < -1) {
         error("MSA batch size must be -1 or a positive integer, got ${batch_size}")
     }
+    def cache_dir = MsaCache.directory(params) ?: ''
 
-    ch_generated_json = null
+    TO_COLABFOLD_FASTA(
+        ch_fasta.mix(ch_json_for_search)
+            .collect(flat: false)
+            .filter { rows -> !rows.isEmpty() }
+            // Several samples may reference the same input file; stage it
+            // once and let the task map every sample onto its staged name.
+            .map { rows -> [rows, rows.collect { it[1] }.unique { it.toString() }] },
+        batch_size,
+        cache_dir,
+        false
+    )
 
-    // One batched search path serves every batch size: 1 runs one sample per
-    // task, -1 runs all samples of the run in a single task. Each input is a
-    // colon-delimited FASTA holding exactly one record whose header is the
-    // sample id, so a batch is a plain concatenation and colabfold_search
-    // names every result after its record header.
-    ch_batches = ch_search_input
-        .map { meta, csv -> [meta.id, meta, csv] }
-        .collect(flat: false)
-        .flatMap { rows ->
-            // Private copies: the collected rows travel through nextflow
-            // operators that may share buffers across concurrent consumers.
-            def sorted = new ArrayList(rows).sort { a, b -> a[0] <=> b[0] }
-            def ids = sorted.collect { row -> row[0] }
-            if (ids.toSet().size() != ids.size()) error("Duplicate sample IDs are not allowed")
-            def effective_batch_size = batch_size == -1 ? Math.max(1, sorted.size()) : batch_size
-            sorted.collate(effective_batch_size).collect { batch ->
-                [new ArrayList(batch.collect { item -> item[1] }), new ArrayList(batch.collect { item -> item[2] })]
+    // Cache hits: match each cached AF3-format MSA JSON back to its sample
+    // by the sanitised-id prefix of the file name.
+    ch_cached_json = TO_COLABFOLD_FASTA.out.hits
+        .flatMap { pairs, files ->
+            // Private copies: emitted lists may share buffers across
+            // concurrent consumers.
+            def list = new ArrayList(files instanceof List ? files : [files])
+            list.collect { file ->
+                def sid = file.name.replaceAll(/\.json$/, '')
+                def pair = pairs.find { (it[0].id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_') == sid }
+                pair == null ? error("Cached MSA result ${file.name} does not match any sample in the batch") : [pair[0], file]
             }
         }
-    MMSEQS_COLABFOLDSEARCH_BATCH(ch_batches, ch_colabfold_db, ch_uniref30, cache_dir)
+
+    // One search task per chunk FASTA; the sample metadata list rides along
+    // so each result can be matched back to its sample by record header.
+    MMSEQS_COLABFOLDSEARCH_BATCH(
+        TO_COLABFOLD_FASTA.out.misses
+            .flatMap { pairs, files ->
+                def list = new ArrayList(files instanceof List ? files : [files])
+                list.collect { file -> [new ArrayList(pairs.collect { it[0] }), file] }
+            },
+        ch_colabfold_db,
+        ch_uniref30,
+        cache_dir
+    )
     ch_generated_json = MMSEQS_COLABFOLDSEARCH_BATCH.out.json
-        .flatMap { batch_meta, files ->
-            def batch_files = files instanceof List ? files : [files]
-            batch_files.collect { file ->
-                def sample_id = file.name.endsWith('.json') ? file.name[0..-6] : file.name
-                def sample = batch_meta.find { meta -> meta.get('id') == sample_id }
-                if (sample == null) error("MMseqs batch output ${file.name} does not match input samples ${batch_meta.collect { meta -> meta.id }}")
+        .flatMap { samples, files ->
+            def list = new ArrayList(files instanceof List ? files : [files])
+            list.collect { file ->
+                def sid = file.name.endsWith('.json') ? file.name[0..-6] : file.name
+                def sample = samples.find { (it.id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_') == sid }
+                if (sample == null) error("MMseqs search result ${file.name} does not match any input sample")
                 [sample, file]
             }
         }

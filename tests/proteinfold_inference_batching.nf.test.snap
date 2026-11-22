@@ -1,7 +1,7 @@
 {
     "runs batched inference": {
         "content": [
-            7,
+            6,
             [
                 "msa",
                 "msa/T1024_mmseqs.a3m",
@@ -48,7 +48,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_COLABFOLD_SEARCH:MMSEQS_COLABFOLDSEARCH_BATCH:mmseqs": "48f2a22d5f68f595afdfb5e601ca11721cf17449"
             }
         ],
-        "timestamp": "2026-11-22T15:20:07.324292825",
+        "timestamp": "2026-11-22T16:14:05.664720751",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"

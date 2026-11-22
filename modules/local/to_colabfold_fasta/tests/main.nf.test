@@ -14,6 +14,8 @@ nextflow_process {
         file("$outputDir/to_colabfold_fasta").mkdirs()
         file("$outputDir/to_colabfold_fasta/multichain.fasta").text =
             '>sample_alpha\nMKTAYIAKQRQISFVKSH\n>sample_beta\nEVLQQNSEIL\n'
+        file("$outputDir/to_colabfold_fasta/second.fasta").text =
+            '>second_sample\nAAAA\n'
         file("$outputDir/to_colabfold_fasta/rich_input.json").text =
             '''{
   "dialect": "alphafold3",
@@ -38,25 +40,87 @@ nextflow_process {
 '''
     }
 
-    test("colon-joins a multi-record FASTA into one ColabFold query") {
+    test("concatenates converted queries into pre-batched chunk FASTAs") {
         def fastaInput = new File("$outputDir/to_colabfold_fasta/multichain.fasta").absolutePath
 
         when {
             process {
                 """
                 input[0] = [
-                    [ id: 'sample' ],
-                    file('${fastaInput}', checkIfExists: true)
+                    [ [ [ id: 'sample' ], file('${fastaInput}', checkIfExists: true) ] ],
+                    [ file('${fastaInput}', checkIfExists: true) ]
                 ]
-                input[1] = ''
+                input[1] = -1
+                input[2] = ''
+                input[3] = false
                 """
             }
         }
 
         then {
+            def asList = { value -> value instanceof List ? value : [value] }
             assertAll(
                 { assert process.success },
-                { assert path(process.out.query[0][1]).text == '>sample\nMKTAYIAKQRQISFVKSH:EVLQQNSEIL\n' }
+                { assert path(asList(process.out.misses[0][1])[0].toString()).text == '>sample\nMKTAYIAKQRQISFVKSH:EVLQQNSEIL\n' },
+                { assert !process.out.hits },
+                { assert !process.out.queries }
+            )
+        }
+    }
+
+    test("splits misses into one chunk per msa_batch_size records") {
+        def fastaInput = new File("$outputDir/to_colabfold_fasta/multichain.fasta").absolutePath
+        def secondInput = new File("$outputDir/to_colabfold_fasta/second.fasta").absolutePath
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ [ [ id: 'sample' ], file('${fastaInput}', checkIfExists: true) ], [ [ id: 'second' ], file('${secondInput}', checkIfExists: true) ] ],
+                    [ file('${fastaInput}', checkIfExists: true), file('${secondInput}', checkIfExists: true) ]
+                ]
+                input[1] = 1
+                input[2] = ''
+                input[3] = false
+                """
+            }
+        }
+
+        then {
+            def asList = { value -> value instanceof List ? value : [value] }
+            assertAll(
+                { assert process.success },
+                { assert asList(process.out.misses[0][1]).size() == 2 },
+                { assert asList(process.out.misses[0][1]).collect { f -> path(f.toString()).text }.contains('>sample\nMKTAYIAKQRQISFVKSH:EVLQQNSEIL\n') },
+                { assert asList(process.out.misses[0][1]).collect { f -> path(f.toString()).text }.contains('>second\nAAAA\n') },
+                { assert !process.out.hits }
+            )
+        }
+    }
+
+    test("keeps one query FASTA per sample when emit_queries is set") {
+        def fastaInput = new File("$outputDir/to_colabfold_fasta/multichain.fasta").absolutePath
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ [ [ id: 'sample' ], file('${fastaInput}', checkIfExists: true) ] ],
+                    [ file('${fastaInput}', checkIfExists: true) ]
+                ]
+                input[1] = -1
+                input[2] = ''
+                input[3] = true
+                """
+            }
+        }
+
+        then {
+            def asList = { value -> value instanceof List ? value : [value] }
+            assertAll(
+                { assert process.success },
+                { assert path(asList(process.out.queries[0][1])[0].toString()).text == '>sample\nMKTAYIAKQRQISFVKSH:EVLQQNSEIL\n' },
+                { assert !process.out.misses }
             )
         }
     }
@@ -68,18 +132,22 @@ nextflow_process {
             process {
                 """
                 input[0] = [
-                    [ id: 'rich_sample' ],
-                    file('${richInput}', checkIfExists: true)
+                    [ [ [ id: 'rich_sample' ], file('${richInput}', checkIfExists: true) ] ],
+                    [ file('${richInput}', checkIfExists: true) ]
                 ]
-                input[1] = ''
+                input[1] = -1
+                input[2] = ''
+                input[3] = false
                 """
             }
         }
 
         then {
+            def asList = { value -> value instanceof List ? value : [value] }
             assertAll(
                 { assert process.success },
-                { assert path(process.out.query[0][1]).text == '>rich_sample\nACDE:ACDE\n' }
+                { assert path(asList(process.out.misses[0][1])[0].toString()).text == '>rich_sample\nACDE:ACDE\n' },
+                { assert !process.out.hits }
             )
         }
     }

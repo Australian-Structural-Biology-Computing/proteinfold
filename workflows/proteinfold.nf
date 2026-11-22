@@ -303,10 +303,29 @@ workflow PROTEINFOLD {
     if (af2_specs) {
         if (msa_tool == 'msa_server') {
             // Server mode: colabfold_batch runs the webserver search itself;
-            // JSON inputs are reduced to their protein chains first.
-            TO_COLABFOLD_FASTA(ch_input_by_ext.json)
+            // JSON inputs are reduced to their protein chains first. One
+            // conversion task converts every JSON sample and keeps one query
+            // FASTA per sample for the per-sample inference.
+            TO_COLABFOLD_FASTA(
+                ch_input_by_ext.json
+                    .collect(flat: false)
+                    .filter { rows -> !rows.isEmpty() }
+                    .map { rows -> [rows, rows.collect { it[1] }.unique { it.toString() }] },
+                1,
+                '',
+                true
+            )
             ch_af2_inference_input = ch_input_by_ext.fasta
-                .mix(TO_COLABFOLD_FASTA.out.query_fasta)
+                .mix(
+                    TO_COLABFOLD_FASTA.out.queries
+                        .flatMap { pairs, files ->
+                            (files instanceof List ? files : [files]).collect { file ->
+                                def sid = file.name.replaceAll(/\.fasta$/, '')
+                                def pair = pairs.find { (it[0].id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_') == sid }
+                                pair == null ? error("Converted query ${file.name} does not match any input sample") : [pair[0], file]
+                            }
+                        }
+                )
                 .map { meta, input ->
                     def tagged = meta.clone()
                     tagged.msa_short = 'server'

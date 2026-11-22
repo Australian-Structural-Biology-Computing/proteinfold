@@ -27,7 +27,7 @@
                 "T1026_odde_server.cif:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-21T12:47:19.138898605",
+        "timestamp": "2026-11-22T16:12:23.259790197",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -35,7 +35,7 @@
     },
     "--msa_tool colabfold_search": {
         "content": [
-            8,
+            7,
             [
                 "msa",
                 "msa/T1024_mmseqs.a3m",
@@ -82,7 +82,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-22T15:20:59.86266832",
+        "timestamp": "2026-11-22T16:10:15.78510585",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -133,7 +133,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-21T22:28:15.730352009",
+        "timestamp": "2026-11-22T16:10:40.097700916",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -179,7 +179,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-21T22:29:02.169066477",
+        "timestamp": "2026-11-22T16:11:40.095168228",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -240,7 +240,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-21T22:28:41.102779064",
+        "timestamp": "2026-11-22T16:11:13.101907042",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
