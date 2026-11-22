@@ -1,7 +1,7 @@
 {
     "runs multiple MSA batches": {
         "content": [
-            14,
+            11,
             [
                 "msa",
                 "msa/T1024_mmseqs.a3m",
@@ -44,7 +44,7 @@
                 "T1027_odde_mmseqs.cif:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-22T02:07:56.415288738",
+        "timestamp": "2026-11-22T15:19:49.663678717",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"

@@ -35,7 +35,7 @@
     },
     "--msa_tool colabfold_search": {
         "content": [
-            10,
+            8,
             [
                 "msa",
                 "msa/T1024_mmseqs.a3m",
@@ -82,7 +82,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-22T02:29:54.655972122",
+        "timestamp": "2026-11-22T15:20:59.86266832",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
