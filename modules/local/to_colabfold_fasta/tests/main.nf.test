@@ -9,8 +9,37 @@ nextflow_process {
     tag "to_colabfold_fasta"
     profile "test_nostub"
 
+    setup {
+        // tests/data is gitignored, so the fixtures are written here
+        file("$outputDir/to_colabfold_fasta").mkdirs()
+        file("$outputDir/to_colabfold_fasta/multichain.fasta").text =
+            '>sample_alpha\nMKTAYIAKQRQISFVKSH\n>sample_beta\nEVLQQNSEIL\n'
+        file("$outputDir/to_colabfold_fasta/rich_input.json").text =
+            '''{
+  "dialect": "alphafold3",
+  "version": 2,
+  "name": "rich_sample",
+  "sequences": [
+    {
+      "protein": {
+        "id": ["A", "D"],
+        "sequence": "ACDE",
+        "modifications": [{"ptmType": "CCD_SEP", "ptmPosition": 2}],
+        "templates": []
+      }
+    },
+    {"rna": {"id": "B", "sequence": "AUCG", "modifications": []}},
+    {"ligand": {"id": "C", "smiles": "CCO"}}
+  ],
+  "modelSeeds": [1],
+  "bondedAtomPairs": [[[["A", 1, "CA"], ["C", 1, "C1"]]]],
+  "userCCD": "data_custom\\n#"
+}
+'''
+    }
+
     test("colon-joins a multi-record FASTA into one ColabFold query") {
-        def fastaInput = new File('modules/local/to_colabfold_fasta/tests/data/multichain.fasta').absolutePath
+        def fastaInput = new File("$outputDir/to_colabfold_fasta/multichain.fasta").absolutePath
 
         when {
             process {
@@ -32,7 +61,7 @@ nextflow_process {
     }
 
     test("extracts repeated protein queries without flattening rich AF3 entities") {
-        def richInput = new File('modules/local/to_colabfold_fasta/tests/data/rich_input.json').absolutePath
+        def richInput = new File("$outputDir/to_colabfold_fasta/rich_input.json").absolutePath
 
         when {
             process {
