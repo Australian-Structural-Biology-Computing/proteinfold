@@ -1,5 +1,7 @@
+include { batchTag } from '../../../subworkflows/local/utils_nfcore_proteinfold_pipeline'
+
 process GENERATE_REPORT_BATCH {
-    tag   "batch_${batch_meta*.id.join('_')}"
+    tag   "${batchTag(batch_meta)}"
     label 'process_medium'
 
     conda "${moduleDir}/environment.yml"

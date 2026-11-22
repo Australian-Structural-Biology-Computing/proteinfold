@@ -1,5 +1,7 @@
+include { batchTag } from '../../../subworkflows/local/utils_nfcore_proteinfold_pipeline'
+
 process COLABFOLD2_INFERENCE_BATCH {
-    tag "batch_${batch_meta*.id.join('_')} ($model_type)"
+    tag "${batchTag(batch_meta)} ($model_type)"
     label 'process_medium'
     label 'process_gpu'
 

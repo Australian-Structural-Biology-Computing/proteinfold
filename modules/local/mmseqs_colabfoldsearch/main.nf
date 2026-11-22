@@ -1,5 +1,7 @@
+include { batchTag } from '../../../subworkflows/local/utils_nfcore_proteinfold_pipeline'
+
 process MMSEQS_COLABFOLDSEARCH_BATCH {
-    tag "batch_${batch_meta.collect { meta -> meta.id }.join('_')}"
+    tag "${batchTag(batch_meta)}"
     label 'process_high_memory'
     label 'process_high'
     container "ghcr.io/tlitfin/proteinfold_colabfold:af3-preview-38683c2"

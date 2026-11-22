@@ -235,6 +235,18 @@ def modeChannel(ch, mode) {
 // the rest are mixed in one at a time, because mix() is a channel operator -- it
 // does not exist on ArrayList.
 //
+// Summarise a batch of sample metas into a bounded task tag: small batches
+// keep the full id list, large ones show the first three ids plus the
+// remaining count so a 1000-sample batch does not become a 10 kB tag.
+def batchTag(batch_metas) {
+    def ids = (batch_metas instanceof Collection ? batch_metas.collect() : [batch_metas])
+        .collect { (it.id as String) }
+    if (ids.size() <= 3) {
+        return "batch_${ids.join('_')}"
+    }
+    return "batch_${ids[0]}_${ids[1]}_${ids[2]}+${ids.size() - 3}more"
+}
+
 def collectMultiqcMetrics(metric_channels) {
     // The metric tuples carry their own meta, whose model field names the
     // public mode; grouping collapses every sample of a mode into one
