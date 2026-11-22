@@ -44,7 +44,7 @@
                 "T1027_odde_mmseqs.cif:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-22T16:03:18.579232804",
+        "timestamp": "2026-11-22T19:25:16.199471811",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"

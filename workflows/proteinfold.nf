@@ -212,7 +212,6 @@ workflow PROTEINFOLD {
                 .filter { rows -> !rows.isEmpty() }
                 .map { rows -> [rows, rows.collect { it[1] }.unique { it.toString() }] },
             msa_batch_size,
-            '',
             true
         )
         ch_server_queries = TO_COLABFOLD_FASTA.out.queries

@@ -8,7 +8,6 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
     tuple val(samples), path(query_fasta) // one concatenated ColabFold query (msa_batch_size records)
     path ('db/*')
     path ('uniref30/*')
-    val cache_dir
 
     output:
     tuple val(samples), path("results/*.a3m"), emit: a3m
@@ -23,13 +22,6 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
         error("Local MMSEQS_COLABFOLDSEARCH_BATCH module does not support Conda. Please use Docker / Singularity / Podman instead.")
     }
     def args = task.ext.args ?: ''
-    def dir = cache_dir ?: ''
-    def cache_id = task.ext.msa_cache_id ?: ''
-    def tool_id = task.ext.msa_cache_tool_id ?: ''
-    def quotedDir = "'${dir.toString().replace("'", "'\\''")}'"
-    def quotedId = "'${cache_id.toString().replace("'", "'\\''")}'"
-    def quotedToolId = "'${tool_id.toString().replace("'", "'\\''")}'"
-    def quotedArgs = "'${args.toString().replace("'", "'\\''")}'"
     """
     for f in uniref30/*; do
         [ -e "db/\$(basename \$f)" ] || ln -sf \$(realpath \$f) db/\$(basename \$f)
@@ -44,11 +36,6 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
         test -s "results/\${id}.json" || { echo "Missing JSON output for \$id" >&2; exit 1; }
     done
 
-    if [ -n ${quotedDir} ]; then
-        # One batch-native store: every record of the concatenated query is
-        # keyed by its own sequence, matching the per-sample lookups.
-        to_colabfold_query_fasta.py cache-store-chunk ${query_fasta} ${quotedId} ${quotedToolId} ${quotedArgs} ${quotedDir} results/
-    fi
     """
 
     stub:

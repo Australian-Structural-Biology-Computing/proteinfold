@@ -10,15 +10,12 @@ process TO_COLABFOLD_FASTA {
     input:
     tuple val(pairs), path(input_files, stageAs: 'input/*')
     val msa_batch_size  // records per emitted chunk FASTA; -1 = one chunk with everything
-    val cache_dir       // absolute MSA cache directory; '' disables the lookup
     val emit_queries    // keep one query FASTA per sample (for consumers that need per-sample files)
 
     output:
-    // Misses only: every chunk is a plain concatenation of msa_batch_size
-    // ColabFold query FASTAs (one record per sample), ready for the search.
-    // Cache hits leave only their cached AF3-format MSA JSON behind.
-    tuple val(pairs), path("chunks/*.fasta"), optional: true, emit: misses
-    tuple val(pairs), path("cache_result/*.json"), optional: true, emit: hits
+    // Every chunk is a plain concatenation of msa_batch_size ColabFold
+    // query FASTAs (one record per sample), ready for the search.
+    tuple val(pairs), path("chunks/*.fasta"), optional: true, emit: chunks
     // One ColabFold query FASTA per sample, named after the sanitised sample
     // id; the record header inside carries the raw id. Only emitted when
     // emit_queries is true (e.g. the MSA server path folds one query per
@@ -49,43 +46,24 @@ process TO_COLABFOLD_FASTA {
     if ([metas*.id, files*.name].flatten().any { (it as String).matches('(?s).*[\\t\\r\\n].*') }) {
         error("TO_COLABFOLD_FASTA received sample IDs or input file names containing tabs or newlines")
     }
-    def dir = (cache_dir ?: '').toString().replace("'", "'\''")
-    def cache_id = (params.msa_cache_id ?: '').toString().replace("'", "'\''")
-    def tool_id = (params.msa_cache_tool_id ?: '').toString().replace("'", "'\''")
-    def cache_args = params.colabfold_db_load_mode ? "--db-load-mode ${params.colabfold_db_load_mode}" : ''
-    def cache_args_quoted = cache_args.toString().replace("'", "'\''")
     def limit = msa_batch_size instanceof Number ? msa_batch_size : msa_batch_size.toString().toInteger()
     def mode_arg = emit_queries ? '--queries-dir queries' : '--chunks-dir chunks'
     def command = [
         'to_colabfold_query_fasta.py batch \\',
         '    --manifest manifest.tsv \\',
         "    --batch-size ${limit} \\",
-        "    ${mode_arg} \\",
+        "    ${mode_arg}",
     ]
-    if (dir) {
-        command << '    --hits-dir cache_result \\'
-        command << "    --cache-dir '${dir}' \\"
-        command << "    --cache-id '${cache_id}' \\"
-        command << "    --tool-id '${tool_id}' \\"
-        command << "    --cache-args '${cache_args_quoted}'"
-    } else {
-        command << '    --hits-dir cache_result'
-    }
 
-    // One batch-native call: converts every sample in memory, looks the
-    // query up in the MSA cache, extracts hits straight to cache_result
-    // and concatenates the misses into pre-batched chunk FASTAs. No
+    // One batch-native call: converts every sample in memory and
+    // concatenates the queries into pre-batched chunk FASTAs. No
     // per-sample intermediate files are written.
-    def body = """cat > manifest.tsv <<'MANIFEST'
+    """
+cat > manifest.tsv <<'MANIFEST'
 ${manifest.join('\n')}
 MANIFEST
 
 ${command.join('\n')}
-rmdir cache_result chunks queries 2>/dev/null || true
+rmdir chunks queries 2>/dev/null || true
 """
-
-    """
-${body}
-    """
-
 }
