@@ -64,7 +64,7 @@
                 "T1026_odde_server.cif:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-21T17:33:52.37295919",
+        "timestamp": "2026-11-23T00:16:28.45017815",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -133,9 +133,9 @@
                 "T1026_odde_mmseqs_plddt.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1026_odde_mmseqs_ptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_mmseqs.a3m:md5,2d5bea1d28ffa33dc01f46541bedc592",
-                "T1024_mmseqs.json:md5,04ab94fc527ff560f1f17a9d402b2c5e",
+                "T1024_mmseqs.json:md5,ab416d112e67291b35c4d8666d830e71",
                 "T1026_mmseqs.a3m:md5,2d5bea1d28ffa33dc01f46541bedc592",
-                "T1026_mmseqs.json:md5,da95d1d89a8dec9b6eaa666b64c74d66",
+                "T1026_mmseqs.json:md5,a7935f6914a8ac6ba965668a4079001b",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
                 ".stub:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_odde_mmseqs_report.html:md5,d41d8cd98f00b204e9800998ecf8427e",
@@ -156,7 +156,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-22T01:46:02.683177009",
+        "timestamp": "2026-11-23T00:14:36.763847179",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -244,7 +244,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-21T19:41:34.076899209",
+        "timestamp": "2026-11-23T00:15:13.401344965",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -309,7 +309,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-21T19:42:19.122534939",
+        "timestamp": "2026-11-23T00:15:57.20571759",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -407,7 +407,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:OPENDDE:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-21T19:41:58.206493183",
+        "timestamp": "2026-11-23T00:15:38.858856604",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
