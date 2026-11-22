@@ -43,10 +43,11 @@ cat <<-END_VERSIONS > versions.yml
     END_VERSIONS
 """
 
+
     stub:
-    // The merge is pure-python JSON repopulation; the original input is a
-    // real staged file even in stub runs, so hand it through unchanged to
-    // keep downstream consumers (a3m conversion, inference) honest.
+    // Upstream MSA modules emit placeholder files in stub runs, which the
+    // real merge cannot parse; hand the original JSON through unchanged so
+    // downstream consumers (a3m conversion, inference) stay well-formed.
     """
 cat > manifest.tsv <<'MERGE_MANIFEST'
 ${manifest}
