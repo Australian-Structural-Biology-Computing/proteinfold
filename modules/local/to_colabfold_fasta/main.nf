@@ -57,7 +57,7 @@ process TO_COLABFOLD_FASTA {
     def limit = msa_batch_size instanceof Number ? msa_batch_size : msa_batch_size.toString().toInteger()
     def mode_arg = emit_queries ? '--queries-dir queries' : '--chunks-dir chunks'
     def command = [
-        'to_colabfold_query_fasta.py \\',
+        'to_colabfold_query_fasta.py batch \\',
         '    --manifest manifest.tsv \\',
         "    --batch-size ${limit} \\",
         "    ${mode_arg} \\",

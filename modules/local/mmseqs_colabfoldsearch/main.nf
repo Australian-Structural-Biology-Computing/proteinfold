@@ -47,7 +47,7 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
     if [ -n ${quotedDir} ]; then
         # One batch-native store: every record of the concatenated query is
         # keyed by its own sequence, matching the per-sample lookups.
-        msa_cache.py store-chunk ${query_fasta} ${quotedId} ${quotedToolId} ${quotedArgs} ${quotedDir} results/
+        to_colabfold_query_fasta.py cache-store-chunk ${query_fasta} ${quotedId} ${quotedToolId} ${quotedArgs} ${quotedDir} results/
     fi
     """
 

@@ -21,7 +21,7 @@ nextflow_pipeline {
             payload.text = '>hit\nACDEFG\n'
             def jsonPayload = file(projectDir + '/tests/fixtures/multimer.json')
             def cache = file("$outputDir/cache")
-            def command = ['python3', file(projectDir + '/bin/msa_cache.py').toString(), 'store', query.toString(), 'revision', 'sha256:test-image', '', cache.toString(), jsonPayload.toString(), payload.toString()]
+            def command = ['python3', file(projectDir + '/bin/to_colabfold_query_fasta.py').toString(), 'cache-store', query.toString(), 'revision', 'sha256:test-image', '', cache.toString(), jsonPayload.toString(), payload.toString()]
             assert command.execute().waitFor() == 0
         }
         when {
@@ -58,7 +58,7 @@ nextflow_pipeline {
                 query.text = "id,sequence\n${id},${sequence}\n"
                 def payload = file("$outputDir/${id}.a3m")
                 payload.text = ">${id}\n${sequence}\n"
-                def command = ['python3', file(projectDir + '/bin/msa_cache.py').toString(), 'store', query.toString(), 'revision', 'sha256:test-image', '', cache.toString(), jsonPayload.toString(), payload.toString()]
+                def command = ['python3', file(projectDir + '/bin/to_colabfold_query_fasta.py').toString(), 'cache-store', query.toString(), 'revision', 'sha256:test-image', '', cache.toString(), jsonPayload.toString(), payload.toString()]
                 assert command.execute().waitFor() == 0
                 "${id},${fasta}\n"
             }.join('')
