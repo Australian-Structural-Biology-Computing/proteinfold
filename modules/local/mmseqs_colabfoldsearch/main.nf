@@ -45,32 +45,23 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
     done
 
     if [ -n ${quotedDir} ]; then
-        # The store keys on the per-sample query content, so split the
-        # concatenated query back into transient per-record files; they are
-        # removed once stored.
-        mkdir keys
-        awk '/^>/ { if (f) close(f); h = substr(\$0, 2); n = h; gsub(/[^A-Za-z0-9_.-]/, "_", n); f = "keys/" n ".fasta" } f { print > f }' ${query_fasta}
-        for f in keys/*.fasta; do
-            id=\$(basename "\$f")
-            id="\${id%.*}"
-            msa_cache.py store "\$f" ${quotedId} ${quotedToolId} ${quotedArgs} ${quotedDir} "results/\${id}.json" "results/\${id}.a3m"
-        done
-        rm -rf keys
+        # One batch-native store: every record of the concatenated query is
+        # keyed by its own sequence, matching the per-sample lookups.
+        msa_cache.py store-chunk ${query_fasta} ${quotedId} ${quotedToolId} ${quotedArgs} ${quotedDir} results/
     fi
     """
 
     stub:
+    // One dummy a3m/JSON pair per record of the concatenated query; the
+    // sample ids come from the record headers, sanitised the way
+    // colabfold_search names its results.
     """
-    mkdir results keys
-        awk '/^>/ { if (f) close(f); h = substr(\$0, 2); n = h; gsub(/[^A-Za-z0-9_.-]/, "_", n); f = "keys/" n ".fasta" } f { print > f }' ${query_fasta}
-    for f in keys/*.fasta; do
-        id=\$(basename "\$f"); id="\${id%.*}"
-        printf '>stub\n' > results/\${id}.a3m
-        python3 - "\$f" "\$id" <<'PY'
-import json, sys
-path, sample_id = sys.argv[1], sys.argv[2]
+    mkdir results
+    python3 - ${query_fasta} <<'PY'
+import json, os, re, sys
+
 records, header, seq = [], None, []
-for line in open(path):
+for line in open(sys.argv[1]):
     line = line.strip()
     if line.startswith('>'):
         if header is not None:
@@ -80,25 +71,28 @@ for line in open(path):
         seq.append(line)
 if header is not None:
     records.append((header, ''.join(seq)))
-document = {
-    'dialect': 'alphafold3',
-    'version': 2,
-    'name': sample_id,
-    'modelSeeds': [1],
-    'sequences': [
-        {
-            'protein': {
-                'id': [chr(ord('A') + i) for i in range(len(records))] or ['A'],
-                'sequence': ':'.join(s for _, s in records) or 'ACDE',
-                'unpairedMsa': '>' + (records[0][0] if records else 'query') + '\\n' + (':'.join(s for _, s in records) or 'ACDE') + '\\n',
+
+for raw_id, sequence in records:
+    sample_id = re.sub(r'[^A-Za-z0-9_.-]', '_', raw_id)
+    with open(f'results/{sample_id}.a3m', 'w') as handle:
+        handle.write('>stub\\n')
+    document = {
+        'dialect': 'alphafold3',
+        'version': 2,
+        'name': sample_id,
+        'modelSeeds': [1],
+        'sequences': [
+            {
+                'protein': {
+                    'id': ['A'],
+                    'sequence': sequence or 'ACDE',
+                    'unpairedMsa': '>' + (raw_id or 'query') + '\\n' + (sequence or 'ACDE') + '\\n',
+                }
             }
-        }
-    ],
-}
-with open(f'results/{sample_id}.json', 'w') as handle:
-    json.dump(document, handle)
+        ],
+    }
+    with open(f'results/{sample_id}.json', 'w') as handle:
+        json.dump(document, handle)
 PY
-    done
-    rm -rf keys
     """
 }

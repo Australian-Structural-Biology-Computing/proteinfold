@@ -34,7 +34,6 @@ process TO_COLABFOLD_FASTA {
     // staged input without a name collision.
     def metas = pairs.collect { it[0] }
     def files = input_files instanceof Collection ? input_files.collect() : [input_files]
-    def safe = { name -> "'" + (name as String).replaceAll("'", "'\\''") + "'" }
     def sanitise = { id -> (id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_') }
     // sanitised sample id, raw record header, staged input name; one
     // tab-separated triple per line
@@ -50,127 +49,43 @@ process TO_COLABFOLD_FASTA {
     if ([metas*.id, files*.name].flatten().any { (it as String).matches('(?s).*[\\t\\r\\n].*') }) {
         error("TO_COLABFOLD_FASTA received sample IDs or input file names containing tabs or newlines")
     }
-    def dir = (cache_dir ?: '').toString().replace("'", "'\\''")
-    def cache_id = (params.msa_cache_id ?: '').toString().replace("'", "'\\''")
-    def tool_id = (params.msa_cache_tool_id ?: '').toString().replace("'", "'\\''")
+    def dir = (cache_dir ?: '').toString().replace("'", "'\''")
+    def cache_id = (params.msa_cache_id ?: '').toString().replace("'", "'\''")
+    def tool_id = (params.msa_cache_tool_id ?: '').toString().replace("'", "'\''")
     def cache_args = params.colabfold_db_load_mode ? "--db-load-mode ${params.colabfold_db_load_mode}" : ''
-    def cache_args_quoted = cache_args.toString().replace("'", "'\\''")
+    def cache_args_quoted = cache_args.toString().replace("'", "'\''")
     def limit = msa_batch_size instanceof Number ? msa_batch_size : msa_batch_size.toString().toInteger()
+    def mode_arg = emit_queries ? '--queries-dir queries' : '--chunks-dir chunks'
+    def command = [
+        'to_colabfold_query_fasta.py \\',
+        '    --manifest manifest.tsv \\',
+        "    --batch-size ${limit} \\",
+        "    ${mode_arg} \\",
+    ]
+    if (dir) {
+        command << '    --hits-dir cache_result \\'
+        command << "    --cache-dir '${dir}' \\"
+        command << "    --cache-id '${cache_id}' \\"
+        command << "    --tool-id '${tool_id}' \\"
+        command << "    --cache-args '${cache_args_quoted}'"
+    } else {
+        command << '    --hits-dir cache_result'
+    }
 
-    """
-mkdir -p queries cache_result
-cat > manifest.tsv <<'MANIFEST'
+    // One batch-native call: converts every sample in memory, looks the
+    // query up in the MSA cache, extracts hits straight to cache_result
+    // and concatenates the misses into pre-batched chunk FASTAs. No
+    // per-sample intermediate files are written.
+    def body = """cat > manifest.tsv <<'MANIFEST'
 ${manifest.join('\n')}
 MANIFEST
 
-while IFS=\$'\\t' read -r sid raw_id input_name <&3; do
-    # Input paths are staged under input/; strip a leading input/ in case
-    # the task context already reports the staged location.
-    input_path="input/\${input_name#input/}"
-    to_colabfold_query_fasta.py \\
-        "\${input_path}" \\
-        --id "\${raw_id}" \\
-        --output "queries/\${sid}.fasta"
-    if [ -n '${dir}' ]; then
-        # The lookup hashes the same arguments as the store side of the
-        # search (--db-load-mode), so cached searches are actually hit.
-        # The lookup exits 0 whether or not it hits; the written JSON is
-        # the hit signal. A hit stands in for the search, so the query must
-        # not be searched.
-        msa_cache.py lookup "queries/\${sid}.fasta" '${cache_id}' '${tool_id}' '${cache_args_quoted}' '${dir}' "cache_result/\${sid}.json" af3_json || true
-        if [ -f "cache_result/\${sid}.json" ]; then
-            rm -f "queries/\${sid}.fasta"
-        fi
-    fi
-done 3< manifest.tsv
-
-if ${emit_queries}; then
-    : # per-sample query FASTAs stay for consumers that need one file per sample
-else
-    # Concatenate the remaining (miss) queries into chunks of
-    # --msa_batch_size records; the search runs one task per chunk file.
-    mkdir chunks
-    idx=0
-    count=0
-    for f in \$(find queries -name '*.fasta' | sort); do
-        if [ '${limit}' -gt 0 ] && [ "\${count}" -eq '${limit}' ]; then
-            idx=\$((idx + 1))
-            count=0
-        fi
-        cat "\$f" >> "chunks/queries_\${idx}.fasta"
-        count=\$((count + 1))
-    done
-    rm -rf queries
-fi
+${command.join('\n')}
 rmdir cache_result chunks queries 2>/dev/null || true
 """
-
-    stub:
-    // Stub runs must produce the real colon-joined queries and run the real
-    // lookups: cache hits key on the query content even in stub-mode test
-    // runs, where a placeholder would turn every hit into a miss. Both
-    // helpers only need the host's standard library.
-    // pairs: one [meta, input file] entry per sample; input_files: the
-    // deduplicated files behind them, so several samples may share one
-    // staged input without a name collision.
-    def metas = pairs.collect { it[0] }
-    def files = input_files instanceof Collection ? input_files.collect() : [input_files]
-    def safe = { name -> "'" + (name as String).replaceAll("'", "'\\''") + "'" }
-    def sanitise = { id -> (id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_') }
-    def manifest = pairs.collect { meta, file ->
-        "${sanitise(meta.id)}\t${meta.id}\t${file.name}"
-    }
-    if (metas.collect(sanitise).toSet().size() != metas.size()) {
-        error("TO_COLABFOLD_FASTA received sample IDs that collide after sanitisation: ${metas*.id}")
-    }
-    if (files.collect { it.name }.toSet().size() != files.size()) {
-        error("TO_COLABFOLD_FASTA received distinct input files that share a name; rename them so one task can stage them together")
-    }
-    def dir = (cache_dir ?: '').toString().replace("'", "'\\''")
-    def cache_id = (params.msa_cache_id ?: '').toString().replace("'", "'\\''")
-    def tool_id = (params.msa_cache_tool_id ?: '').toString().replace("'", "'\\''")
-    def cache_args = params.colabfold_db_load_mode ? "--db-load-mode ${params.colabfold_db_load_mode}" : ''
-    def cache_args_quoted = cache_args.toString().replace("'", "'\\''")
-    def limit = msa_batch_size instanceof Number ? msa_batch_size : msa_batch_size.toString().toInteger()
 
     """
-mkdir -p queries cache_result
-cat > manifest.tsv <<'MANIFEST'
-${manifest.join('\n')}
-MANIFEST
+${body}
+    """
 
-while IFS=\$'\\t' read -r sid raw_id input_name <&3; do
-    # Input paths are staged under input/; strip a leading input/ in case
-    # the task context already reports the staged location.
-    input_path="input/\${input_name#input/}"
-    to_colabfold_query_fasta.py \\
-        "\${input_path}" \\
-        --id "\${raw_id}" \\
-        --output "queries/\${sid}.fasta"
-    if [ -n '${dir}' ]; then
-        msa_cache.py lookup "queries/\${sid}.fasta" '${cache_id}' '${tool_id}' '${cache_args_quoted}' '${dir}' "cache_result/\${sid}.json" af3_json || true
-        if [ -f "cache_result/\${sid}.json" ]; then
-            rm -f "queries/\${sid}.fasta"
-        fi
-    fi
-done 3< manifest.tsv
-
-if ${emit_queries}; then
-    :
-else
-    mkdir chunks
-    idx=0
-    count=0
-    for f in \$(find queries -name '*.fasta' | sort); do
-        if [ '${limit}' -gt 0 ] && [ "\${count}" -eq '${limit}' ]; then
-            idx=\$((idx + 1))
-            count=0
-        fi
-        cat "\$f" >> "chunks/queries_\${idx}.fasta"
-        count=\$((count + 1))
-    done
-    rm -rf queries
-fi
-rmdir cache_result chunks queries 2>/dev/null || true
-"""
 }
