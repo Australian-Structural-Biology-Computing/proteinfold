@@ -35,6 +35,8 @@ process MMSEQS_COLABFOLDSEARCH_BATCH {
         test -s "results/\${id}.a3m" || { echo "Missing A3M output for \$id" >&2; exit 1; }
         test -s "results/\${id}.json" || { echo "Missing JSON output for \$id" >&2; exit 1; }
     done
+    # The concatenated query is not consumed once the results exist.
+    rm -f ${query_fasta}
 
     """
 

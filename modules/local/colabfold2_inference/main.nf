@@ -112,6 +112,14 @@ pack_metrics.py --ids sample_ids.txt --struct-ext ${structure_ext} --raw-dir raw
     rm -f raw/*_scores_rank_*.json
     rm -rf msa_in __pycache__
 """
+    // Multiple seeds and diffusion rollouts write one structure, scores file
+    // (and, when requested, confidences/logits/representations) per rank;
+    // nothing downstream consumes beyond the top-ranked model, so all other
+    // ranks are pruned before the metrics are packed. The per-sample a3m and
+    // the rank-1 files stay.
+    def prune_cmds = params.save_intermediates ? '' : '''
+find raw -maxdepth 1 -type f -name '*_rank_*' ! -name '*_rank_001_*' -delete
+'''
     """
 if ! command -v colabfold_batch >/dev/null 2>&1; then
     echo "COLABFOLD2_INFERENCE_BATCH: colabfold_batch is missing or not executable on the container PATH" >&2
@@ -187,6 +195,7 @@ colabfold_batch_af3_chainwise.py \\
     $args \\
     msa_in/ \\
     raw/
+${prune_cmds}
 
 while IFS= read -r id; do
     mapfile -t ranked_structures < <(find raw -maxdepth 1 -type f -name "\${id}_rank_*.${structure_ext}" | sort)

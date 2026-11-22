@@ -134,7 +134,7 @@ Depending on the selected options, additional top-level directories may be prese
 
 ### `--save_intermediates`
 
-If `--save_intermediates` is enabled, extra raw intermediate files are published in mode-specific `raw/` directories.
+Without this flag the inference work directories are pruned aggressively: only the top-ranked model's data (and the a3m MSAs) survive, since multiple seeds and diffusion rollouts write one structure and scores file per rank and nothing downstream consumes beyond rank 1. With `--save_intermediates` enabled, the unpruned raw intermediate files are published in mode-specific `raw/` directories instead.
 
 Examples include:
 

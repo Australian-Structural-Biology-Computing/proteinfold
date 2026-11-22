@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Structure prediction runs as a single batched process (`COLABFOLD2_INFERENCE_BATCH`); `--inference_batch_size 1` reproduces the previous per-sample behaviour. Batching now also works with `--use_msa_server`: every sample is converted to a per-sample single-query FASTA first, so colabfold_batch's directory input never sees a multi-record FASTA (which it would fold as its first record only).
 - Reports and ModelCIF assembly run as batched tasks (`--report_batch_size`, default `-1`); published report/ModelCIF files are unchanged.
 - The integer-encoded MSA TSV is replaced by the raw a3m file (consumed by the report and ModelCIF stages).
-- The inference task now deletes colabfold's per-rank scores JSONs and MSA staging copies once the packed metric stores are written (unless `--save_intermediates` is set), so the largest raw intermediates no longer accumulate in the work directory. Task directories also suppress `__pycache__` writes.
+- The inference task aggressively prunes its work directory (unless `--save_intermediates` is set): everything beyond the top-ranked model is deleted right after prediction -- multiple seeds and diffusion rollouts write one structure, scores file and (when requested) confidences/logits/representations per rank, and nothing downstream consumes beyond rank 1 -- and the per-rank scores JSONs and MSA staging copies are removed once the packed metric stores are written. The search task drops its concatenated query once the results exist. Task directories also suppress `__pycache__` writes.
 
 ### Fixed
 
