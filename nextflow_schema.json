@@ -233,6 +233,12 @@
                         "alphafold_params_2021-07-14"
                     ],
                     "fa_icon": "fas fa-database"
+                },
+                "analysis_batch_size": {
+                    "type": "integer",
+                    "default": -1,
+                    "description": "Number of samples processed together by the downstream analysis tasks (report generation, MultiQC content preparation); -1 runs all samples of a mode in one batch.",
+                    "fa_icon": "fas fa-chart-bar"
                 }
             }
         },

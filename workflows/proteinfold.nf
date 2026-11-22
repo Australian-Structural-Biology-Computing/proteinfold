@@ -86,7 +86,12 @@ def splitBatchOutputs(out) {
         pae                 : splitBatchSingleFiles(out.pae),
         ptms                : splitBatchSingleFiles(out.ptms),
         iptms               : splitBatchSingleFiles(out.iptms),
-        ipsaes              : splitBatchSingleFiles(out.ipsaes),
+        // The *_ipsae.tsv glob also sweeps the chainwise ipSAE store
+        // (T1024_chainwise_ipsae.tsv ends in _ipsae.tsv); keep it out of the
+        // per-sample ipSAE stream, where a duplicate tuple would double every
+        // downstream join on the sample meta.
+        ipsaes              : splitBatchSingleFiles(out.ipsaes)
+            .filter { meta, file -> !file.name.endsWith('_chainwise_ipsae.tsv') },
         chainwise           : splitBatchSingleFiles(out.chainwise),
         chainwise_ipsaes    : splitBatchSingleFiles(out.chainwise_ipsaes),
         confidence          : splitBatchSingleFiles(out.confidence),

@@ -350,7 +350,8 @@ workflow NFCORE_PROTEINFOLD {
         ch_modelcif,
         params.write_modelcif,
         params.modelcif_binary,
-        params.modelcif_pae_embed
+        params.modelcif_pae_embed,
+        params.analysis_batch_size as Integer
     )
 
     emit:
