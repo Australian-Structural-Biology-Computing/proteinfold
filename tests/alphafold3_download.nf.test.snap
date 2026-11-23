@@ -3,18 +3,18 @@
         "content": [
             29,
             {
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "3.14.x",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "3.14.x",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:generate_report.py": "3.12.7",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:python": "3.12.7",
-                "NFCORE_PROTEINFOLD:PREPARE_ALPHAFOLD3_DBS:ARIA2_MGNIFY:ZSTD_DECOMPRESS:zstd": "v1.5.6",
-                "NFCORE_PROTEINFOLD:PREPARE_ALPHAFOLD3_DBS:ARIA2_NT_RNA_2023_02_23:ZSTD_DECOMPRESS:zstd": "v1.5.6",
-                "NFCORE_PROTEINFOLD:PREPARE_ALPHAFOLD3_DBS:ARIA2_PDB_SEQRES:ZSTD_DECOMPRESS:zstd": "v1.5.6",
-                "NFCORE_PROTEINFOLD:PREPARE_ALPHAFOLD3_DBS:ARIA2_RFAM:ZSTD_DECOMPRESS:zstd": "v1.5.6",
-                "NFCORE_PROTEINFOLD:PREPARE_ALPHAFOLD3_DBS:ARIA2_RNACENTRAL_ACTIVE_SEQ:ZSTD_DECOMPRESS:zstd": "v1.5.6",
-                "NFCORE_PROTEINFOLD:PREPARE_ALPHAFOLD3_DBS:ARIA2_SMALL_BFD:ZSTD_DECOMPRESS:zstd": "v1.5.6",
-                "NFCORE_PROTEINFOLD:PREPARE_ALPHAFOLD3_DBS:ARIA2_UNIPROT:ZSTD_DECOMPRESS:zstd": "v1.5.6",
-                "NFCORE_PROTEINFOLD:PREPARE_ALPHAFOLD3_DBS:ARIA2_UNIREF90:ZSTD_DECOMPRESS:zstd": "v1.5.6"
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "3.10.8",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "3.10.8",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:generate_report.py": "3.10.8",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:python": "3.10.8",
+                "NFCORE_PROTEINFOLD:PREPARE_ALPHAFOLD3_DBS:ARIA2_MGNIFY:ZSTD_DECOMPRESS:zstd": "v1.4.4",
+                "NFCORE_PROTEINFOLD:PREPARE_ALPHAFOLD3_DBS:ARIA2_NT_RNA_2023_02_23:ZSTD_DECOMPRESS:zstd": "v1.4.4",
+                "NFCORE_PROTEINFOLD:PREPARE_ALPHAFOLD3_DBS:ARIA2_PDB_SEQRES:ZSTD_DECOMPRESS:zstd": "v1.4.4",
+                "NFCORE_PROTEINFOLD:PREPARE_ALPHAFOLD3_DBS:ARIA2_RFAM:ZSTD_DECOMPRESS:zstd": "v1.4.4",
+                "NFCORE_PROTEINFOLD:PREPARE_ALPHAFOLD3_DBS:ARIA2_RNACENTRAL_ACTIVE_SEQ:ZSTD_DECOMPRESS:zstd": "v1.4.4",
+                "NFCORE_PROTEINFOLD:PREPARE_ALPHAFOLD3_DBS:ARIA2_SMALL_BFD:ZSTD_DECOMPRESS:zstd": "v1.4.4",
+                "NFCORE_PROTEINFOLD:PREPARE_ALPHAFOLD3_DBS:ARIA2_UNIPROT:ZSTD_DECOMPRESS:zstd": "v1.4.4",
+                "NFCORE_PROTEINFOLD:PREPARE_ALPHAFOLD3_DBS:ARIA2_UNIREF90:ZSTD_DECOMPRESS:zstd": "v1.4.4"
             },
             [
                 "DBs",
@@ -63,6 +63,7 @@
                 "alphafold3/top_ranked_structures",
                 "alphafold3/top_ranked_structures/T1024.cif",
                 "alphafold3/top_ranked_structures/T1026.cif",
+                "benchmark",
                 "download",
                 "download/mmcif_files",
                 "download/mmcif_files/stub.cif",
@@ -122,10 +123,10 @@
                 "T1026_alphafold3_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-09-29T16:29:20.110512797",
+        "timestamp": "2026-11-23T12:18:42.449145823",
         "meta": {
             "nf-test": "0.9.5",
-            "nextflow": "26.04.6"
+            "nextflow": "26.10.6"
         }
     }
 }

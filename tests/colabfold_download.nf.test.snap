@@ -7,6 +7,7 @@
                 "DBs/colabfold",
                 "DBs/colabfold/params",
                 "DBs/colabfold/params/alphafold_params_2022-12-06",
+                "benchmark",
                 "colabfold",
                 "colabfold/T1024",
                 "colabfold/T1024/T1024_chainwise_ipsae.tsv",
@@ -92,10 +93,10 @@
                 "T1026_colabfold_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-10-26T16:05:22.748637017",
+        "timestamp": "2026-11-23T12:26:15.990754898",
         "meta": {
-            "nf-test": "0.9.4",
-            "nextflow": "26.04.6"
+            "nf-test": "0.9.5",
+            "nextflow": "26.10.6"
         }
     }
 }

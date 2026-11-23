@@ -55,6 +55,7 @@
                 "alphafold2/split_msa_prediction/top_ranked_structures/T1024.pdb",
                 "alphafold2/split_msa_prediction/top_ranked_structures/T1026.cif",
                 "alphafold2/split_msa_prediction/top_ranked_structures/T1026.pdb",
+                "benchmark",
                 "multiqc",
                 "multiqc/multiqc_data",
                 "multiqc/multiqc_data/.stub",
@@ -116,10 +117,10 @@
                 "T1026_alphafold2_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-09-29T16:28:09.771504003",
+        "timestamp": "2026-11-23T12:18:00.091052159",
         "meta": {
             "nf-test": "0.9.5",
-            "nextflow": "26.04.6"
+            "nextflow": "26.10.6"
         }
     }
 }

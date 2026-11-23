@@ -3,6 +3,7 @@
         "content": [
             16,
             [
+                "benchmark",
                 "colabfold",
                 "colabfold/T1024",
                 "colabfold/T1024/T1024_chainwise_ipsae.tsv",
@@ -117,10 +118,10 @@
                 "T1027_colabfold_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-10-12T12:36:15.704285512",
+        "timestamp": "2026-11-23T12:25:42.401695597",
         "meta": {
-            "nf-test": "0.9.4",
-            "nextflow": "25.10.4"
+            "nf-test": "0.9.5",
+            "nextflow": "26.10.6"
         }
     }
 }
