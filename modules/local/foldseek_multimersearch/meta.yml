@@ -1,0 +1,48 @@
+name: "foldseek_multimersearch"
+description: All-vs-all Foldseek-Multimer complex alignment over the predicted structures of a sample, reporting chain-order-invariant complex TM-scores and the chain assignments used for each pair.
+tools:
+  - "foldseek":
+      description: "Foldseek: fast and accurate protein structure search"
+      homepage: "https://search.foldseek.com/search"
+      documentation: "https://github.com/steineggerlab/foldseek"
+      tool_dev_url: "https://github.com/steineggerlab/foldseek"
+      doi: "10.1038/s41587-023-01773-0"
+      licence:
+        - "GPL v3"
+input:
+  - - meta:
+        type: map
+        description: Groovy Map containing sample information.
+    - structures:
+        type: file
+        description: All predicted structure files (PDB or mmCIF) of the sample; every file is treated as one complex.
+output:
+  multimer_report:
+    - - meta:
+          type: map
+          description: Groovy Map containing sample information.
+      - "*_multimer_report.tsv":
+          type: file
+          description: Foldseek complex report with per-pair matched chains, complex TM-scores, rotation/translation vectors and assignment ids.
+          pattern: "*_multimer_report.tsv"
+  versions_foldseek:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from.
+      - foldseek:
+          type: string
+          description: The tool name.
+      - "foldseek --help |& sed -n 's/.*Version: //p'":
+          type: eval
+          description: The expression to obtain the Foldseek version.
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from.
+      - foldseek:
+          type: string
+          description: The tool name.
+      - "foldseek --help |& sed -n 's/.*Version: //p'":
+          type: eval
+          description: The expression to obtain the Foldseek version.

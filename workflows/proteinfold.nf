@@ -25,6 +25,7 @@ include { ALPHAFOLD3_JSON_TO_COLABFOLD_A3M   } from '../modules/local/af3_msa_js
 include { MSA_COLABFOLD_SEARCH } from '../subworkflows/local/msa_colabfold_search'
 include { MSA_ALPHAFOLD2       } from '../subworkflows/local/msa_alphafold2'
 include { MSA_ALPHAFOLD3       } from '../subworkflows/local/msa_alphafold3'
+include { CONFORMATIONAL_ANALYSIS } from '../subworkflows/local/conformational_analysis'
 include { collectMultiqcMetrics; modeChannel } from '../subworkflows/local/utils_nfcore_proteinfold_pipeline'
 
 workflow PROTEINFOLD {
@@ -421,6 +422,17 @@ workflow PROTEINFOLD {
     ch_top_ranked_structure = ch_batch.top_ranked_structure
     ch_structures = ch_batch.structures_pdb.mix(ch_batch.structures)
 
+    //
+    // CONFORMATIONAL ANALYSIS: cluster and project the predicted structures
+    //
+    if (params.conformational_analysis) {
+        CONFORMATIONAL_ANALYSIS(
+            ch_structures,
+            ch_batch.scores,
+            params.conformational_analysis_cluster_cutoff
+        )
+    }
+
     emit:
     top_ranked_pdb  = ch_top_ranked_structure
     pdb             = ch_structures
@@ -434,5 +446,6 @@ workflow PROTEINFOLD {
     chainwise_ipsae = ch_batch.chainwise_ipsaes
     confidence      = ch_batch.confidence
     plddt           = ch_batch.plddt
+    scores          = ch_batch.scores
     multiqc_metrics = ch_multiqc_metrics
 }

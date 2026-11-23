@@ -58,10 +58,20 @@ process COLABFOLD2_INFERENCE {
         error("Local COLABFOLD2_INFERENCE module does not support Conda. Please use Docker / Singularity / Podman instead.")
     }
     def args = task.ext.args ?: ''
+    // Site-level ext.args overrides are appended after the module's own flags,
+    // where argparse would silently let them win; force these knobs through
+    // their first-class parameters instead.
+    if (args =~ /--num-seeds|--max-msa/) {
+        error("COLABFOLD2_INFERENCE: task.ext.args must not set --num-seeds or --max-msa; use --colabfold_num_seeds / --colabfold_max_msa instead")
+    }
     def use_esm_arg = use_esm ? '--use-esm' : ''
     def precision = task.ext.weights_precision ?: 'fp32'
     // Forward the global --random_seed; colabfold_batch defaults to 0 anyway.
+    // Seed multiplicity and MSA subsampling are rendered here rather than via
+    // ext.args so site-level ext.args overrides cannot silently drop them.
     def random_seed_arg = params.random_seed != null ? "--random-seed ${params.random_seed}" : ''
+    def num_seeds_arg = params.colabfold_num_seeds && params.colabfold_num_seeds > 1 ? "--num-seeds ${params.colabfold_num_seeds}" : ''
+    def max_msa_arg = params.colabfold_max_msa ? "--max-msa '${params.colabfold_max_msa}'" : ''
     // Persistent JIT cache for the AF3-family backends: their pinned build has no
     // native compile-cache consumption, so jax's own persistent compilation cache
     // (JAX_COMPILATION_CACHE_DIR) covers them. The AlphaFold2 backends get
@@ -129,6 +139,8 @@ process COLABFOLD2_INFERENCE {
         --weights-precision ${precision} \
         --data "${params_path}" \
         ${random_seed_arg} \
+        ${num_seeds_arg} \
+        ${max_msa_arg} \
         $args \
         msa_in/ \
         raw/

@@ -164,6 +164,17 @@ Alternatively, the required data layout for each MSA tool and backend is describ
 
 > Omitting the `--db` flag will allow the pipeline to download the reference data required to execute the selected MSA tool and backend.
 
+## Conformational analysis
+
+By default the pipeline stops after predicting and reporting structures. With `--conformational_analysis` an optional downstream subworkflow is enabled that compares every predicted structure of a sample against every other one — across all selected `--mode` backends, model ranks and seeds — and produces a 2D conformational plot per sample:
+
+- `foldseek_multimersearch`: an all-vs-all [Foldseek-Multimer](https://github.com/steineggerlab/foldseek) complex alignment over the sample's structures. Foldseek optimises the chain pairing between two complexes, so the resulting complex TM-scores are invariant to chain naming, ordering and composition differences between prediction backends, and the report records which chains were aligned with each other for every pair.
+- `cluster_conformations`: structures are grouped into conformational clusters by average-linkage clustering on the complex TM-score similarities and embedded in 2D with classical multidimensional scaling (MDS).
+
+The interactive `<SEQUENCE NAME>_conformations.html` report plots each predicted structure as a point in the MDS embedding, with options to color by conformational cluster, prediction model, rank, seed or any confidence score, and to filter structures by a minimum confidence-score threshold. A per-structure table `<SEQUENCE NAME>_conformations.tsv` and the Foldseek-Multimer alignment report `<SEQUENCE NAME>_multimer_report.tsv` are written alongside it.
+
+The `--conformational_analysis_cluster_cutoff` parameter sets the complex TM-score similarity at or above which two structures are joined into the same cluster (default 0.5, the conventional Foldseek structure clustering threshold). If the Foldseek-Multimer alignment is unavailable the analysis falls back to approximate TM-scores computed from CA-atom superpositions, which assume a chain correspondence by order of appearance and are only reliable for monomers.
+
 ## Random Seeds
 
 The pipeline-wide `--random_seed` parameter is forwarded to `colabfold_batch` (`--random-seed`) and honoured by every prediction backend: the AlphaFold2 backends seed the model runners, and the AlphaFold3-open backends (alphafold3, boltz2, protenix2, chai1, esmfold2, ...) set the folding input's `rng_seeds`.

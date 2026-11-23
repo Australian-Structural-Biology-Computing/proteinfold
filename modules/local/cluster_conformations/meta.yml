@@ -1,0 +1,79 @@
+name: "cluster_conformations"
+description: Cluster all predicted structures of a sample by superposition RMSD, project them onto a 2D MDS plot and report per-structure confidence metrics.
+tools: []
+input:
+  - - meta:
+        type: map
+        description: Groovy Map containing sample information.
+    - structures:
+        type: file
+        description: All predicted structure files (PDB or mmCIF) of the sample, across every prediction model.
+    - scores:
+        type: file
+        description: Per-structure ColabFold confidence JSON files.
+    - multimer_report:
+        type: file
+        description: Foldseek-Multimer all-vs-all complex report for the sample.
+    - model_labels:
+        type: list
+        description: Prediction model (public mode and short token) per structure file, index-aligned with structures.
+  - cluster_cutoff:
+      type: float
+      description: Superposition RMSD cutoff in Angstrom used for conformational clustering.
+output:
+  html:
+    - - meta:
+          type: map
+          description: Groovy Map containing sample information.
+      - "*conformations.html":
+          type: file
+          description: Interactive 2D conformational plot with options to color and filter by model and confidence scores.
+          pattern: "*conformations.html"
+  table:
+    - - meta:
+          type: map
+          description: Groovy Map containing sample information.
+      - "*conformations.tsv":
+          type: file
+          description: Per-structure table with model, rank, seed, cluster, confidence metrics and 2D coordinates.
+          pattern: "*conformations.tsv"
+  versions_python:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from.
+      - python:
+          type: string
+          description: The tool name.
+      - "python3 --version | sed 's/Python //g'":
+          type: eval
+          description: The expression to obtain the Python version.
+  versions_cluster_conformations:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from.
+      - cluster_conformations.py:
+          type: string
+          description: The tool name.
+      - "python3 --version | sed 's/Python //g'":
+          type: eval
+          description: The expression to obtain the Python version.
+topics:
+  versions:
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from.
+      - python:
+          type: string
+          description: The tool name.
+      - "python3 --version | sed 's/Python //g'":
+          type: eval
+          description: The expression to obtain the Python version.
+    - - "${task.process}":
+          type: string
+          description: The process the versions were collected from.
+      - cluster_conformations.py:
+          type: string
+          description: The tool name.
+      - "python3 --version | sed 's/Python //g'":
+          type: eval
+          description: The expression to obtain the Python version.

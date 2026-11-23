@@ -1,0 +1,8 @@
+name: cluster_conformations
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - conda-forge::biopython=1.84
+  - conda-forge::numpy=2.1.3
+  - conda-forge::plotly=5.24.1
