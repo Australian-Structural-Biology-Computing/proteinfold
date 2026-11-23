@@ -13,57 +13,16 @@ nextflow_process {
 
     def testdataBase = System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/'
 
-    // Build the packed metric store pair (<sample>_metrics.jsonl.gz/.npz)
-    // from the legacy per-metric TSV fixtures with tests/make_packed_store.py,
-    // and return a nextflow expression string for `input[0]`: the nf-test DSL
-    // `file()` helper is only in scope inside the generated test script, and
-    // the when-block template substitution would swallow closure-local
-    // variables, so the stores are built here and only the expression is
-    // embedded into the when block.
-    // 'rank_<n>=<value>' spec from a two-column (rank, value) TSV fixture;
-    // non-numeric rows (the fixtures carry deliberate junk) are skipped.
-    def toRankSpec = { String url ->
-        new URL(url).text.readLines().findAll { it.trim() }
-            .findAll { line -> line.split('\t').every { it.isNumber() } }
-            .collect { line -> def parts = line.split('\t'); "rank_${parts[0]}=${parts[1]}" }
-            .join(',')
-    }
-
-    def buildPackedStore = { String outputDir, String projectDir, String testdata, String sampleId, Map opts = [:] ->
-        def plddtLines = new URL(testdata + "testdata/metrics/${opts.plddtFixture}").text.readLines()
-        def header = plddtLines[0].split('\t')
-        def ranks = (1..header.size() - 1)
-        def perRankFiles = ranks.collect { new File(outputDir, "${sampleId}_plddt_${header[it]}.tsv") }
-        def perRankValues = ranks.collect { col ->
-            plddtLines.tail().collect { it.split('\t')[col] }.findAll { it && it != 'nan' }
-        }
-        [perRankFiles, perRankValues].transpose().each { f, values -> f.text = values.join('\n') + '\n' }
-        def plddtSpec = [ranks.collect { header[it] }, perRankFiles].transpose()
-            .collect { rank, f -> "${rank}=${f}" }.join(',')
-        def command = [
-            'python3', "${projectDir}/tests/make_packed_store.py",
-            '--sample-id', sampleId,
-            '--out-prefix', "${outputDir}/${sampleId}_colabfold2",
-            '--plddt', plddtSpec
-        ]
-        if (opts.ptmFixture) {
-            command += ['--ptm', toRankSpec(testdata + "testdata/metrics/${opts.ptmFixture}")]
-            command += ['--iptm', toRankSpec(testdata + "testdata/metrics/${opts.iptmFixture}")]
-            command += ['--msa-depth', opts.msaDepth.toString()]
-        }
-        if (opts.chainwise) {
-            // chainwise records stay in the store but must not leak into the
-            // MultiQC contents
-            command += ['--chainwise-iptm', 'rank_0=A:B=0.1']
-        }
-        def generator = command.execute()
-        assert generator.waitFor() == 0 : generator.err.text
-        // Return the complete when-block script with the real paths baked in:
-        // keeping every ${...} out of the when template sidesteps the nf-test
-        // variable substitution, which mangles closure values.
-        "input[0] = tuple([model: '${opts.model}'], " +
-            "[file('${outputDir}/${sampleId}_colabfold2_metrics.jsonl.gz', checkIfExists: true), " +
-            "file('${outputDir}/${sampleId}_colabfold2_metrics.npz', checkIfExists: true)])\n" +
+    // The packed metric store pairs are pre-generated under
+    // tests/fixtures/packed_stores/ (regenerable with
+    // tests/make_packed_store.py); no fixture-building process runs on the
+    // CI host. The builder only assembles the when-block script text, with
+    // every ${...} kept out of the template so the nf-test variable
+    // substitution cannot mangle closure values.
+    def buildPackedStore = { String projectDir, String sampleId, String model ->
+        "input[0] = tuple([model: '${model}'], " +
+            "[file('${projectDir}/tests/fixtures/packed_stores/${sampleId}_colabfold2_metrics.jsonl.gz', checkIfExists: true), " +
+            "file('${projectDir}/tests/fixtures/packed_stores/${sampleId}_colabfold2_metrics.npz', checkIfExists: true)])\n" +
             "input[1] = file('${projectDir}/modules/local/generate_multiqc_contents/generate_multiqc_contents.py', checkIfExists: true)"
     }
 
@@ -71,15 +30,7 @@ nextflow_process {
 
         when {
             process {
-                def msaDepth = new URL(testdataBase + 'testdata/metrics/S2_boltz_msa.tsv').text.readLines().findAll { it.trim() }.size()
-                buildPackedStore(outputDir, projectDir, testdataBase, 'S2', [
-                    model: 'boltz',
-                    plddtFixture: 'S2_plddt.tsv',
-                    ptmFixture: 'S2_ptm.tsv',
-                    iptmFixture: 'S2_iptm.tsv',
-                    msaDepth: msaDepth,
-                    chainwise: true
-                ])
+                buildPackedStore(projectDir, 'S2', 'boltz')
             }
         }
 
@@ -128,10 +79,7 @@ def files = (outs instanceof List ? outs : [outs]).collect { file(it) }
 
         when {
             process {
-                buildPackedStore(outputDir, projectDir, testdataBase, 'S1', [
-                    model: 'esmfold',
-                    plddtFixture: 'S1_plddt.tsv'
-                ])
+                buildPackedStore(projectDir, 'S1', 'esmfold')
             }
         }
 

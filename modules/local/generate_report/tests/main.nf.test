@@ -15,35 +15,21 @@ nextflow_process {
     def testdataBase = System.getenv('PROTEINFOLD_TESTDATA_BASE_PATH') ?: 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/refs/heads/proteinfold/'
 
     def buildInputs = { outputDir, projectDir, testdata ->
-        // Extract per-rank pLDDT columns from the DUMMY_PLDDT matrix the same
-        // way tests/assemble_modelcif.nf.test does.
-        def plddtLines = new URL(testdataBase + 'testdata/metrics/DUMMY_PLDDT.tsv').readLines()
-        def column = plddtLines[0].split('\t').findIndexOf { it == 'rank_0' }
-        new File(outputDir, 'S1_plddt_0.tsv').text = plddtLines.tail()
-            .collect { it.split('\t')[column] }.join('\n') + '\n'
-        def pae = new File(projectDir, 'tests/fixtures/DUMMY_PAE.tsv').text
-        new File(outputDir, 'S1_pae_0.tsv').text = pae
         new File(outputDir, 'S1.a3m').text = '>S1\n' + ('A' * 20) + '\n'
-        def generator = [
-            'python3', "$projectDir/tests/make_packed_store.py",
-            '--sample-id', 'S1',
-            '--out-prefix', "$outputDir/S1",
-            '--plddt', "rank_0=$outputDir/S1_plddt_0.tsv",
-            '--pae', "rank_0=$outputDir/S1_pae_0.tsv",
-            '--scores', 'rank_0=0.725'
-        ].execute()
-        assert generator.waitFor() == 0 : generator.err.text
         // colabfold-style ranked-structure names: the generator globs
         // <sample_id>_rank_*.<struct-ext>.
         (0..1).each { rank ->
             def src = new URL(testdataBase + "testdata/models/rank_${rank}.pdb").bytes
             new File(outputDir, "S1_rank_${rank}.pdb").bytes = src
         }
+        // The packed metric store pair is pre-generated under
+        // tests/fixtures/packed_stores/ (regenerable with
+        // tests/make_packed_store.py); no host-side fixture build.
         [
             "[[id: 'S1', model: 'alphafold2', mode_short: 'af2', msa_short: 'mmseqs', msa_tool: 'jackhmmer']]",
             "[file('${outputDir}/S1_rank_0.pdb', checkIfExists: true), file('${outputDir}/S1_rank_1.pdb', checkIfExists: true)]",
             "[file('${outputDir}/S1.a3m', checkIfExists: true)]",
-            "[file('${outputDir}/S1_metrics.jsonl.gz', checkIfExists: true), file('${outputDir}/S1_metrics.npz', checkIfExists: true)]",
+            "[file('${projectDir}/tests/fixtures/packed_stores/S1_metrics.jsonl.gz', checkIfExists: true), file('${projectDir}/tests/fixtures/packed_stores/S1_metrics.npz', checkIfExists: true)]",
             "S1\\tS1_metrics.jsonl.gz\\tS1_metrics.npz\\taf2_mmseqs",
             'pdb'
         ]

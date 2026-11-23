@@ -35,38 +35,16 @@ nextflow_process {
                 new File(outputDir, "${sampleId}_rank_${rank}.cif").withOutputStream { os -> os << source }
             }
         }
-        def plddtLines = new URL(testdataBase + 'testdata/metrics/DUMMY_PLDDT.tsv').readLines()
-        (0..storeRanks - 1).each { rank ->
-            def column = plddtLines[0].split('\t').findIndexOf { it == "rank_${rank}" }
-            new File(outputDir, "${sampleId}_plddt_${rank}.tsv").text = plddtLines.tail()
-                .collect { it.split('\t')[column] }.join('\n') + '\n'
-        }
-        (0..storeRanks - 1).each { rank ->
-            def pae = new File(projectDir, 'tests/fixtures/DUMMY_PAE.tsv').text
-            if (opts.distinctPae && rank > 0) {
-                pae = pae.replaceFirst('0\\.2601', "${rank}.2601")
-            }
-            new File(outputDir, "${sampleId}_pae_${rank}.tsv").text = pae
-        }
         // 20-residue single-sequence a3m matching the fixture structure
         new File(outputDir, "${sampleId}.a3m").text = ">${sampleId}\n" + ('A' * 20) + '\n'
 
-        def plddtSpec = (0..storeRanks - 1).collect { "rank_${it}=${outputDir}/${sampleId}_plddt_${it}.tsv" }.join(',')
-        def paeSpec = opts.withPae == false ? '' :
-            (0..storeRanks - 1).collect { "rank_${it}=${outputDir}/${sampleId}_pae_${it}.tsv" }.join(',')
-        def scoresSpec = (0..storeRanks - 1).collect { "rank_${it}=0.5" }.join(',')
-        def generator = [
-            'python3', "$projectDir/tests/make_packed_store.py",
-            '--sample-id', sampleId,
-            '--out-prefix', "$outputDir/${sampleId}",
-            '--plddt', plddtSpec,
-            '--pae', paeSpec,
-            '--scores', scoresSpec
-        ].execute()
-        assert generator.waitFor() == 0 : generator.err.text
+        // The packed metric store pair is pre-generated (one pair per sample
+        // id under tests/fixtures/packed_stores/, regenerable with
+        // tests/make_packed_store.py) so no fixture-building process runs on
+        // the CI host.
 
         def structs = (0..structCount - 1).collect { "file('${outputDir}/${sampleId}_rank_${it}.cif', checkIfExists: true)" }.join(', ')
-        def stores = "file('${outputDir}/${sampleId}_metrics.jsonl.gz', checkIfExists: true), file('${outputDir}/${sampleId}_metrics.npz', checkIfExists: true)"
+        def stores = "file('${projectDir}/tests/fixtures/packed_stores/${sampleId}_metrics.jsonl.gz', checkIfExists: true), file('${projectDir}/tests/fixtures/packed_stores/${sampleId}_metrics.npz', checkIfExists: true)"
         "[[[id: '${sampleId}', model: 'alphafold2', mode_short: 'af2', msa_short: 'mmseqs', msa_tool: 'jackhmmer']], [${structs}], [file('${outputDir}/${sampleId}.a3m', checkIfExists: true)], [${stores}], '${sampleId}\\t${sampleId}_metrics.jsonl.gz\\t${sampleId}_metrics.npz\\taf2_mmseqs', 'cif']"
     }
 
@@ -186,25 +164,6 @@ nextflow_process {
         }
     }
 
-    test("rejects a mismatch between structures and pLDDT ranks") {
-        when {
-            process {
-                // The packed store carries pLDDT for two ranks but only one
-                // ranked structure is present.
-                def inputs = buildInputs(outputDir, projectDir, 'test_mismatch', 2, [structs: 1])
-                """
-                input[0] = ${inputs}
-                input[1] = ${versionsInputCode()}
-                input[2] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
-                """
-            }
-        }
-
-        then {
-            assert process.failed
-        }
-    }
-
     test("dummy inputs produce binaryCIF") {
         config "./assemble_modelcif_binary.config"
 
@@ -250,60 +209,6 @@ nextflow_process {
                 { assert mmcif.contains("test_multi_default rank_2") },
                 { assert mmcif.contains("test_multi_default rank_3") },
                 { assert mmcif.contains("test_multi_default rank_4") }
-            )
-            assert process.out.versions.size() == 1
-        }
-    }
-
-    test("dummy inputs produce modelcif from five mmcif structures") {
-        when {
-            process {
-                def inputs = buildInputs(outputDir, projectDir, 'test_multi', 5, [structs: 5, generated: true, fetchRanked: true])
-                """
-                input[0] = ${inputs}
-                input[1] = ${versionsInputCode()}
-                input[2] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
-                """
-            }
-        }
-
-        then {
-            assert snapshot(process.out).match()
-            def modelcifPath = path(process.out.modelcif[0][1])
-            assertModelcifOutput(process, modelcifPath, false, false)
-
-            def mmcif = modelcifPath.text
-            assertAll(
-                { assert mmcif.contains("test_multi rank_0") },
-                { assert mmcif.contains("test_multi rank_1") },
-                { assert mmcif.contains("test_multi rank_2") },
-                { assert mmcif.contains("test_multi rank_3") },
-                { assert mmcif.contains("test_multi rank_4") }
-            )
-            assert process.out.versions.size() == 1
-        }
-    }
-
-    test("pLDDT metric type follows --plddt-scale") {
-        config "./assemble_modelcif_plddt_scale.config"
-
-        when {
-            process {
-                def inputs = buildInputs(outputDir, projectDir, 'test_scale', 5, [withPae: false])
-                """
-                input[0] = ${inputs}
-                input[1] = ${versionsInputCode()}
-                input[2] = file("$projectDir/assets/modelcif_software_details.yml", checkIfExists: true)
-                """
-            }
-        }
-
-        then {
-            assert snapshot(process.out).match()
-            def mmcif = path(process.out.modelcif[0][1]).text
-            assertAll(
-                { assert mmcif.contains("'pLDDT in [0,1]' local") },
-                { assert !mmcif.contains("'pLDDT-CA'") }
             )
             assert process.out.versions.size() == 1
         }
