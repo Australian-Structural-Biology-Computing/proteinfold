@@ -3,10 +3,10 @@
         "content": [
             10,
             {
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "3.14.x",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "3.14.x",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:generate_report.py": "3.12.7",
-                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:python": "3.12.7"
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "3.10.8",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "3.10.8",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:generate_report.py": "3.10.8",
+                "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_REPORT:python": "3.10.8"
             },
             [
                 "alphafold3",
@@ -35,6 +35,7 @@
                 "alphafold3/top_ranked_structures",
                 "alphafold3/top_ranked_structures/T1024.cif",
                 "alphafold3/top_ranked_structures/T1026.cif",
+                "benchmark",
                 "fasta",
                 "fasta/T1024.json",
                 "fasta/T1026.json",
@@ -79,10 +80,10 @@
                 "T1026_alphafold3_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-09-29T16:28:56.426251898",
+        "timestamp": "2026-11-23T12:18:27.061504943",
         "meta": {
             "nf-test": "0.9.5",
-            "nextflow": "26.04.6"
+            "nextflow": "26.10.6"
         }
     }
 }

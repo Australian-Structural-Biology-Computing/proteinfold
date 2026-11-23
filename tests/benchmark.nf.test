@@ -1,0 +1,65 @@
+nextflow_pipeline {
+    name "Test reference structure benchmarking"
+    script "../main.nf"
+    tag "pipeline"
+    tag "test_benchmark"
+    profile "test_esmfold"
+
+    test("benchmarks only samples with references") {
+        setup {
+            def first = file("$outputDir/first.fasta")
+            def second = file("$outputDir/second.fasta")
+            def reference = file("$projectDir/tests/fixtures/benchmark/reference.pdb")
+            first.text = '>first\nMQIFVKTLTGKTITLEVEPS\n'
+            second.text = '>second\nMQIFVKTLTGKTITLEVEPS\n'
+            file("$outputDir/samples.csv").text =
+                "id,fasta,reference\nfirst,${first},${reference}\nsecond,${second},\n"
+        }
+        when {
+            params {
+                outdir = "$outputDir"
+                input = "$outputDir/samples.csv"
+                skip_multiqc = true
+                skip_visualisation = true
+            }
+        }
+        then {
+            assert workflow.success
+            assert workflow.trace.succeeded().count { it.name.contains('BENCHMARK_STRUCTURE') } == 1
+            assert file("${params.outdir}/benchmark/esmfold/first.json").exists()
+            assert !file("${params.outdir}/benchmark/esmfold/second.json").exists()
+            def summary = file("${params.outdir}/benchmark/benchmark_summary.csv")
+            assert summary.exists()
+            assert summary.readLines()[0] == 'sample,mode,lddt,tm_score'
+            assert summary.readLines()[1].startsWith('first,esmfold,')
+            assert snapshot(
+                removeNextflowVersion("$outputDir/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml")
+            ).match()
+        }
+    }
+
+    test("rejects references with split fasta") {
+        setup {
+            def fasta = file("$outputDir/input.fasta")
+            def reference = file("$projectDir/tests/fixtures/benchmark/reference.pdb")
+            fasta.text = '>first\nMQIFVKTLTGKTITLEVEPS\n'
+            file("$outputDir/samples.csv").text = "id,fasta,reference\nfirst,${fasta},${reference}\n"
+        }
+        when {
+            params {
+                outdir = "$outputDir"
+                input = "$outputDir/samples.csv"
+                split_fasta = true
+                skip_multiqc = true
+                skip_visualisation = true
+            }
+        }
+        then {
+            assert workflow.failed
+            // Nextflow >= 26.10 leaves workflow.errorMessage empty for errors raised
+            // during pipeline initialisation, so assert against the captured stdout,
+            // which nf-test records for both successful and failed runs.
+            assert workflow.stdout.join('\n').contains("The 'reference' samplesheet column cannot be used with --split_fasta.")
+        }
+    }
+}

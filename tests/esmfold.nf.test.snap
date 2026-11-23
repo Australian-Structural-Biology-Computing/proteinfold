@@ -3,6 +3,7 @@
         "content": [
             6,
             [
+                "benchmark",
                 "esmfold",
                 "esmfold/T1024",
                 "esmfold/T1024/T1024_pae.tsv",
@@ -42,10 +43,10 @@
                 "T1026_esmfold_report.html:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-09-29T16:29:44.465261472",
+        "timestamp": "2026-11-23T12:28:23.922513337",
         "meta": {
             "nf-test": "0.9.5",
-            "nextflow": "26.04.6"
+            "nextflow": "26.10.6"
         }
     }
 }
