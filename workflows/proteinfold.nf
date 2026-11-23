@@ -29,14 +29,6 @@ include { collectMultiqcMetrics; modeChannel } from '../subworkflows/local/utils
 
 workflow PROTEINFOLD {
 
-    // The compiled-kernel cache is bound into the inference containers, and
-    // a bind source must exist before a container starts -- create it on the
-    // host, owned by the launching user, ahead of any task.
-    if (params.colabfold2_compile_cache) {
-        // Resolved against the launch directory, matching the module's bind.
-        new File(file(params.colabfold2_compile_cache).toAbsolutePath().toString()).mkdirs()
-    }
-
     take:
     ch_samplesheet  // channel: samplesheet read in from --input
     ch_params_path  // channel: tuple(model_type, params dir) from PREPARE_COLABFOLD2_DBS
@@ -73,6 +65,13 @@ workflow PROTEINFOLD {
     ch_af3_rnacentral   // channel: path(rnacentral)
 
     main:
+    // The compiled-kernel cache is bound into the inference containers, and
+    // a bind source must exist before a container starts -- create it on the
+    // host, owned by the launching user, ahead of any task.
+    if (params.colabfold2_compile_cache) {
+        // Resolved against the launch directory, matching the module's bind.
+        new File(file(params.colabfold2_compile_cache).toAbsolutePath().toString()).mkdirs()
+    }
     def COLABFOLD2_BACKENDS = [
         'auto'                   : 'ALPHAFOLD2',   // the plain alphafold2 token
         'alphafold2'             : 'ALPHAFOLD2',   // defensive alias for the same token
