@@ -45,7 +45,8 @@ workflow POST_PROCESSING {
     // are empty by design.
     if (write_modelcif && !workflow.stubRun) {
         MODELCIF_ASSEMBLE_BATCH(
-            ch_packed_batches.combine(ch_software_versions),
+            ch_packed_batches,
+            ch_software_versions,
             modelcif_software_details
         )
         MODELCIF_VALIDATE(MODELCIF_ASSEMBLE_BATCH.out.modelcif)

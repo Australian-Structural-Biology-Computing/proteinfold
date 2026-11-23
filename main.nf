@@ -311,8 +311,8 @@ workflow NFCORE_PROTEINFOLD {
     // the sample's packed metric stores, collated into --report_batch_size
     // groups (consumers read the stores natively).
     //
-    def report_batch = params.report_batch_size instanceof Number ?
-        params.report_batch_size : params.report_batch_size.toString().toInteger()
+    def report_batch_size = params.report_batch_size
+    def report_batch = report_batch_size instanceof Number ? report_batch_size : report_batch_size.toString().toInteger()
     if (report_batch == 0 || report_batch < -1) {
         error("Report batch size must be -1 or a positive integer, got ${report_batch}")
     }
