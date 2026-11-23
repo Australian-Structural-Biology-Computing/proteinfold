@@ -89,6 +89,11 @@
               class="hidden min-w-0 flex-1 flex flex-wrap items-center gap-x-3 gap-y-1"
               aria-label="Chain colour legend"
             ></ul>
+            <ul
+              id="entity-legend"
+              class="hidden min-w-0 flex-1 flex flex-wrap items-center gap-x-3 gap-y-1"
+              aria-label="Entity colour legend"
+            ></ul>
             <div
               id="color-mode-toggle"
               class="inline-flex shrink-0 rounded-lg border border-gray-200 bg-white p-0.5 text-xs shadow-sm"
@@ -100,6 +105,9 @@
               </button>
               <button type="button" data-mode="chain" class="rounded-md px-2.5 py-1 font-medium text-gray-500">
                 Chain
+              </button>
+              <button type="button" data-mode="entity" class="hidden rounded-md px-2.5 py-1 font-medium text-gray-500">
+                Entity
               </button>
             </div>
           </div>
@@ -481,6 +489,23 @@
 
       const chainColorPair = (seg) => CHAIN_COLORS[CHAIN_COLOR_INDEX.get(seg.chain) || 0];
 
+      // Entity grouping from the input JSON's id lists: chains declared as
+      // copies of one entity share a colour in the entity colouring mode,
+      // with one legend chip per entity (labelled e.g. "A+C").
+      const ENTITIES = Array.isArray(config.entities) ? config.entities : [];
+      const ENTITY_OF_CHAIN = (() => {
+        const map = new Map();
+        ENTITIES.forEach((entity, ix) => {
+          (entity.chains || []).forEach((chain) => {
+            if (!map.has(chain)) map.set(chain, ix % CHAIN_COLORS.length);
+          });
+        });
+        return map;
+      })();
+      // The mode is only meaningful when some entity groups several chains;
+      // otherwise it would duplicate the chain colouring.
+      const hasEntityGrouping = ENTITIES.some((entity) => (entity.chains || []).length > 1);
+
       const base64ToBytes = (b64) => {
         const binary = atob(b64);
         const bytes = new Uint8Array(binary.length);
@@ -645,6 +670,7 @@
       };
 
       const CHAIN_THEME_NAME = "chain-element";
+      const ENTITY_THEME_NAME = "entity-blocks";
 
       // Default CPK element colours - the same Jmol table Molstar's built-in
       // element-symbol theme uses, so heteroatoms keep their familiar
@@ -830,6 +856,54 @@
         plugin.representation.structure.themes.colorThemeRegistry.add(provider);
       };
 
+      const registerEntityTheme = (plugin) => {
+        const { StructureProperties } = molstar.lib.structure;
+        const atomOf = (unit, element) => {
+          if (!unit) return { chain: null, symbol: null };
+          const loc = { unit, element };
+          try {
+            return {
+              chain: StructureProperties.chain.auth_asym_id(loc),
+              symbol: StructureProperties.atom.type_symbol(loc),
+            };
+          } catch (e) {
+            return { chain: null, symbol: null };
+          }
+        };
+        const provider = {
+          name: ENTITY_THEME_NAME,
+          label: "Entity / element",
+          category: "Miscellaneous",
+          factory: (ctx, props) => {
+            const color = (location) => {
+              let chainId = null;
+              let symbol = null;
+              if (location && location.kind === "element-location") {
+                ({ chain: chainId, symbol } = atomOf(location.unit, location.element));
+              } else if (location && location.kind === "bond-location") {
+                ({ chain: chainId, symbol } = atomOf(location.aUnit, location.aUnit.elements[location.aIndex]));
+              }
+              const ix = chainId !== null ? ENTITY_OF_CHAIN.get(chainId) : undefined;
+              if (ix === undefined) return 0x9ca3af;
+              // Same convention as the chain theme: entity-coloured carbons,
+              // default CPK colours for every other element
+              if (symbol && symbol.toUpperCase() !== "C") return ELEMENT_COLORS[symbol.toUpperCase()] ?? 0xffffff;
+              return CHAIN_COLORS[ix].hex;
+            };
+            return {
+              factory: provider.factory,
+              granularity: "group",
+              preferSmoothing: false,
+              color,
+            };
+          },
+          getParams: () => ({}),
+          defaultValues: {},
+          isApplicable: () => true,
+        };
+        plugin.representation.structure.themes.colorThemeRegistry.add(provider);
+      };
+
       const VIEWER_OPTIONS = {
         layoutIsExpanded: false,
         layoutShowControls: false,
@@ -850,6 +924,7 @@
         viewer = await molstar.Viewer.create("molstar-root", VIEWER_OPTIONS);
         registerPlddtTheme(viewer.plugin);
         registerChainTheme(viewer.plugin);
+        registerEntityTheme(viewer.plugin);
         viewer.subscribe(viewer.plugin.behaviors.interaction.click, handleViewerClick);
         await viewer.plugin.clear();
         await viewer.loadStructureFromData(MODEL_DATA, STRUCT_FORMAT);
@@ -2238,17 +2313,42 @@
             chainLegend.appendChild(chip);
           });
         }
+        const entityLegend = document.getElementById("entity-legend");
+        if (entityLegend && hasEntityGrouping) {
+          ENTITIES.forEach((entity) => {
+            const ix = ENTITY_OF_CHAIN.get((entity.chains || [])[0]);
+            if (ix === undefined) return;
+            const { band, text } = CHAIN_COLORS[ix];
+            const chip = document.createElement("li");
+            chip.className = "flex items-center gap-1.5";
+            const swatch = document.createElement("span");
+            swatch.className = "inline-block h-3 w-3 rounded-sm border border-black/10";
+            swatch.style.background = band;
+            const label = document.createElement("span");
+            label.className = "text-xs font-medium";
+            label.style.color = text;
+            label.textContent = entity.label;
+            chip.appendChild(swatch);
+            chip.appendChild(label);
+            entityLegend.appendChild(chip);
+          });
+        }
         const colorToggle = document.getElementById("color-mode-toggle");
         if (colorToggle) {
+          const entityButton = colorToggle.querySelector('button[data-mode="entity"]');
+          if (entityButton && hasEntityGrouping) entityButton.classList.remove("hidden");
           colorToggle.querySelectorAll("button[data-mode]").forEach((btn) => {
             btn.addEventListener("click", async () => {
               const mode = btn.dataset.mode;
               if (mode === structureColorMode || !viewer) return;
+              if (mode === "entity" && !hasEntityGrouping) return;
               structureColorMode = mode;
               markToggleActive(colorToggle, btn);
               document.getElementById("plddt-legend").classList.toggle("hidden", mode !== "plddt");
               chainLegend.classList.toggle("hidden", mode !== "chain");
-              const themeName = mode === "chain" ? CHAIN_THEME_NAME : PLDDT_THEME_NAME;
+              entityLegend.classList.toggle("hidden", mode !== "entity");
+              const themeName =
+                mode === "chain" ? CHAIN_THEME_NAME : mode === "entity" ? ENTITY_THEME_NAME : PLDDT_THEME_NAME;
               await applyStructureTheme(viewer, themeName);
               await updateFocusVisualTheme(themeName);
             });

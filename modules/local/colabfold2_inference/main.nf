@@ -35,6 +35,7 @@ process COLABFOLD2_INFERENCE {
     tuple val(meta), path("raw/*_rank_*.cif")                 , optional: true, emit: structures
     tuple val(meta), path("raw/*_rank_*.pdb")                 , optional: true, emit: structures_pdb
     tuple val(meta), path("${meta.id}_colabfold2_msa.tsv")    , optional: true, emit: msa
+    tuple val(meta), path("${meta.id}_entities.json")         , optional: true, emit: entities
     tuple val(meta), path("${meta.id}_1_pae.tsv")             , optional: true, emit: pae
     tuple val(meta), path("${meta.id}_ptm.tsv")               , optional: true, emit: ptms
     tuple val(meta), path("${meta.id}_iptm.tsv")              , optional: true, emit: iptms
@@ -180,6 +181,11 @@ process COLABFOLD2_INFERENCE {
         exit 1
     fi
 
+    # Entity colouring needs declared chain ids; FASTA and a3m inputs have none.
+    if [[ ! -f "${meta.id}_entities.json" ]]; then
+        printf '{"entities": []}\\n' > "${meta.id}_entities.json"
+    fi
+
     touch \
         "${meta.id}_1_pae.tsv" \
         "${meta.id}_ptm.tsv" \
@@ -215,6 +221,7 @@ process COLABFOLD2_INFERENCE {
     touch "${meta.id}_chainwise_ipsae.tsv"
     touch "${meta.id}_plddt.tsv"
     touch "${meta.id}_confidence.tsv"
+    printf '{"entities": []}\\n' > "${meta.id}_entities.json"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

@@ -22,7 +22,8 @@ nextflow_process {
                     [file(params.pipelines_testdata_base_path + 'testdata/metrics/S1_scalar.tsv', checkIfExists: true)],
                     [file(params.pipelines_testdata_base_path + 'testdata/metrics/S1_scalar.tsv', checkIfExists: true)],
                     [file(params.pipelines_testdata_base_path + 'testdata/metrics/S1_chainwise.tsv', checkIfExists: true)],
-                    [file("${projectDir}/tests/fixtures/NO_FILE")]
+                    [file("${projectDir}/tests/fixtures/NO_FILE")],
+                    [file("${projectDir}/tests/fixtures/entities_empty.json", checkIfExists: true)]
                 )
                 input[1] = file("${projectDir}/assets/report_template.html", checkIfExists: true)
                 """
@@ -53,6 +54,8 @@ nextflow_process {
             // Molstar-based viewer with cross-highlighting scaffolding
             assert config.residues && config.residues[0][0] == "A"
             assert config.pae == null && config.msa == null
+            // The empty entity map keeps the entity colouring hidden
+            assert config.entities == []
             assert html.contains("cdn.jsdelivr.net/npm/molstar@") && !html.contains("ngl.js") && !html.contains("NGL.Stage")
             assert html.contains("id=\"molstar-root\"")
             assert html.contains("id=\"selection-readout\"")

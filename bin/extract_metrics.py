@@ -588,7 +588,55 @@ def read_paired_a3m(name, a3m_file, structure=None):
     msa_rows, spans = a3m_to_int(a3m_file, structure=structure)
     write_msa_tsv(name, msa_rows, spans=spans)
 
+def entity_map_from_af3_json(json_path, structure=None):
+    """Chain groups per entity from an AlphaFold3-format JSON.
+
+    Every entity kind (protein, ligand, RNA, DNA) carries an 'id' or an id
+    list, with one entry per copy of the entity - the grouping the report's
+    entity colouring needs, which the predicted structure alone cannot
+    provide (it has no notion of which chains are copies). Returns
+    [{'label': 'A+C', 'chains': ['A', 'C']}, ...] in input order, each
+    entity's chains listed in the predicted structure's chain order so the
+    labels read in the order the viewer shows them.
+    """
+    with open(json_path, encoding="utf-8") as handle:
+        document = json.load(handle)
+    if isinstance(document, list):
+        if len(document) != 1:
+            raise ValueError(
+                "ColabFold2 requires one AlphaFold3 job per samplesheet row; "
+                f"the JSON contains {len(document)} jobs"
+            )
+        document = document[0]
+    entities = []
+    for entity in document.get("sequences", []):
+        if not isinstance(entity, dict):
+            continue
+        payload = next((v for v in entity.values() if isinstance(v, dict)), None)
+        if payload is None:
+            continue
+        ids = payload.get("id")
+        id_list = list(ids) if isinstance(ids, list) else ([ids] if ids else [])
+        if id_list:
+            entities.append(id_list)
+    if not entities:
+        return []
+    if structure is not None:
+        chain_order = {chain_id: ix for ix, chain_id in enumerate(get_chain_ids(structure))}
+        entities = [
+            sorted(id_list, key=lambda cid: chain_order.get(cid, len(chain_order)))
+            for id_list in entities
+        ]
+    return [{"label": "+".join(id_list), "chains": list(id_list)} for id_list in entities]
+
+
 def read_af3_msa_json(name, json_path, structure=None):
+    # The entity map is written before the coverage: it only needs the ids,
+    # and must survive the no-MSA exits so language-model variants keep their
+    # entity colouring too.
+    entity_map = entity_map_from_af3_json(json_path, structure=structure)
+    with open(f"{name}_entities.json", "w") as handle:
+        json.dump({"entities": entity_map}, handle)
     try:
         msa_rows, spans = af3_msa_json_to_int(json_path, structure=structure)
     except MissingMsaError:

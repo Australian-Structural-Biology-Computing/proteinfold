@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 import base64
 import re
+import warnings
 from Bio import PDB
 
 def is_missing_input(path):
@@ -559,6 +560,11 @@ parser.add_argument("--chainwise_ipsae", dest="chainwise_ipsae", default=None)
 parser.add_argument("--name", dest="name")
 parser.add_argument("--output_dir", dest="output_dir")
 parser.add_argument("--html_template", dest="html_template")
+parser.add_argument(
+    "--entities", dest="entities", default=None,
+    help="Entity map JSON written by extract_metrics.py: chain groups per "
+         "AlphaFold3 entity, powering the report's entity colouring",
+)
 parser.add_argument("--version", action="version", version=f"{version}")
 parser.set_defaults(output_dir="")
 parser.set_defaults(in_type="af3")
@@ -591,6 +597,18 @@ chainwise_ipsae_matrix = build_pair_score_matrices(
 # Cross-highlighting between the PAE/MSA and the structure is only enabled
 # when this list length matches the matrix dimensions (checked client-side).
 residue_list = get_residue_list(top_structure)
+
+# Entity groups (which chains are copies of one declared entity) power the
+# report's entity colouring; extract_metrics.py derives them from the input
+# JSON's id lists, ordered for the labels by the structure's chain order.
+entity_map = []
+if not is_missing_input(args.entities):
+    try:
+        with open(args.entities, "r") as handle:
+            entity_map = json.load(handle).get("entities") or []
+    except (OSError, ValueError) as error:
+        warnings.warn(f"Could not read the entity map {args.entities}: {error}")
+        entity_map = []
 pae_payload = encode_pae_payload(args.pae, top_structure, residue_list)
 msa_payload = build_msa_payload(args.msa)
 
@@ -626,6 +644,7 @@ report_config = {
     "residues": residue_list,
     "pae": pae_payload,
     "msa": msa_payload,
+    "entities": entity_map,
 }
 config_blob = (
     '<script type="application/json" id="report-config">'

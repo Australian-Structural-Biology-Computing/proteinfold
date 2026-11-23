@@ -368,12 +368,13 @@ workflow PROTEINFOLD {
     // Combine every backend's emits. The metas already carry the public
     // mode (tagged at dispatch), so publication and MultiQC grouping stay
     // collision-free without further tagging.
-    def combined = [top_ranked_structure: [], structures: [], structures_pdb: [], msa: [], pae: [], ptms: [], iptms: [], ipsaes: [], chainwise: [], chainwise_ipsaes: [], confidence: [], plddt: [], scores: [], raw: []]
+    def combined = [top_ranked_structure: [], structures: [], structures_pdb: [], msa: [], entities: [], pae: [], ptms: [], iptms: [], ipsaes: [], chainwise: [], chainwise_ipsaes: [], confidence: [], plddt: [], scores: [], raw: []]
     backends_out.each { backend, out ->
         combined.top_ranked_structure   << out.top_ranked_structure
         combined.structures             << out.structures
         combined.structures_pdb         << out.structures_pdb
         combined.msa                    << out.msa
+        combined.entities               << out.entities
         combined.pae                    << out.pae
         combined.ptms                   << out.ptms
         combined.iptms                  << out.iptms
@@ -405,6 +406,7 @@ workflow PROTEINFOLD {
         structures          : combined.structures.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
         structures_pdb      : combined.structures_pdb.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
         msa                 : combined.msa.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
+        entities            : combined.entities.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
         pae                 : combined.pae.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
         ptms                : combined.ptms.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
         iptms               : combined.iptms.inject(Channel.empty()) { acc, ch -> acc.mix(ch) },
@@ -423,6 +425,7 @@ workflow PROTEINFOLD {
     top_ranked_pdb  = ch_top_ranked_structure
     pdb             = ch_structures
     msa             = ch_batch.msa
+    entities        = ch_batch.entities
     pae             = ch_batch.pae
     ptm             = ch_batch.ptms
     iptm            = ch_batch.iptms
