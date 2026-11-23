@@ -67,3 +67,7 @@ ${command.join('\n')}
 rmdir chunks queries 2>/dev/null || true
 """
 }
+
+def sanitise(id) {
+    (id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_')
+}
