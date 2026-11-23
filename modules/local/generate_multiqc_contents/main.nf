@@ -21,17 +21,22 @@ process GENERATE_MULTIQC_CONTENTS {
 
     script:
     def args = task.ext.args ?: ''
+    // When --analysis_batch_size splits a mode's metrics across tasks, each
+    // chunk emits its own section ids so MultiQC keeps them apart.
+    def chunk_arg = meta.analysis_chunk != null ? "--chunk-index ${meta.analysis_chunk}" : ''
     """
     python3 ${generator_script} \\
         --model ${meta.model} \\
         --output-dir ./ \\
+        ${chunk_arg} \\
         ${metric_files.join(' ')} \\
         $args
     """
 
     stub:
+    def chunk_suffix = meta.analysis_chunk != null ? "_chunk${meta.analysis_chunk}" : ''
     """
-    touch proteinfold_${meta.model}_generalstats_mqc.json proteinfold_${meta.model}_plddt_lineplot_mqc.json
+    touch proteinfold_${meta.model}${chunk_suffix}_generalstats_mqc.json proteinfold_${meta.model}${chunk_suffix}_plddt_lineplot_mqc.json
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

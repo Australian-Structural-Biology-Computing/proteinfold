@@ -1,7 +1,7 @@
 nextflow_process {
-    name "Test Process GENERATE_REPORT"
+    name "Test Process GENERATE_REPORT_BATCH"
     script "../main.nf"
-    process "GENERATE_REPORT"
+    process "GENERATE_REPORT_BATCH"
     tag "modules"
     tag "ci_img_misc"
     tag "modules_local"
@@ -11,18 +11,52 @@ nextflow_process {
     profile "test_nostub"
 
     test("report generation carries full config, injection-safe blob, and clean download naming") {
+        setup {
+            // The batched module derives per-sample file names from the
+            // sanitised sample id (the inference module's naming invariant),
+            // so stage the fixtures under those names.
+            def fixtures = ['msa': 'DUMMY_MSA.tsv', 'pae': 'DUMMY_PAE.tsv',
+                            'chainwise_ipsae': 'DUMMY_CHAINWISE_IPSAE.tsv']
+            fixtures.each { metric, fixture ->
+                file("$outputDir/S1_${metric}.tsv").bytes = file("${projectDir}/tests/fixtures/${fixture}").bytes
+            }
+            // The chainwise store carries an injection payload in a chain
+            // label; the report must escape it (asserted below).
+            def payload = '</script><img src=x onerror=alert(1)>'
+            file("$outputDir/S1_chainwise.tsv").text =
+                "0\t1\t2\t3\t4\n" +
+                "${payload}:A\t0.3810\t0.3790\t0.3850\t0.3770\t0.3830\n" +
+                "A:B\t0.6170\t0.6160\t0.6100\t0.6060\t0.6060\n"
+            // Ranked-score stores parse integer rank rows; only rank 0 is
+            // populated so the second model reads back as 'n/a'.
+            ['iptm', 'ipsae'].each { metric ->
+                file("$outputDir/S1_${metric}.tsv").text = '0\t0.725\n'
+            }
+            // Minimal single-residue PDBs: the generator only needs parseable
+            // _atom_site records for the coverage/LDDT plumbing.
+            def pdb_text = { serial -> String.format(
+                "ATOM  %5d  CA  ALA A%4d    %8.3f%8.3f%8.3f%6.2f%6.2f           C\nEND\n",
+                serial, 1, 11.0 + serial * 0.1, 12.0, 13.0, 1.00d, 90.00d) }
+            [0, 1].each { rank ->
+                file("$outputDir/S1_rank_${rank}.pdb").text = pdb_text(rank + 11)
+            }
+        }
+
         when {
             process {
                 """
+                // Batch form: one sample in the batch, every slot a list.
+                // The setup stages every fixture under the sanitised sample
+                // id the inference module bakes into its output names.
                 input[0] = tuple(
-                    [id: 'S1', model: 'boltz2', mode_short: 'bz2'],
-                    [file(params.pipelines_testdata_base_path + 'testdata/models/rank_0.pdb', checkIfExists: true), file(params.pipelines_testdata_base_path + 'testdata/models/rank_1.pdb', checkIfExists: true)],
-                    [file("${projectDir}/tests/fixtures/NO_FILE")],
-                    [file("${projectDir}/tests/fixtures/NO_FILE")],
-                    [file(params.pipelines_testdata_base_path + 'testdata/metrics/S1_scalar.tsv', checkIfExists: true)],
-                    [file(params.pipelines_testdata_base_path + 'testdata/metrics/S1_scalar.tsv', checkIfExists: true)],
-                    [file(params.pipelines_testdata_base_path + 'testdata/metrics/S1_chainwise.tsv', checkIfExists: true)],
-                    [file("${projectDir}/tests/fixtures/NO_FILE")]
+                    [[id: 'S1', model: 'boltz2', mode_short: 'bz2', msa_short: 'msa']],
+                    [file("$outputDir/S1_rank_0.pdb", checkIfExists: true), file("$outputDir/S1_rank_1.pdb", checkIfExists: true)],
+                    [file("$outputDir/S1_msa.tsv", checkIfExists: true)],
+                    [file("$outputDir/S1_pae.tsv", checkIfExists: true)],
+                    [file("$outputDir/S1_iptm.tsv", checkIfExists: true)],
+                    [file("$outputDir/S1_ipsae.tsv", checkIfExists: true)],
+                    [file("$outputDir/S1_chainwise.tsv", checkIfExists: true)],
+                    [file("$outputDir/S1_chainwise_ipsae.tsv", checkIfExists: true)]
                 )
                 input[1] = file("${projectDir}/assets/report_template.html", checkIfExists: true)
                 """
@@ -37,13 +71,13 @@ nextflow_process {
             assert config.programName == "Boltz2"
             assert config.sampleName == "S1"
             assert config.structFormat == "cif"
-            assert config.models == ["rank_0.cif", "rank_1.cif"]
+            assert config.models == ["S1_rank_0.cif", "S1_rank_1.cif"]
             assert config.models_data.size() == 2 && config.models_data.every { it.contains("_atom_site.group_PDB") }
             assert config.lddt_averages.size() == 2
             assert config.iptm_scores == ["0.725", "n/a"] && config.ipsae_scores == ["0.725", "n/a"]
             def payload = "</script><img src=x onerror=alert(1)>"
             assert config.chainwise[0].chains.contains(payload)
-            assert config.chainwise_ipsae[0].chains == []
+            assert config.chainwise_ipsae[0].chains == ['A', 'B']
             assert !html.contains("<img src=x onerror=alert(1)>")
             assert !((html =~ /(?s)const renderScoreMatrix = .*?const updatePairScoreTables/)[0]).contains("innerHTML")
             assert html.contains('onclick="downloadStructure()"') && !html.contains("downloadPdb")

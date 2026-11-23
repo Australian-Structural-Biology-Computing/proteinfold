@@ -88,6 +88,18 @@ per-user (e.g. `~/.cache/proteinfold/compile`, mode `0700`) and only share it
 within a group of mutually trusting accounts that runs under the same
 account boundary.
 
+## Batching
+
+Both expensive stages can process several samples in a single task:
+
+| Parameter                | Default | Description                                                                                                                                                                                                                                                                                                                                                                          |
+| ------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--msa_batch_size`       | `-1`    | Number of samples processed together during MSA search; `-1` runs all inputs in one batch.                                                                                                                                                                                                                                                                                           |
+| `--inference_batch_size` | `1`     | Number of samples processed together during structure prediction; `-1` runs all inputs in one batch.                                                                                                                                                                                                                                                                                 |
+| `--analysis_batch_size`  | `-1`    | Number of samples processed together by the downstream analysis (report generation and MultiQC content preparation); `-1` runs all samples of a mode in one batch. Analysis tasks group samples per public mode: the report generator renders each sample of the batch in turn, and MultiQC custom content is split into per-chunk sections only when a mode exceeds the batch size. |
+
+Batching structure prediction groups several samples into one `colabfold_batch` task so the model weights are loaded (and, where applicable, compiled) once for the whole batch instead of once per sample. Batched inference requires one query per samplesheet row (use `--split_fasta` for multi-record FASTA inputs) and is not supported with `--use_msa_server`; batched outputs are published flat under the selected mode token (files keep their per-sample names) instead of in per-sample subdirectories.
+
 ## File Structure
 
 If `--colabfold2_params_path` is not set and no weights cache is available under a local `--db`/`--colabfold_db`, the pipeline downloads the required weights in a separate Nextflow process. The weights root has this structure:

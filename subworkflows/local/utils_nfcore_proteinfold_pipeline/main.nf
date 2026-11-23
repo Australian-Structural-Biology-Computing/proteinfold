@@ -18,6 +18,11 @@ include { UTILS_NFCORE_PIPELINE     } from '../../nf-core/utils_nfcore_pipeline'
 include { UTILS_NEXTFLOW_PIPELINE   } from '../../nf-core/utils_nextflow_pipeline'
 include { logColours                } from '../../nf-core/utils_nfcore_pipeline'
 
+def sanitise(id) {
+    (id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_')
+}
+
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     SUBWORKFLOW TO INITIALISE PIPELINE
@@ -235,6 +240,44 @@ def modeChannel(ch, mode) {
 // the rest are mixed in one at a time, because mix() is a channel operator -- it
 // does not exist on ArrayList.
 //
+// Summarise a batch of sample metas into a bounded task tag: small batches
+// keep the full id list, large ones show the first three ids plus the
+// remaining count so a 1000-sample batch does not become a 10 kB tag.
+def batchTag(batch_metas) {
+    def ids = (batch_metas instanceof Collection ? batch_metas.collect() : [batch_metas])
+        .collect { (it.id as String) }
+    if (ids.size() <= 3) {
+        return "batch_${ids.join('_')}"
+    }
+    return "batch_${ids[0]}_${ids[1]}_${ids[2]}+${ids.size() - 3}more"
+}
+
+def batchMergeInputs(ch_merge_input, analysis_batch) {
+    // rows: [meta, searched MSA JSON, original input JSON]. One task per
+    // analysis batch merges every row; samples that share an input file
+    // stage it once and address it through the manifest.
+    if (analysis_batch == 0 || analysis_batch < -1) {
+        error("Analysis batch size must be -1 or a positive integer, got ${analysis_batch}")
+    }
+    return ch_merge_input
+        .collect(flat: false)
+        .filter { rows -> !rows.isEmpty() }
+        .flatMap { rows ->
+            def sorted = new ArrayList(rows).sort { a, b -> (a[0].id as String) <=> (b[0].id as String) }
+            def effective = analysis_batch == -1 ? Math.max(1, sorted.size()) : analysis_batch
+            sorted.collate(effective).collect { batch ->
+                def originals = batch.collect { it[2] }.unique { it.toString() }
+                if (originals.collect { it.name }.toSet().size() != originals.size()) {
+                    error("Samples in one merge batch share input file names; rename them or run with --analysis_batch_size 1")
+                }
+                def manifest = batch.collect { meta, msa_json, original_json ->
+                    "${sanitise(meta.id)}\t${msa_json.name}\t${original_json.name}"
+                }.join('\n')
+                [new ArrayList(batch.collect { it[0] }), new ArrayList(batch.collect { it[1] }), originals, manifest]
+            }
+        }
+}
+
 def collectMultiqcMetrics(metric_channels) {
     // The metric tuples carry their own meta, whose model field names the
     // public mode; grouping collapses every sample of a mode into one

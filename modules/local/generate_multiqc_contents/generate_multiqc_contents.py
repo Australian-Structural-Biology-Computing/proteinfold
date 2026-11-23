@@ -286,6 +286,14 @@ def main(argv=None):
         "sample names are qualified with this mode, never with 'UNKNOWN'.",
     )
     parser.add_argument("--output-dir", default=".", help="Directory to write the *_mqc.json files into")
+    parser.add_argument(
+        "--chunk-index",
+        dest="chunk_index",
+        type=int,
+        default=None,
+        help="When a mode's metrics are split across several tasks, the 0-based chunk "
+        "index; it qualifies the JSON ids and file names so MultiQC keeps the chunks apart",
+    )
     parser.add_argument("metric_files", nargs="+", help="Routed metric TSVs (_plddt/_msa/_ptm/_iptm)")
     args = parser.parse_args(argv)
 
@@ -293,6 +301,10 @@ def main(argv=None):
     if not model_key:
         fail("No prediction mode given (--model); refusing to emit '_UNKNOWN' sample names")
     mode_label = MODE_LABELS.get(model_key, model_key)
+    # Chunks must not share MultiQC section ids: MultiQC keys custom content
+    # by id, and a second file with the same id would shadow the first.
+    chunk_suffix = f"_chunk{args.chunk_index}" if args.chunk_index is not None else ""
+    chunk_note = f" (part {args.chunk_index + 1})" if args.chunk_index is not None else ""
 
     rows = {}
     line_series = {}
@@ -327,7 +339,7 @@ def main(argv=None):
     metrics_seen = {column for data in rows.values() for column in data}
     headers = {column: dict(GENERALSTATS_HEADERS[column]) for column in GENERALSTATS_HEADERS if column in metrics_seen}
     generalstats = {
-        "id": "proteinfold",
+        "id": f"proteinfold{chunk_suffix}",
         "section_name": "ProteinFold",
         "description": "Summary metrics for protein structure prediction "
         "(average pLDDT, MSA depth, pTM and ipTM per prediction)",
@@ -346,7 +358,7 @@ def main(argv=None):
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    generalstats_path = output_dir / f"proteinfold_{model_key}_generalstats_mqc.json"
+    generalstats_path = output_dir / f"proteinfold_{model_key}{chunk_suffix}_generalstats_mqc.json"
     dump_json(generalstats_path, generalstats)
 
     linegraph_path = None
@@ -354,15 +366,15 @@ def main(argv=None):
         pconfig = dict(LINEGRAPH_PCONFIG)
         pconfig["data_labels"] = data_labels
         linegraph = {
-            "id": "proteinfold_plddt_lineplot",
-            "section_name": "ProteinFold: pLDDT by Position",
+            "id": f"proteinfold_plddt_lineplot{chunk_suffix}",
+            "section_name": f"ProteinFold: pLDDT by Position{chunk_note}",
             "description": "Per-residue confidence scores across all predicted ranks "
             "(switch between predictions with the tabs above the plot)",
             "plot_type": "linegraph",
             "pconfig": pconfig,
             "data": datasets,
         }
-        linegraph_path = output_dir / f"proteinfold_{model_key}_plddt_lineplot_mqc.json"
+        linegraph_path = output_dir / f"proteinfold_{model_key}{chunk_suffix}_plddt_lineplot_mqc.json"
         dump_json(linegraph_path, linegraph)
 
     if linegraph_path is None:

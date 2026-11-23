@@ -1,6 +1,8 @@
-process GENERATE_REPORT {
-    tag   "$meta.id-$meta.model"
-    label 'process_single'
+include { batchTag } from '../../../subworkflows/local/utils_nfcore_proteinfold_pipeline'
+
+process GENERATE_REPORT_BATCH {
+    tag   "${batchTag(batch_meta)}"
+    label 'process_medium'
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
@@ -8,13 +10,11 @@ process GENERATE_REPORT {
         'community.wave.seqera.io/library/biopython_matplotlib_pip_plotly:35975fa0fc54b2d3' }"
 
     input:
-    tuple val(meta), path(pdb), path(msa, stageAs: 'input_msa'), path(pae, stageAs: 'input_pae'), path(iptm, stageAs: 'input_iptm'), path(ipsae, stageAs: 'input_ipsae'), path(chainwise, stageAs: 'input_chainwise'), path(chainwise_ipsae, stageAs: 'input_chainwise_ipsae')
+    tuple val(batch_meta), path(structures), path(msa_files), path(pae_files), path(iptm_files), path(ipsae_files), path(chainwise_files), path(chainwise_ipsae_files)
     path(template)
 
     output:
-    tuple val(meta), path ("*report.html")     , emit: report
-    tuple val(meta), path ("*seq_coverage.png"), optional: true, emit: sequence_coverage
-    tuple val(meta), path ("*_LDDT.html")      , emit: plddt
+    tuple val(batch_meta), path("*report.html"), emit: report
     tuple val("${task.process}"), val('python'), eval("python3 --version | sed 's/Python //g'"), emit: versions_python, topic: versions
     tuple val("${task.process}"), val('generate_report.py'), eval("python3 --version | sed 's/Python //g'"), emit: versions_generate_report, topic: versions
 
@@ -23,34 +23,60 @@ process GENERATE_REPORT {
 
     script:
     def args = task.ext.args ?: ''
+    def head = batch_meta instanceof Collection ? batch_meta[0] : batch_meta
+    def model = head.mode_short ?: head.model
+    // The task files carry the sanitised ids colabfold_batch bakes into its
+    // outputs; the report name keeps the raw sample id.
+    def raw_ids = (batch_meta instanceof Collection ? batch_meta.collect() : [batch_meta])
+        .collect { meta -> safe(meta.id) }.join(' ')
+    def sample_ids = (batch_meta instanceof Collection ? batch_meta.collect() : [batch_meta])
+        .collect { meta -> (meta.id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_') }
+    if (sample_ids.toSet().size() != sample_ids.size()) {
+        error("GENERATE_REPORT_BATCH received sample IDs that collide after sanitisation: ${sample_ids}")
+    }
+    def struct_ext = (structures instanceof List ? structures[0] : structures).name.endsWith('.pdb') ? 'pdb' : 'cif'
+    def ids_content = sample_ids.collect { safe(it) }.join(' ')
 
     """
+printf '%s\\n' ${ids_content} > sample_ids.txt
+printf '%s\\n' ${raw_ids} > raw_ids.txt
+
+export PYTHONDONTWRITEBYTECODE=1
+
+while IFS= read -r id && IFS= read -r raw_id <&3; do
     generate_report.py \\
-        --type ${meta.mode_short} \
-        --tag ${meta.mode_short}_${meta.msa_short ?: 'msa'} \\
-        --msa ${msa} \\
-        --pae ${pae} \\
-        --iptm ${iptm} \\
-        --ipsae ${ipsae} \\
-        --chainwise ${chainwise} \\
-        --chainwise_ipsae ${chainwise_ipsae} \\
-        --pdb ${pdb.join(' ')} \\
+        --type ${model} \\
+        --tag ${model}_${head.msa_short ?: 'msa'} \\
+        --msa "\${id}_colabfold2_msa.tsv" \\
+        --pae "\${id}_1_pae.tsv" \\
+        --iptm "\${id}_iptm.tsv" \\
+        --ipsae "\${id}_ipsae.tsv" \\
+        --chainwise "\${id}_chainwise.tsv" \\
+        --chainwise_ipsae "\${id}_chainwise_ipsae.tsv" \\
+        --pdb "\${id}"_rank_*.${struct_ext} \\
         --html_template ${template} \\
         --output_dir ./ \\
-        --name ${meta.id} \\
-        $args \\
-    """
+        --name "\${raw_id}" \\
+        $args || exit 1
+done < sample_ids.txt 3< raw_ids.txt
+"""
 
     stub:
+    def head = batch_meta instanceof Collection ? batch_meta[0] : batch_meta
+    def stub_files = (batch_meta instanceof Collection ? batch_meta.collect() : [batch_meta]).collect { meta ->
+        def tag = "${meta.mode_short ?: meta.model}_${meta.msa_short ?: 'msa'}"
+"    touch ${meta.id}_${tag}_report.html\n"
+    }.join()
     """
-    touch ${meta.id}_${meta.mode_short}_${meta.msa_short ?: 'msa'}_report.html
-    touch ${meta.id}_${meta.mode_short}_${meta.msa_short ?: 'msa'}_seq_coverage.png
-    touch ${meta.id}_coverage_LDDT.html
-
+${stub_files}
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         python: \$(python3 --version | sed 's/Python //g')
         generate_report.py: \$(python3 --version)
     END_VERSIONS
     """
+}
+
+def safe(name) {
+    "'" + (name as String).replaceAll("'", "'\\''") + "'"
 }
