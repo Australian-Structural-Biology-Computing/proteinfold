@@ -207,8 +207,22 @@
                             "minimum": 1
                         }
                     ],
-                    "description": "Number of inputs processed together during structure prediction; -1 runs all inputs in one batch. Batching is not supported with --use_msa_server.",
+                    "description": "Number of inputs processed together during structure prediction; -1 runs all inputs in one batch.",
                     "errorMessage": "Inference batch size must be -1 or a positive integer"
+                },
+                "report_batch_size": {
+                    "type": "integer",
+                    "default": -1,
+                    "anyOf": [
+                        {
+                            "const": -1
+                        },
+                        {
+                            "minimum": 1
+                        }
+                    ],
+                    "description": "Number of samples processed together per report/ModelCIF task ; -1 runs all samples in one task",
+                    "errorMessage": "Report batch size must be -1 or a positive integer"
                 },
                 "colabfold_db_load_mode": {
                     "type": "integer",
@@ -280,32 +294,6 @@
                     "default": "msa",
                     "description": "ESMFold2 model used by --mode esmfold2. msa uses the normal MSA model; lm300m and lm600m use the ESM-C language-model variants with --use-esm; confidence output depends on the upstream checkpoint and runtime version.",
                     "fa_icon": "fas fa-dna"
-                }
-            }
-        },
-        "msa_cache_options": {
-            "title": "MSA cache options",
-            "type": "object",
-            "fa_icon": "fas fa-database",
-            "description": "Shared MMseqs MSA cache for ColabFold and Boltz.",
-            "properties": {
-                "use_msa_cache": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Cache local MMseqs MSAs by default; set false to disable."
-                },
-                "msa_cache_dir": {
-                    "type": "string",
-                    "format": "directory-path",
-                    "description": "Absolute local cache directory; overrides PROTEINFOLD_MSA_CACHE_DIR and the default <outdir>/msa_cache."
-                },
-                "msa_cache_id": {
-                    "type": "string",
-                    "description": "Optional database revision namespace; change when the database changes."
-                },
-                "msa_cache_tool_id": {
-                    "type": "string",
-                    "description": "Optional search-tool version or image digest namespace; change when the image changes."
                 }
             }
         },
@@ -852,9 +840,6 @@
         },
         {
             "$ref": "#/$defs/colabfold2_options"
-        },
-        {
-            "$ref": "#/$defs/msa_cache_options"
         },
         {
             "$ref": "#/$defs/process_skipping_options"

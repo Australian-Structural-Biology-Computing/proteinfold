@@ -12,7 +12,7 @@ include { methodsDescriptionText } from '../utils_nfcore_proteinfold_pipeline'
 include { GENERATE_REPORT_BATCH    } from '../../../modules/local/generate_report'
 include { GENERATE_MULTIQC_CONTENTS } from '../../../modules/local/generate_multiqc_contents'
 include { MULTIQC                   } from '../../../modules/nf-core/multiqc/main'
-include { MODELCIF_ASSEMBLE         } from '../../../modules/local/assemble_modelcif/main'
+include { MODELCIF_ASSEMBLE_BATCH   } from '../../../modules/local/assemble_modelcif/main'
 include { MODELCIF_VALIDATE         } from '../../../modules/local/modelcif_validate/main'
 include { CIFCHECK                  } from '../../../modules/local/cifcheck/main'
 
@@ -20,7 +20,6 @@ workflow POST_PROCESSING {
 
     take:
     skip_visualisation
-    ch_report_input
     ch_report_template
     skip_multiqc
     outdir
@@ -30,24 +29,27 @@ workflow POST_PROCESSING {
     multiqc_logo
     ch_multiqc_methods_description
     ch_software_versions
-    ch_modelcif
     write_modelcif
     modelcif_binary
     modelcif_pae_embed
-    analysis_batch_size // int: number of samples analysed together (-1 = one batch)
+    modelcif_software_details
+    ch_packed_batches
 
     main:
-    if (analysis_batch_size == 0 || analysis_batch_size < -1) {
-        error("Analysis batch size must be -1 or a positive integer, got ${analysis_batch_size}")
-    }
     def ch_multiqc_files = channel.empty()
     ch_modelcif_published = channel.empty()
 
-    // ModelCIF assembly consumes real ranked-structure metrics; stub runs
-    // only produce empty placeholder files, so skip assembly entirely there.
+    // ModelCIF assembly reads the packed metric stores natively; VALIDATE /
+    // CIFCHECK then validate and publish each batch's files. Skipped under
+    // stubs: the validator parses real mmCIF content and stub placeholders
+    // are empty by design.
     if (write_modelcif && !workflow.stubRun) {
-        MODELCIF_ASSEMBLE(ch_modelcif)
-        MODELCIF_VALIDATE(MODELCIF_ASSEMBLE.out.modelcif)
+        MODELCIF_ASSEMBLE_BATCH(
+            ch_packed_batches,
+            ch_software_versions,
+            modelcif_software_details
+        )
+        MODELCIF_VALIDATE(MODELCIF_ASSEMBLE_BATCH.out.modelcif)
         CIFCHECK(
             MODELCIF_VALIDATE.out.modelcif.map { meta, modelcif ->
                 [meta, modelcif, file("$projectDir/bin/dicts/mmcif_ma.sdb", checkIfExists: true)]
@@ -57,38 +59,10 @@ workflow POST_PROCESSING {
     }
 
     if (!skip_visualisation){
-        // Group the per-sample report inputs by public mode (the generator's
-        // --type/--tag are constant within a mode) and collate each mode's
-        // samples into --analysis_batch_size-sized report tasks. The key is
-        // the full mode name: distinct modes can share a mode_short token,
-        // and their per-sample files would collide inside one task.
-        def ch_report_batches = ch_report_input
-            .map { meta, structure, msa, pae, iptm, ipsae, chainwise, chainwise_ipsae ->
-                tuple(meta.model, meta, structure, msa, pae, iptm, ipsae, chainwise, chainwise_ipsae)
-            }
-            .groupTuple()
-            .flatMap { mode, metas, structures, msas, paes, iptms, ipsaes, chainwises, chainwise_ipsaes ->
-                def rows = new ArrayList([metas, structures, msas, paes, iptms, ipsaes, chainwises, chainwise_ipsaes])
-                    .transpose()
-                    .sort { a, b -> (a[0].id as String) <=> (b[0].id as String) }
-                def effective = analysis_batch_size == -1 ? Math.max(1, rows.size()) : analysis_batch_size
-                rows.collate(effective).collect { batch ->
-                    tuple(
-                        new ArrayList(batch*.getAt(0)),
-                        // The ranked-structure slot is a per-sample list of
-                        // lists; the path input needs one flat file list.
-                        new ArrayList(batch*.getAt(1).flatten()),
-                        new ArrayList(batch*.getAt(2)),
-                        new ArrayList(batch*.getAt(3)),
-                        new ArrayList(batch*.getAt(4)),
-                        new ArrayList(batch*.getAt(5)),
-                        new ArrayList(batch*.getAt(6)),
-                        new ArrayList(batch*.getAt(7))
-                    )
-                }
-            }
+        // One report task per batch; the report generator reads the packed
+        // metric stores natively and renders every sample in the batch.
         GENERATE_REPORT_BATCH(
-            ch_report_batches,
+            ch_packed_batches,
             ch_report_template
         )
     }
@@ -107,23 +81,8 @@ workflow POST_PROCESSING {
         ch_multiqc_files       = ch_multiqc_files.mix(ch_software_versions)
 
         def mqc_generator_script = file("${projectDir}/modules/local/generate_multiqc_contents/generate_multiqc_contents.py", checkIfExists: true)
-        // Chunk each mode's metrics so one task never has to hold every
-        // sample's per-residue series; unsplit modes keep a single task with
-        // the unchunked section ids.
-        def ch_multiqc_chunks = ch_multiqc_rep
-            .flatMap { meta, files ->
-                def list = files instanceof List ? files : [files]
-                def effective = analysis_batch_size == -1 ? Math.max(1, list.size()) : analysis_batch_size
-                def chunks = new ArrayList(list).sort { it.name }.collate(effective)
-                if (chunks.size() <= 1) {
-                    // flatMap flattens one level: an unsplit mode must come
-                    // back as a single tuple, not as its two elements.
-                    return [[meta, list]]
-                }
-                chunks.withIndex().collect { chunk, idx -> [meta + [analysis_chunk: idx], new ArrayList(chunk)] }
-            }
         GENERATE_MULTIQC_CONTENTS(
-            ch_multiqc_chunks,
+            ch_multiqc_rep,
             mqc_generator_script
         )
 

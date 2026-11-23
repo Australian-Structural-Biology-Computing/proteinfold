@@ -42,7 +42,7 @@ nextflow run nf-core/proteinfold \
 
 MSA generation is selected with `--msa_tool` (`colabfold_search`, `alphafold2_msa` or `alphafold3_msa`) or delegated to the ColabFold MSA server with `--use_msa_server`. The default `colabfold_search` runs the local MMseqs2 protocol against the databases in `--colabfold_db`; the `alphafold2_msa` and `alphafold3_msa` tools run the respective upstream data pipelines and convert their MSAs into the AlphaFold3-format input JSON used by the backends (see the [usage documentation](https://nf-co.re/proteinfold/usage)). `--db`/`--colabfold_db` is a database-only location; it is not expected to contain a `colabfold2_models` child when it is an S3 URL. If no explicit local `--colabfold2_params_path` is supplied, the pipeline reuses complete model weights under a local `<colabfold_db>/colabfold2_models` directory or runs the pinned upstream ColabFold2 downloader in a separate Nextflow task and stages the result in the task work directory. Outdated Chai1 or Boltz2 completion markers trigger a fresh download instead of reusing old blobs. For RosettaFold3 fp32, the pipeline also checks the checkpoint size pinned to this image: a stale implicit cache triggers a task-local download, while a stale explicit `--colabfold2_params_path` fails with a request to provide refreshed weights; neither case changes the source cache. This requires outbound network access and several GB of task storage; no model weights are downloaded in stub mode. AlphaFold3 JSON inputs are passed through to carry rich entities such as RNA, ligands, PTMs, templates and user CCD definitions: with offline MSA generation the pipeline extracts their protein queries, runs the search and merges the resulting MSAs back into the original JSON, while `--use_msa_server` (with an optional private `--msa_server_url`) passes the file directly to `colabfold_batch`.
 
-The `alphafold2` modes run the classic AlphaFold2 models through `colabfold_batch`; they emit PDB instead of mmCIF structures and consume ColabFold a3m queries rather than the AlphaFold3 input JSON, so the pipeline converts the MSA JSON produced by the selected `--msa_tool` before inference. These models do not provide int8 weights; `--colabfold2_weights_precision int8` is rejected. With `--use_msa_server`, the server performs the search and the queries are passed as FASTA (AlphaFold3 JSON inputs are reduced to their protein chains first).
+The `alphafold2` modes run the classic AlphaFold2 models through `colabfold_batch`; they emit PDB instead of mmCIF structures and consume ColabFold a3m queries rather than the AlphaFold3 input JSON, so the pipeline converts the MSA JSON produced by the selected `--msa_tool` before inference. These models do not provide int8 weights; `--colabfold2_weights_precision int8` is rejected. With `--use_msa_server`, the server performs the search and every sample is reduced to a per-sample single-query FASTA (multi-record FASTAs are colon-joined into one complex query; AlphaFold3 JSON inputs are reduced to their protein chains for the AlphaFold2 modes, while the AlphaFold3 modes keep the original JSON so ligands and nucleic acids survive).
 
 > [!NOTE]
 > Local MSA generation occurs in a separate module to model inference, so inference can be re-run without repeating the MSA search.
@@ -87,6 +87,20 @@ with the privileges of every user whose runs consume it. Keep the cache
 per-user (e.g. `~/.cache/proteinfold/compile`, mode `0700`) and only share it
 within a group of mutually trusting accounts that runs under the same
 account boundary.
+The directory must be writable inside the container. If your container engine
+does not mount host paths by default, bind it explicitly, e.g.
+`--singularity-args '--bind /scratch/share/colabfold_compile_cache'`.
+
+## Batching
+
+Both expensive stages can process several samples in a single task:
+
+| Parameter                | Default | Description                                                                                          |
+| ------------------------ | ------- | ---------------------------------------------------------------------------------------------------- |
+| `--msa_batch_size`       | `-1`    | Number of samples processed together during MSA search; `-1` runs all inputs in one batch.           |
+| `--inference_batch_size` | `1`     | Number of samples processed together during structure prediction; `-1` runs all inputs in one batch. |
+
+Batching structure prediction groups several samples into one `colabfold_batch` task so the model weights are loaded (and, where applicable, compiled) once for the whole batch instead of once per sample. Batched inference requires one query per samplesheet row (use `--split_fasta` for multi-record FASTA inputs) and is not supported with `--use_msa_server`; batched outputs are published flat under the selected mode token (files keep their per-sample names) instead of in per-sample subdirectories.
 
 ## Batching
 
@@ -98,7 +112,7 @@ Both expensive stages can process several samples in a single task:
 | `--inference_batch_size` | `1`     | Number of samples processed together during structure prediction; `-1` runs all inputs in one batch.                                                                                                                                                                                                                                                                                 |
 | `--analysis_batch_size`  | `-1`    | Number of samples processed together by the downstream analysis (report generation and MultiQC content preparation); `-1` runs all samples of a mode in one batch. Analysis tasks group samples per public mode: the report generator renders each sample of the batch in turn, and MultiQC custom content is split into per-chunk sections only when a mode exceeds the batch size. |
 
-Batching structure prediction groups several samples into one `colabfold_batch` task so the model weights are loaded (and, where applicable, compiled) once for the whole batch instead of once per sample. Batched inference requires one query per samplesheet row (use `--split_fasta` for multi-record FASTA inputs) and is not supported with `--use_msa_server`; batched outputs are published flat under the selected mode token (files keep their per-sample names) instead of in per-sample subdirectories.
+Batching structure prediction groups several samples into one `colabfold_batch` task so the model weights are loaded (and, where applicable, compiled) once for the whole batch instead of once per sample. Batched inference requires one query per samplesheet row (use `--split_fasta` for multi-record FASTA inputs); it also works with `--use_msa_server`, and batched outputs are published flat under the selected mode token (files keep their per-sample names) instead of in per-sample subdirectories.
 
 ## File Structure
 

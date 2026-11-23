@@ -2,25 +2,6 @@
     "-profile test": {
         "content": [
             [
-                "metrics",
-                "metrics/T1024_odde_mmseqs_1_pae.tsv",
-                "metrics/T1024_odde_mmseqs_chainwise.tsv",
-                "metrics/T1024_odde_mmseqs_chainwise_ipsae.tsv",
-                "metrics/T1024_odde_mmseqs_confidence.tsv",
-                "metrics/T1024_odde_mmseqs_ipsae.tsv",
-                "metrics/T1024_odde_mmseqs_iptm.tsv",
-                "metrics/T1024_odde_mmseqs_msa.tsv",
-                "metrics/T1024_odde_mmseqs_plddt.tsv",
-                "metrics/T1024_odde_mmseqs_ptm.tsv",
-                "metrics/T1026_odde_mmseqs_1_pae.tsv",
-                "metrics/T1026_odde_mmseqs_chainwise.tsv",
-                "metrics/T1026_odde_mmseqs_chainwise_ipsae.tsv",
-                "metrics/T1026_odde_mmseqs_confidence.tsv",
-                "metrics/T1026_odde_mmseqs_ipsae.tsv",
-                "metrics/T1026_odde_mmseqs_iptm.tsv",
-                "metrics/T1026_odde_mmseqs_msa.tsv",
-                "metrics/T1026_odde_mmseqs_plddt.tsv",
-                "metrics/T1026_odde_mmseqs_ptm.tsv",
                 "msa",
                 "msa/T1024_mmseqs.a3m",
                 "msa/T1024_mmseqs.json",
@@ -42,24 +23,6 @@
                 "top_ranked_structures/T1026_odde_mmseqs.cif"
             ],
             [
-                "T1024_odde_mmseqs_1_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_odde_mmseqs_chainwise.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_odde_mmseqs_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_odde_mmseqs_confidence.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_odde_mmseqs_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_odde_mmseqs_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_odde_mmseqs_msa.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_odde_mmseqs_plddt.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1024_odde_mmseqs_ptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_odde_mmseqs_1_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_odde_mmseqs_chainwise.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_odde_mmseqs_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_odde_mmseqs_confidence.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_odde_mmseqs_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_odde_mmseqs_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_odde_mmseqs_msa.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_odde_mmseqs_plddt.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "T1026_odde_mmseqs_ptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "T1024_mmseqs.a3m:md5,2d5bea1d28ffa33dc01f46541bedc592",
                 "T1024_mmseqs.json:md5,ab416d112e67291b35c4d8666d830e71",
                 "T1026_mmseqs.a3m:md5,2d5bea1d28ffa33dc01f46541bedc592",
@@ -72,7 +35,7 @@
                 "T1026_odde_mmseqs.cif:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-22T13:04:15.296875098",
+        "timestamp": "2026-11-22T02:26:32.964039483",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"

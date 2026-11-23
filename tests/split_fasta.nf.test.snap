@@ -1,27 +1,8 @@
 {
     "-profile test_split_fasta": {
         "content": [
-            10,
+            7,
             [
-                "metrics",
-                "metrics/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_odde_mmseqs_1_pae.tsv",
-                "metrics/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_odde_mmseqs_chainwise.tsv",
-                "metrics/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_odde_mmseqs_chainwise_ipsae.tsv",
-                "metrics/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_odde_mmseqs_confidence.tsv",
-                "metrics/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_odde_mmseqs_ipsae.tsv",
-                "metrics/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_odde_mmseqs_iptm.tsv",
-                "metrics/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_odde_mmseqs_msa.tsv",
-                "metrics/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_odde_mmseqs_plddt.tsv",
-                "metrics/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_odde_mmseqs_ptm.tsv",
-                "metrics/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs_1_pae.tsv",
-                "metrics/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs_chainwise.tsv",
-                "metrics/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs_chainwise_ipsae.tsv",
-                "metrics/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs_confidence.tsv",
-                "metrics/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs_ipsae.tsv",
-                "metrics/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs_iptm.tsv",
-                "metrics/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs_msa.tsv",
-                "metrics/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs_plddt.tsv",
-                "metrics/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs_ptm.tsv",
                 "msa",
                 "msa/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_mmseqs.a3m",
                 "msa/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_mmseqs.json",
@@ -43,24 +24,6 @@
                 "top_ranked_structures/H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs.cif"
             ],
             [
-                "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_odde_mmseqs_1_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_odde_mmseqs_chainwise.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_odde_mmseqs_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_odde_mmseqs_confidence.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_odde_mmseqs_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_odde_mmseqs_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_odde_mmseqs_msa.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_odde_mmseqs_plddt.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_odde_mmseqs_ptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs_1_pae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs_chainwise.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs_chainwise_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs_confidence.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs_ipsae.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs_iptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs_msa.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs_plddt.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs_ptm.tsv:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_mmseqs.a3m:md5,2d5bea1d28ffa33dc01f46541bedc592",
                 "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_1_127_residues_mmseqs.json:md5,f2e6743afae2aa35467478b04876abc2",
                 "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_mmseqs.a3m:md5,2d5bea1d28ffa33dc01f46541bedc592",
@@ -73,7 +36,7 @@
                 "H1065_H1065_N4-Cytosine_Methyltransferase_Serratia_marcescens_subunit_2_98_residues_odde_mmseqs.cif:md5,d41d8cd98f00b204e9800998ecf8427e"
             ]
         ],
-        "timestamp": "2026-11-23T11:14:40.304638344",
+        "timestamp": "2026-11-23T10:56:26.033365025",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"

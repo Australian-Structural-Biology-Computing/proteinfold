@@ -1,68 +1,66 @@
-process MODELCIF_ASSEMBLE {
-    tag "$meta.id-$meta.model"
-    label 'process_single'
+process MODELCIF_ASSEMBLE_BATCH {
+    tag   "batch_${batch_meta*.id.join('_')}"
+    label 'process_medium'
 
     conda "${moduleDir}/environment.yml"
     container 'ghcr.io/keiran-rowell-unsw/proteinfold-modelcif:1.7'
 
-    // Missing metrics use placeholder TSVs and are excluded using --missing-metrics.
-    // TODO: Unsure at this stage best way forward with chain-wise paths. At least modelCIF has the asymmetric unit entity, so we *could* DUMMY_FILE, but I do like the philosophy of don't check things that *can't* exist
     input:
-    tuple val(meta), path(structs), path(msa), path(plddt), path(pae), path(ptm), path(iptm), path(versions_yml, stageAs: 'versions_input/versions.yml'), path(software_details)
+    tuple val(batch_meta), path(structures), path(msa_files), path(metrics_stores), val(manifest), val(struct_ext)
+    path(versions_yml, stageAs: 'versions_input/versions.yml')
+    path(software_details)
 
     output:
-    tuple val(meta), path("*.{mmcif,bcif}"), emit: modelcif
-    path "pae/*.tsv", optional: true, emit: pae
+    tuple val(batch_meta), path("*.{mmcif,bcif}"), emit: modelcif
+    path "pae/*.npz", optional: true, emit: pae
     path "versions.yml", emit: versions
 
     when:
     task.ext.when == null || task.ext.when
 
-    // This will take a maximalist approach to populating the modelCIF
-    // Every single structure from a sequence prediction method will be captured in .ModelGroup
-    // Every common metric will be captured as a modelCIF qa_metric
-    // The advantage is all software metadata and protocol steps are shared between all structures in the .ModelGroup
-    // BinaryCIF output: pass --write_binary via task.ext.args.
     script:
+    // Assembles ModelCIF for a whole batch: the driver reads the packed
+    // metric stores natively and derives each sample's missing metrics from
+    // the store contents. Template written at column 0 (see
+    // colabfold2_inference for why).
     def args = task.ext.args ?: ''
-    def no_template_search = meta.no_template_search ? '--no-template-search' : ''
-    def missing_metrics = meta.missing_metrics ? "--missing-metrics ${meta.missing_metrics.join(',')}" : ''
-    def prediction_container = meta.prediction_container ? "--container_image ${meta.prediction_container}" : ''
-    def stage_pae = meta.missing_metrics?.contains('pae') ? '' : "mkdir -p pae && cp ${pae} pae/"
-    def pae_inputs = meta.missing_metrics?.contains('pae') ? "${pae}" : 'pae/*.tsv'
-    def modelcif_params = (meta.modelcif_params ?: [:]).collect { key, value -> "--param ${key}=${value}" }.join(' ')
-    def plddt_scale = meta.plddt_scale ? "--plddt-scale ${meta.plddt_scale}" : ''
-    def output_prefix = "${meta.id}_${meta.mode_short ?: meta.model}${meta.msa_short ? "_" + meta.msa_short : ''}"
+    def batch_head = batch_meta instanceof Collection ? batch_meta[0] : batch_meta
+    def model = batch_head.model
+    def msa_tool = batch_head.msa_tool ?: 'None'
     """
-    ${stage_pae}
+cat > sample_manifest.tsv <<BATCH_MANIFEST
+${manifest}
+BATCH_MANIFEST
 
-    populate_modelcif.py \\
-        --structs ${structs} \\
-        --msa ${msa} \\
-        --plddt ${plddt} \\
-        --pae ${pae_inputs} \\
-        --ptm ${ptm} \\
-        --iptm ${iptm} \\
-        --name ${meta.id} \\
-        --prog ${meta.model} \\
-        --versions_yml ${versions_yml} \\
-        --msa_tool ${meta.msa_tool ?: 'None'} \\
-        --software_details ${software_details} \\
-        ${prediction_container} \\
-        ${missing_metrics} \\
-        ${modelcif_params} \\
-        ${plddt_scale} \\
-        ${no_template_search} \\
-        $args
+export PYTHONDONTWRITEBYTECODE=1
 
-    python3 -c 'import glob, modelcif.reader; outputs = [f for f in glob.glob("${output_prefix}.mmcif") + glob.glob("${output_prefix}.bcif")]; assert len(outputs) == 1, f"Expected one ModelCIF output, found: {outputs}"; output = outputs[0]; handle = open(output, "rb" if output.endswith(".bcif") else "r"); systems = modelcif.reader.read(handle); handle.close(); assert systems, f"No ModelCIF systems found in {output}"'
+populate_modelcif.py \\
+    --manifest sample_manifest.tsv \\
+    --struct-ext ${struct_ext} \\
+    --prog ${model} \\
+    --versions_yml versions_input/versions.yml \\
+    --software_details ${software_details} \\
+    --msa_tool ${msa_tool} ${args}
 
+# ...then rewrite versions.yml in the collected-versions topic format.
+cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        python: \$(python3 --version | sed 's/Python //g')
+        modelcif: \$(python3 -c "import modelcif; print(modelcif.__version__)" 2>/dev/null || echo "unknown")
+    END_VERSIONS
+"""
+
+    stub:
+    def stub_model = (batch_meta instanceof Collection ? batch_meta[0] : batch_meta).with { m -> m.mode_short ?: m.model } ?: 'colabfold2'
+    def stub_files = (batch_meta instanceof Collection ? batch_meta.collect() : [batch_meta]).collect { meta -> """
+    touch ${meta.id}_${meta.mode_short}_${meta.msa_short}.mmcif
+    """ }.join('\n')
+    """
+${stub_files}
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         python: \$(python3 --version | sed 's/Python //g')
         modelcif: \$(python3 -c "import modelcif; print(modelcif.__version__)" 2>/dev/null || echo "unknown")
-        biopython: \$(python3 -c "import Bio; print(Bio.__version__)")
     END_VERSIONS
-    """
-
+"""
 }

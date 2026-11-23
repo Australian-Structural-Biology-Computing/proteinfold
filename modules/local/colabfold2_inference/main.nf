@@ -40,16 +40,8 @@ process COLABFOLD2_INFERENCE_BATCH {
     tuple val(batch_meta), path("*_colabfold2.*")              , emit: top_ranked_structures
     tuple val(batch_meta), path("raw/*_rank_*.cif")            , optional: true, emit: structures_cif
     tuple val(batch_meta), path("raw/*_rank_*.pdb")            , optional: true, emit: structures_pdb
-    tuple val(batch_meta), path("*_colabfold2_msa.tsv")        , emit: msa
-    tuple val(batch_meta), path("*_1_pae.tsv")                 , optional: true, emit: pae
-    tuple val(batch_meta), path("*_ptm.tsv")                   , optional: true, emit: ptms
-    tuple val(batch_meta), path("*_iptm.tsv")                  , optional: true, emit: iptms
-    tuple val(batch_meta), path("*_ipsae.tsv")                 , optional: true, emit: ipsaes
-    tuple val(batch_meta), path("*_chainwise.tsv")             , optional: true, emit: chainwise
-    tuple val(batch_meta), path("*_chainwise_ipsae.tsv")       , optional: true, emit: chainwise_ipsaes
-    tuple val(batch_meta), path("*_plddt.tsv")                 , emit: plddt
-    tuple val(batch_meta), path("*_confidence.tsv")            , emit: confidence
-    tuple val(batch_meta), path("raw/*_scores_rank_*.json")    , optional: true, emit: scores
+    tuple val(batch_meta), path("*_colabfold2_metrics.jsonl.gz"), path("*_colabfold2_metrics.npz"), optional: true, emit: metrics_packed
+    tuple val(batch_meta), path("raw/*.a3m")                   , optional: true, emit: msa_a3m
     path "raw/**"                                              , optional: true, emit: raw
     tuple val("${task.process}"), val('colabfold'), eval("python3 -c 'import importlib.metadata; print(importlib.metadata.version(\"colabfold\"))' 2>/dev/null || echo \"unknown\""), emit: versions_colabfold, topic: versions
     tuple val("${task.process}"), val('colabfold_commit'), val('38683c21700408b6a29cf395e8ef07cf109fcb91'), emit: versions_colabfold_commit, topic: versions
@@ -99,10 +91,35 @@ process COLABFOLD2_INFERENCE_BATCH {
         def ext = dot >= 0 ? name.substring(dot) : ''
         "cp -- ${shell_quote(name)} ${shell_quote("msa_in/${(meta.id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_')}${ext}")}"
     }
-    // Quote once for the printf below; a heredoc here breaks under the
-    // template's uneven indentation (the indented terminator never closes).
     def ids_content = sample_ids.collect { shell_quote(it) }.join(' ')
 
+    // Per-sample metrics are packed into two per-batch stores (see
+    // bin/pack_metrics.py); per-sample metric TSVs are never produced.
+    def per_id_cmds = """
+    [ -f "raw/\$id.a3m" ] || touch "raw/\$id.a3m"
+"""
+    def post_loop_cmds = """
+
+pack_metrics.py --ids sample_ids.txt --struct-ext ${structure_ext} --raw-dir raw \
+    --out-scalars '${sample_ids[0]}_colabfold2_metrics.jsonl.gz' \
+    --out-arrays '${sample_ids[0]}_colabfold2_metrics.npz'
+"""
+    // The packed stores carry everything downstream consumers need. Delete
+    // colabfold's bulky per-rank scores JSONs and the msa_in staging copies
+    // once packed so they do not weigh down the work directory -- unless
+    // --save_intermediates was requested, which publishes raw/ verbatim.
+    def raw_cleanup_cmds = params.save_intermediates ? '' : """
+    rm -f raw/*_scores_rank_*.json
+    rm -rf msa_in __pycache__
+"""
+    // Multiple seeds and diffusion rollouts write one structure, scores file
+    // (and, when requested, confidences/logits/representations) per rank;
+    // nothing downstream consumes beyond the top-ranked model, so all other
+    // ranks are pruned before the metrics are packed. The per-sample a3m and
+    // the rank-1 files stay.
+    def prune_cmds = params.save_intermediates ? '' : '''
+find raw -maxdepth 1 -type f -name '*_rank_*' ! -name '*_rank_001_*' -delete
+'''
     """
 if ! command -v colabfold_batch >/dev/null 2>&1; then
     echo "COLABFOLD2_INFERENCE_BATCH: colabfold_batch is missing or not executable on the container PATH" >&2
@@ -114,6 +131,8 @@ if ! python3 -c 'import colabfold, colabfold.alphafold3.predict, jax'; then
 fi
 mkdir -p msa_in
 ${stage_cmds.join('\n')}
+# Write the sanitised sample ids one per line (printf keeps this robust
+# against the template's uneven indentation, unlike a shell heredoc).
 printf '%s\\n' ${ids_content} > sample_ids.txt
 python3 - <<'PY'
 import glob, json, os, sys
@@ -157,6 +176,7 @@ def _register_missing_gpu_kinds():
         add(kind, "7.0", 70)
 _register_missing_gpu_kinds()
 EOF
+export PYTHONDONTWRITEBYTECODE=1
 export PYTHONPATH="\$PWD\${PYTHONPATH:+:\$PYTHONPATH}"
 if [ '${compile_cache}' != '' ]; then
     mkdir -p '${compile_cache}'
@@ -175,6 +195,7 @@ colabfold_batch_af3_chainwise.py \\
     $args \\
     msa_in/ \\
     raw/
+${prune_cmds}
 
 while IFS= read -r id; do
     mapfile -t ranked_structures < <(find raw -maxdepth 1 -type f -name "\${id}_rank_*.${structure_ext}" | sort)
@@ -189,24 +210,10 @@ while IFS= read -r id; do
         echo "COLABFOLD2_INFERENCE_BATCH produced no confidence JSON files for \${id}" >&2
         exit 1
     fi
-
-    extract_metrics.py --name "\$id" \\
-        --colabfold_metrics_files "\${score_files[@]}" \\
-        --structs "\${ranked_structures[@]}"
-
-    msa_file=\$(find raw -maxdepth 1 -type f -name "\${id}.a3m" -print -quit)
-    if [[ -n "\$msa_file" ]]; then
-        extract_metrics.py --name "\$id" --paired_a3m "\$msa_file"
-        mv "\${id}_msa.tsv" "\${id}_colabfold2_msa.tsv"
-    else
-        touch "\${id}_colabfold2_msa.tsv"
-    fi
-
-    for metric in 1_pae ptm iptm ipsae chainwise chainwise_ipsae plddt; do
-        [ -f "\${id}_\${metric}.tsv" ] || touch "\${id}_\${metric}.tsv"
-    done
-    cp "\${id}_plddt.tsv" "\${id}_confidence.tsv"
+${per_id_cmds}
 done < sample_ids.txt
+${post_loop_cmds}
+${raw_cleanup_cmds}
 
 cat <<-END_VERSIONS > versions.yml
 "${task.process}":
@@ -220,23 +227,17 @@ END_VERSIONS
     stub:
     def structure_ext = (model_type == 'auto' || model_type.startsWith('alphafold2')) ? 'pdb' : 'cif'
     def stub_metas = batch_meta instanceof Collection ? batch_meta.collect() : [batch_meta]
+    def first_id = (stub_metas[0].id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_')
     def stub_commands = stub_metas.collect { meta -> """
     touch "${meta.id}_colabfold2.${structure_ext}"
     touch "raw/${meta.id}_rank_001_${model_type}_seed_000_sample_0.${structure_ext}"
     touch "raw/${meta.id}_scores_rank_001_${model_type}_seed_000_sample_0.json"
-    touch "${meta.id}_colabfold2_msa.tsv"
-    touch "${meta.id}_1_pae.tsv"
-    touch "${meta.id}_ptm.tsv"
-    touch "${meta.id}_iptm.tsv"
-    touch "${meta.id}_ipsae.tsv"
-    touch "${meta.id}_chainwise.tsv"
-    touch "${meta.id}_chainwise_ipsae.tsv"
-    touch "${meta.id}_plddt.tsv"
-    touch "${meta.id}_confidence.tsv"
+    touch "raw/${meta.id}.a3m"
     """ }.join('\n')
     """
     mkdir raw
 ${stub_commands}
+    touch "${first_id}_colabfold2_metrics.jsonl.gz" "${first_id}_colabfold2_metrics.npz"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

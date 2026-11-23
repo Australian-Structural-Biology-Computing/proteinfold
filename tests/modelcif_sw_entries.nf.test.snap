@@ -4,41 +4,45 @@
             {
                 "0": [
                     [
-                        {
-                            "id": "sw_entries",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer",
-                            "no_template_search": true
-                        },
-                        "sw_entries_alphafold2.mmcif:md5,d77523b2282642b12a980032671f659f"
+                        [
+                            {
+                                "id": "sw_entries",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer",
+                                "no_template_search": true
+                            }
+                        ],
+                        "sw_entries_af2_mmseqs.mmcif:md5,0c91a7a26270b9d8ccf4d50f5bcb88ad"
                     ]
                 ],
                 "1": [
-                    "DUMMY_PAE.tsv:md5,303948e029199ff88b8242abb5b01182"
+                    "sw_entries_pae.npz:md5,164d1dc502027cb2718e4d24d2090cb2"
                 ],
                 "2": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ],
                 "modelcif": [
                     [
-                        {
-                            "id": "sw_entries",
-                            "model": "alphafold2",
-                            "msa_tool": "jackhmmer",
-                            "no_template_search": true
-                        },
-                        "sw_entries_alphafold2.mmcif:md5,d77523b2282642b12a980032671f659f"
+                        [
+                            {
+                                "id": "sw_entries",
+                                "model": "alphafold2",
+                                "msa_tool": "jackhmmer",
+                                "no_template_search": true
+                            }
+                        ],
+                        "sw_entries_af2_mmseqs.mmcif:md5,0c91a7a26270b9d8ccf4d50f5bcb88ad"
                     ]
                 ],
                 "pae": [
-                    "DUMMY_PAE.tsv:md5,303948e029199ff88b8242abb5b01182"
+                    "sw_entries_pae.npz:md5,164d1dc502027cb2718e4d24d2090cb2"
                 ],
                 "versions": [
-                    "versions.yml:md5,85da0dc3b71fd8884da8d16ff81647ef"
+                    "versions.yml:md5,2ab9fac5b890669abe612c95015b786b"
                 ]
             }
         ],
-        "timestamp": "2026-11-17T08:56:39.36839471",
+        "timestamp": "2026-11-21T01:19:48.354628658",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"

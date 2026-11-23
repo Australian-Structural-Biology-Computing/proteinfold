@@ -2,8 +2,9 @@
 
 import math
 import os
+import sys
 import argparse
-import csv
+import glob
 import json
 from matplotlib import pyplot as plt
 import numpy as np
@@ -22,17 +23,17 @@ def is_missing_input(path):
     """
     return not path or not os.path.exists(path) or os.path.getsize(path) == 0
 
-def generate_pae_plot(pae_path, out_dir, name, save_image=False):
+def generate_pae_plot(pae_matrix, out_dir, name, save_image=False):
     #save_image=False because plotly needs a local install of Google Chrome to save images.....
     """
     Generate a Plotly heatmap for Predicted Aligned Error (PAE) data.
 
     Args:
-        pae (2D array): The PAE matrix.
+        pae_matrix (2D array-like): The PAE matrix (from the packed metric store).
     Returns:
         fig: A Plotly figure object of the PAE heatmap in green color scale
     """
-    pae = np.genfromtxt(pae_path, delimiter="\t")
+    pae = np.asarray(pae_matrix, dtype=float)
     fig = go.Figure()
 
     # Add heatmap
@@ -57,12 +58,19 @@ def generate_pae_plot(pae_path, out_dir, name, save_image=False):
 
     return fig
 
-def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generate_tsv, pdb):
+def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generate_tsv, pdb, pae_matrix=None):
     msa = []
     if not is_missing_input(msa_path):
-        with open(msa_path, "r") as in_file:
-            for line in in_file:
-                msa.append([int(x) for x in line.strip().split()])
+        if str(msa_path).endswith(".a3m"):
+            # a3m MSA (packed-metrics mode): integer-encode like extract_metrics
+            sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+            from extract_metrics import a3m_to_int
+
+            msa = [list(row) for row in a3m_to_int(msa_path)]
+        else:
+            with open(msa_path, "r") as in_file:
+                for line in in_file:
+                    msa.append([int(x) for x in line.strip().split()])
 
         # Pad jagged MSAs to avoid shape errors in downstream plotting
         if msa:
@@ -193,8 +201,8 @@ def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generat
     ) as out_file:
         out_file.write(html_content)
 
-    if not is_missing_input(args.pae):
-        pae_fig = generate_pae_plot(args.pae, out_dir, name)
+    if pae_matrix is not None:
+        pae_fig = generate_pae_plot(pae_matrix, out_dir, name)
         pae_html_content = pae_fig.to_html(
             full_html=False,
             include_plotlyjs="cdn",
@@ -389,79 +397,55 @@ def pdb_to_lddt(struct_files, generate_tsv):
     return output_lddt, averages
 
 
-def read_ranked_score_tsv(tsv_path, model_count):
+def read_ranked_scores_from_store(scalar_records, sample_id, metric, model_count):
+    """Per-rank scores for one sample, sourced from the packed scalar store.
+
+    Semantics identical to read_ranked_score_tsv: values are rendered at 3
+    decimals and ranks are shifted to 0-based positions when the native
+    ranking starts at 1.
+    """
     scores = ["n/a"] * model_count
-    if is_missing_input(tsv_path):
-        return scores
-
-    rows = []
-    with open(tsv_path, "r") as handle:
-        reader = csv.reader(handle, delimiter="\t")
-        for row in reader:
-            if len(row) < 2:
-                continue
-            try:
-                rank = int(row[0])
-                score = float(row[1])
-            except ValueError:
-                continue
-            rows.append((rank, f"{score:.3f}"))
-
-    parsed_ranks = [rank for rank, _ in rows]
-    rank_offset = 1 if parsed_ranks and 0 not in parsed_ranks and 1 in parsed_ranks else 0
-    for rank, score in sorted(rows, key=lambda item: item[0]):
-        rank -= rank_offset
-        if 0 <= rank < model_count:
-            scores[rank] = score
-
+    per_rank = {}
+    for record in scalar_records:
+        if record["sample_id"] != sample_id or record["metric"] != metric or record.get("chain_pair"):
+            continue
+        try:
+            per_rank[int(record["rank"])] = f"{float(record['value']):.3f}"
+        except (TypeError, ValueError):
+            continue
+    rank_offset = 1 if per_rank and 0 not in per_rank and 1 in per_rank else 0
+    for rank in sorted(per_rank):
+        index = rank - rank_offset
+        if 0 <= index < model_count:
+            scores[index] = per_rank[rank]
     return scores
 
 
-def read_pair_score_tsv(tsv_path, model_count):
+def read_pair_scores_from_store(scalar_records, sample_id, metric, model_count):
+    """Per-rank chain-pair score maps for one sample, from the packed store.
+
+    Semantics identical to read_pair_score_tsv.
+    """
     scores = [{} for _ in range(model_count)]
-    if is_missing_input(tsv_path):
-        return scores
-
-    with open(tsv_path, "r") as handle:
-        reader = list(csv.reader(handle, delimiter="\t"))
-
-    if not reader or len(reader[0]) < 2:
-        return scores
-
-    parsed_headers = []
-    rank_headers = []
-    for header in reader[0][1:]:
-        try:
-            parsed_rank = int(header)
-            parsed_headers.append(parsed_rank)
-            rank_headers.append(parsed_rank)
-        except ValueError:
-            rank_headers.append(None)
-
-    rank_offset = 1 if parsed_headers and 0 not in parsed_headers and 1 in parsed_headers else 0
-
-    for row in reader[1:]:
-        if len(row) < 2:
+    per_rank = {}
+    for record in scalar_records:
+        if record["sample_id"] != sample_id or record["metric"] != metric or not record.get("chain_pair"):
             continue
-        pair_label = row[0]
-        for col_idx, value in enumerate(row[1:]):
-            rank = rank_headers[col_idx] if col_idx < len(rank_headers) else None
-            if rank is None:
-                continue
-            rank -= rank_offset
-            if not (0 <= rank < model_count):
-                continue
-            try:
-                parsed = float(value)
-            except ValueError:
-                continue
-            # Native scores can be NaN for chains without an interface
-            # (e.g. ligands); a NaN cell would render as an unreportable
-            # block, so it is dropped here like any other missing value
-            if not math.isfinite(parsed):
-                continue
-            scores[rank][pair_label] = f"{parsed:.4f}"
-
+        try:
+            parsed = float(record["value"])
+        except (TypeError, ValueError):
+            continue
+        # Native scores can be NaN for chains without an interface
+        # (e.g. ligands); a NaN cell would render as an unreportable
+        # block, so it is dropped here like any other missing value
+        if not math.isfinite(parsed):
+            continue
+        per_rank.setdefault(int(record["rank"]), {})[record["chain_pair"]] = f"{parsed:.4f}"
+    rank_offset = 1 if per_rank and 0 not in per_rank and 1 in per_rank else 0
+    for rank, pairs in per_rank.items():
+        index = rank - rank_offset
+        if 0 <= index < model_count:
+            scores[index] = pairs
     return scores
 
 
@@ -513,130 +497,184 @@ model_name = {
     "rf3": "RosettaFold3",
 }
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--type", dest="in_type")
-parser.add_argument("--tag", dest="file_tag", default=None, help="File-name tag; defaults to --type")
-parser.add_argument(
-    "--generate_tsv", choices=["y", "n"], default="n", dest="generate_tsv"
-)
-parser.add_argument("--msa", dest="msa", default=None)
-parser.add_argument("--pdb", dest="pdb", required=True, nargs="+")
-parser.add_argument("--pae", dest="pae", default=None)
-parser.add_argument("--iptm", dest="iptm", default=None)
-parser.add_argument("--ipsae", dest="ipsae", default=None)
-parser.add_argument("--chainwise", dest="chainwise", default=None)
-parser.add_argument("--chainwise_ipsae", dest="chainwise_ipsae", default=None)
-parser.add_argument("--name", dest="name")
-parser.add_argument("--output_dir", dest="output_dir")
-parser.add_argument("--html_template", dest="html_template")
-parser.add_argument("--version", action="version", version=f"{version}")
-parser.set_defaults(output_dir="")
-parser.set_defaults(in_type="af3")
-parser.set_defaults(name="")
-args = parser.parse_args()
-file_tag = args.file_tag or args.in_type
+def render_sample_report(name, in_type, struct_files, msa_path, scalar_records, array_store,
+                         html_template, output_dir, generate_tsv="n", file_tag=None):
+    """Render the report artefacts for one sample from packed metric stores."""
+    file_tag = file_tag or in_type
+    structures = sorted(struct_files, key=natural_path_sort_key)
+    # Legacy reports plotted the rank-1 PAE (the only per-sample PAE the
+    # pipeline emitted); keep that behaviour when reading from the store.
+    pae_matrix = array_store.get(name, 1, "pae")
+    lddt_data, lddt_averages = pdb_to_lddt(struct_files, generate_tsv)
 
-lddt_data, lddt_averages = pdb_to_lddt(args.pdb, args.generate_tsv)
-
-generate_output_images(
-    args.msa, lddt_data, args.name, args.output_dir, file_tag, args.generate_tsv, args.pdb
-)
-
-print("generating html report...")
-structures = sorted(args.pdb, key=natural_path_sort_key)
-iptm_scores = read_ranked_score_tsv(args.iptm, len(structures))
-ipsae_scores = read_ranked_score_tsv(args.ipsae, len(structures))
-# The chainwise iPTM store carries the per-chain pTM on the diagonal and
-# the pairwise interface ipTM off it; the ipSAE store is a full
-# asymmetric chain-pair matrix from colabfold's native interface scores.
-chainwise_scores = read_pair_score_tsv(args.chainwise, len(structures))
-chainwise_ipsae_scores = read_pair_score_tsv(args.chainwise_ipsae, len(structures))
-chainwise_matrices = build_pair_score_matrices(chainwise_scores)
-chainwise_ipsae_matrices = build_pair_score_matrices(chainwise_ipsae_scores)
-aligned_structures = align_structures(structures)
-
-io = PDB.MMCIFIO()
-ref_structure_path = "aligned_structure_0.cif"
-io.set_structure(aligned_structures[0])
-io.save(ref_structure_path)
-aligned_structures[0] = ref_structure_path
-
-proteinfold_template = open(args.html_template, "r").read()
-
-model_names = [
-    f"{os.path.splitext(os.path.basename(model))[0]}.cif" for model in structures
-]
-models_data = [open(s, "r").read() for s in aligned_structures]
-
-
-def script_safe_json_dumps(obj):
-    """json.dumps with <, > and & escaped, so a payload containing "</script>"
-    cannot terminate the enclosing <script type="application/json"> element early."""
-    return (
-        json.dumps(obj)
-        .replace("<", "\\u003c")
-        .replace(">", "\\u003e")
-        .replace("&", "\\u0026")
+    generate_output_images(
+        msa_path, lddt_data, name, output_dir, file_tag, generate_tsv, struct_files,
+        pae_matrix=pae_matrix
     )
 
+    print("generating html report...")
+    iptm_scores = read_ranked_scores_from_store(scalar_records, name, "iptm", len(structures))
+    ipsae_scores = read_ranked_scores_from_store(scalar_records, name, "ipsae", len(structures))
+    chainwise_iptm_scores = read_pair_scores_from_store(scalar_records, name, "chainwise_iptm", len(structures))
+    chainwise_ipsae_scores = read_pair_scores_from_store(scalar_records, name, "chainwise_ipsae", len(structures))
+    chainwise_iptm_matrices = build_pair_score_matrices(chainwise_iptm_scores)
+    chainwise_ipsae_matrices = build_pair_score_matrices(chainwise_ipsae_scores)
+    aligned_structures = align_structures(structures)
 
-report_config = {
-    "reportType": "standard",
-    "sampleName": args.name,
-    "programName": model_name.get(args.in_type.lower(), args.in_type),
-    "structFormat": "cif",
-    "models": model_names,
-    "models_data": models_data,
-    "lddt_averages": lddt_averages,
-    "iptm_scores": iptm_scores,
-    "ipsae_scores": ipsae_scores,
-    "chainwise": chainwise_matrices,
-    "chainwise_ipsae": chainwise_ipsae_matrices,
-}
-config_blob = (
-    '<script type="application/json" id="report-config">'
-    f"{script_safe_json_dumps(report_config)}</script>"
-)
-proteinfold_template = proteinfold_template.replace(
-    "</head>", f"{config_blob}\n  </head>", 1
-)
+    io = PDB.MMCIFIO()
+    ref_structure_path = "aligned_structure_0.cif"
+    io.set_structure(aligned_structures[0])
+    io.save(ref_structure_path)
+    aligned_structures[0] = ref_structure_path
 
-if not is_missing_input(args.msa):
-    image_path = f"{args.output_dir}/{args.name}_{file_tag}_seq_coverage.png"
-    with open(image_path, "rb") as in_file:
-        data_uri = f"data:image/png;base64,{base64.b64encode(in_file.read()).decode('utf-8')}"
-        proteinfold_template = proteinfold_template.replace(
-            '<div id="seq_cov_placeholder"></div>',
-            f'<img src="{data_uri}" alt="Sequence coverage (MSA)" '
-            'class="w-full h-auto rounded" />',
+    proteinfold_template = open(html_template, "r").read()
+
+    model_names = [
+        f"{os.path.splitext(os.path.basename(model))[0]}.cif" for model in structures
+    ]
+    models_data = [open(s, "r").read() for s in aligned_structures]
+
+
+    def script_safe_json_dumps(obj):
+        """json.dumps with <, > and & escaped, so a payload containing "</script>"
+        cannot terminate the enclosing <script type="application/json"> element early."""
+        return (
+            json.dumps(obj)
+            .replace("<", "\\u003c")
+            .replace(">", "\\u003e")
+            .replace("&", "\\u0026")
         )
-else:
-    pattern = r'<div id="seq_coverage_container".*?>.*?(<!--.*?-->.*?)*?</div>\s*</div>\s*</div>\s*</div>'
-    proteinfold_template = re.sub(pattern, "", proteinfold_template, flags=re.DOTALL)
 
-with open(
-    f"{args.output_dir}/{args.name + ('_' if args.name else '')}coverage_LDDT.html",
-    "r",
-) as in_file:
-    lddt_html = in_file.read()
+
+    report_config = {
+        "reportType": "standard",
+        "sampleName": name,
+        "programName": model_name.get(in_type.lower(), in_type),
+        "structFormat": "cif",
+        "models": model_names,
+        "models_data": models_data,
+        "lddt_averages": lddt_averages,
+        "iptm_scores": iptm_scores,
+        "ipsae_scores": ipsae_scores,
+        "chainwise": chainwise_iptm_matrices,
+        "chainwise_ipsae": chainwise_ipsae_matrices,
+    }
+    config_blob = (
+        '<script type="application/json" id="report-config">'
+        f"{script_safe_json_dumps(report_config)}</script>"
+    )
     proteinfold_template = proteinfold_template.replace(
-        '<div id="lddt_placeholder"></div>', lddt_html
+        "</head>", f"{config_blob}\n  </head>", 1
     )
 
-if not is_missing_input(args.pae):
-    with open(
-        f"{args.output_dir}/{args.name + ('_' if args.name else '')}PAE.html",
-        "r",
-    ) as pae_in_file:
-        pae_html = pae_in_file.read()
-        proteinfold_template = proteinfold_template.replace(
-            '<div id="pae_placeholder"></div>', pae_html
-        )
-else:
-    pattern = r'<div id="pae_container".*?>.*?(<!--.*?-->.*?)*?</div>\s*</div>'
-    proteinfold_template = re.sub(pattern, "", proteinfold_template, flags=re.DOTALL)
+    if not is_missing_input(msa_path):
+        image_path = f"{output_dir}/{name}_{file_tag}_seq_coverage.png"
+        with open(image_path, "rb") as in_file:
+            data_uri = f"data:image/png;base64,{base64.b64encode(in_file.read()).decode('utf-8')}"
+            proteinfold_template = proteinfold_template.replace(
+                '<div id="seq_cov_placeholder"></div>',
+                f'<img src="{data_uri}" alt="Sequence coverage (MSA)" '
+                'class="w-full h-auto rounded" />',
+            )
+    else:
+        pattern = r'<div id="seq_coverage_container".*?>.*?(<!--.*?-->.*?)*?</div>\s*</div>\s*</div>\s*</div>'
+        proteinfold_template = re.sub(pattern, "", proteinfold_template, flags=re.DOTALL)
 
-with open(
-    f"{args.output_dir}/{args.name}_{file_tag.lower()}_report.html", "w"
-) as out_file:
-    out_file.write(proteinfold_template)
+    with open(
+        f"{output_dir}/{name + ('_' if name else '')}coverage_LDDT.html",
+        "r",
+    ) as in_file:
+        lddt_html = in_file.read()
+        proteinfold_template = proteinfold_template.replace(
+            '<div id="lddt_placeholder"></div>', lddt_html
+        )
+
+    if pae_matrix is not None:
+        with open(
+            f"{output_dir}/{name + ('_' if name else '')}PAE.html",
+            "r",
+        ) as pae_in_file:
+            pae_html = pae_in_file.read()
+            proteinfold_template = proteinfold_template.replace(
+                '<div id="pae_placeholder"></div>', pae_html
+            )
+    else:
+        pattern = r'<div id="pae_container".*?>.*?(<!--.*?-->.*?)*?</div>\s*</div>'
+        proteinfold_template = re.sub(pattern, "", proteinfold_template, flags=re.DOTALL)
+
+    with open(
+        f"{output_dir}/{name}_{file_tag.lower()}_report.html", "w"
+    ) as out_file:
+        out_file.write(proteinfold_template)
+
+    # The coverage/PAE visualisations above are embedded into the report
+    # itself; remove the transient files so they do not accumulate in the
+    # task directory (only the report HTML is published).
+    for transient in (
+        f"{output_dir}/{name}_{file_tag}_seq_coverage.png",
+        f"{output_dir}/{name}{'_' if name else ''}coverage_LDDT.html",
+        f"{output_dir}/{name}_PAE.html",
+        "aligned_structure_0.cif",
+    ):
+        try:
+            os.remove(transient)
+        except FileNotFoundError:
+            pass
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--type", dest="in_type")
+    parser.add_argument(
+        "--generate_tsv", choices=["y", "n"], default="n", dest="generate_tsv"
+    )
+    parser.add_argument("--manifest", required=True,
+                        help="TSV: sample_id, packed scalars store, packed arrays store")
+    parser.add_argument("--struct-ext", dest="struct_ext", default="cif", choices=["cif", "pdb"])
+    parser.add_argument("--output_dir", dest="output_dir")
+    parser.add_argument("--html_template", dest="html_template")
+    parser.add_argument("--version", action="version", version=f"{version}")
+    parser.set_defaults(output_dir="")
+    parser.set_defaults(in_type="af3")
+    args = parser.parse_args()
+
+    sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+    import extract_metrics
+    import metrics_store
+
+    with open(args.manifest) as handle:
+        rows = [line.rstrip("\n").split("\t") for line in handle if line.strip()]
+
+    for fields in rows:
+        if len(fields) != 4:
+            sys.exit(f"generate_report: malformed manifest line: {fields}")
+        sample_id, scalars_path, arrays_path, file_tag = fields
+
+        struct_files = extract_metrics.sort_paths_by_rank(
+            glob.glob(f"{sample_id}_rank_*.{args.struct_ext}")
+        )
+        if not struct_files:
+            sys.exit(f"generate_report: no ranked structures staged for {sample_id}")
+
+        scalar_records = list(metrics_store.read_scalars(scalars_path))
+        with metrics_store.ArrayStore(arrays_path) as array_store:
+            render_sample_report(
+                name=sample_id,
+                in_type=args.in_type,
+                file_tag=file_tag,
+                struct_files=struct_files,
+                msa_path=f"{sample_id}.a3m",
+                scalar_records=scalar_records,
+                array_store=array_store,
+                html_template=args.html_template,
+                output_dir=args.output_dir,
+                generate_tsv=args.generate_tsv,
+            )
+        print(f"generate_report: rendered report for {sample_id}")
+
+    print(f"generate_report: rendered {len(rows)} report(s)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

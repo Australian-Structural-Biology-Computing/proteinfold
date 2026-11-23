@@ -1,7 +1,7 @@
 {
     "one multi-mode run folds every sample with every compatible backend": {
         "content": [
-            66,
+            61,
             {
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "3.12.16",
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "3.12.16",
@@ -55,7 +55,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:ROSETTAFOLD3:jax": "0.11.2"
             }
         ],
-        "timestamp": "2026-11-22T12:48:50.252166097",
+        "timestamp": "2026-11-22T16:06:14.12816947",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"
@@ -63,7 +63,7 @@
     },
     "esmfold2 model selection resolves the requested LM variant": {
         "content": [
-            10,
+            7,
             {
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:generate_multiqc_contents.py": "3.12.16",
                 "NFCORE_PROTEINFOLD:POST_PROCESSING:GENERATE_MULTIQC_CONTENTS:python": "3.12.16",
@@ -77,7 +77,7 @@
                 "NFCORE_PROTEINFOLD:PROTEINFOLD:MSA_COLABFOLD_SEARCH:MMSEQS_COLABFOLDSEARCH_BATCH:mmseqs": "48f2a22d5f68f595afdfb5e601ca11721cf17449"
             }
         ],
-        "timestamp": "2026-11-22T12:49:07.221383455",
+        "timestamp": "2026-11-22T16:06:52.134365465",
         "meta": {
             "nf-test": "0.9.4",
             "nextflow": "25.10.4"

@@ -25,24 +25,25 @@ nextflow_process {
                 unirefDir.mkdirs()
                 file('uniref30/dummy.db').text = 'x'
 
-                def fasta1 = file('T1024.fasta')
-                fasta1.text = '>T1024\\nMKTAYIAKQRQISFVKSHFSRQDILD\\n'
-                def fasta2 = file('T1026.fasta')
-                fasta2.text = '>T1026\\nGIVLDSGDGVTHVVPI\\n'
+                // The converter emits one concatenated query per
+                // msa_batch_size slice; the search consumes it directly.
+                def query = file('queries_0.fasta')
+                query.text = '>T1024\\nMKTAYIAKQRQISFVKSHFSRQDILD\\n>T1026\\nGIVLDSGDGVTHVVPI\\n'
 
                 input[0] = [
                     [[id: 'T1024'], [id: 'T1026']],
-                    [fasta1, fasta2]
+                    query
                 ]
                 input[1] = file('db/*')
                 input[2] = file('uniref30/*')
-                input[3] = ''
                 """
             }
         }
 
         then {
             assert process.success
+            // Run with a container profile so the version evals report the
+            // real image's versions.
             assert snapshot(process.out).match()
         }
     }

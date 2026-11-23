@@ -164,6 +164,43 @@ Alternatively, the required data layout for each MSA tool and backend is describ
 
 > Omitting the `--db` flag will allow the pipeline to download the reference data required to execute the selected MSA tool and backend.
 
+## Metric outputs and batching
+
+The pipeline writes one small TSV per metric per sequence (pLDDT, PAE, pTM,
+ipTM, ipSAE, chain-wise scores). At large scale - e.g. annotating a whole
+genome with tens of thousands of predictions - this produces millions of
+tiny files and exhausts file-system inodes.
+
+Instead, all per-sequence metrics are packed into **two files per inference
+batch**:
+
+- `*_colabfold2_metrics.jsonl.gz` - scalar metrics (pTM, ipTM, ipSAE,
+  chain-wise scores, MSA depth/length), one JSON record per value
+- `*_colabfold2_metrics.npz` - per-residue pLDDT vectors and PAE matrices,
+  one member per sequence and rank
+
+Structures and the raw a3m MSA remain per-sequence files; every downstream
+consumer (MultiQC, the HTML reports, ModelCIF assembly) reads the packed
+stores natively.
+
+Batching controls how many samples share a task at each stage:
+
+- `--inference_batch_size` (default `1`): samples per structure-prediction
+  task; `-1` runs all samples in one task (recommended for genome scale -
+  one model/weight load for the whole run). Batching above 1 is not
+  supported with `--use_msa_server`.
+- `--report_batch_size` (default `-1`): samples per report/ModelCIF task;
+  reports and ModelCIF files are generated per sample within the batch task
+  and published unchanged.
+
+With `--skip_visualisation` the report/ModelCIF stages are skipped entirely,
+leaving only structures, the a3m MSA, the packed metric stores and the
+MultiQC summary - the recommended configuration for genome-scale runs:
+
+```bash
+nextflow run nf-core/proteinfold --inference_batch_size -1 --skip_visualisation ...
+```
+
 ## Random Seeds
 
 The pipeline-wide `--random_seed` parameter is forwarded to `colabfold_batch` (`--random-seed`) and honoured by every prediction backend: the AlphaFold2 backends seed the model runners, and the AlphaFold3-open backends (alphafold3, boltz2, protenix2, chai1, esmfold2, ...) set the folding input's `rng_seeds`.

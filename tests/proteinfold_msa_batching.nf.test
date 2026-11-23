@@ -1,0 +1,33 @@
+nextflow_pipeline {
+
+    name "Test MSA batching"
+    script "../main.nf"
+    tag "pipeline"
+    tag "test_proteinfold_msa_batching"
+    profile "test_proteinfold"
+
+    test("runs multiple MSA batches") {
+        when {
+            params {
+                outdir = "$outputDir"
+                input = 'https://raw.githubusercontent.com/Australian-Structural-Biology-Computing/test-datasets/proteinfold/testdata/samplesheet/v2.0/colabfold_batching_samplesheet.csv'
+                msa_batch_size = 2
+            }
+        }
+
+        then {
+            assert workflow.success
+            assert file("${params.outdir}/multiqc/multiqc_report.html").exists()
+            assert file("${params.outdir}/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml").size() > 0
+            def batches = workflow.trace.succeeded().findAll { it.name.contains('MMSEQS_COLABFOLDSEARCH_BATCH') }
+            assert batches.size() == 2
+            def stable_name = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
+            def stable_path = getAllFilesFromDir(params.outdir, ignoreFile: 'tests/.nftignore')
+            assert snapshot(
+                workflow.trace.succeeded().size(),
+                stable_name,
+                stable_path
+            ).match()
+        }
+    }
+}

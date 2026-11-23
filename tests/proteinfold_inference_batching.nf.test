@@ -17,16 +17,16 @@ nextflow_pipeline {
 
         then {
             assert workflow.success
-            def batches = workflow.trace.succeeded().findAll { it.name ==~ /.*:ALPHAFOLD3 \(batch_.*/ }
+            def batches = workflow.trace.succeeded().findAll { it.name.contains('ALPHAFOLD3') && it.name.contains('batch_') }
             assert batches.size() == 1
             assert batches[0].name.contains('batch_T1024_T1026')
-            // every inference task is a batch task
-            assert workflow.trace.succeeded().count { it.name ==~ /.*:ALPHAFOLD3 \(batch_.*/ } == 1
+            // no per-sample inference task was run
+            assert workflow.trace.succeeded().count { it.name ==~ /.*:ALPHAFOLD3 \((?!batch_).*/ } == 0
             // outputs are split back per sample and published flat
             assert file("${params.outdir}/top_ranked_structures/T1024_af3_mmseqs.cif").exists()
             assert file("${params.outdir}/top_ranked_structures/T1026_af3_mmseqs.cif").exists()
-            assert file("${params.outdir}/metrics/T1024_af3_mmseqs_plddt.tsv").exists()
-            assert file("${params.outdir}/metrics/T1026_af3_mmseqs_confidence.tsv").exists()
+            assert file("${params.outdir}/reports/T1024_af3_mmseqs_report.html").exists()
+            assert file("${params.outdir}/reports/T1026_af3_mmseqs_report.html").exists()
             def stable_name = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
             def stable_path = getAllFilesFromDir(params.outdir, ignoreFile: 'tests/.nftignore')
             assert snapshot(
@@ -50,12 +50,12 @@ nextflow_pipeline {
 
         then {
             assert workflow.success
-            def batches = workflow.trace.succeeded().findAll { it.name ==~ /.*:ALPHAFOLD3 \(batch_.*/ }
+            def batches = workflow.trace.succeeded().findAll { it.name.contains('ALPHAFOLD3') && it.name.contains('batch_') }
             assert batches.size() == 2
             assert batches.any { it.name.contains('batch_T1024_T1026') }
             assert batches.any { it.name.contains('batch_T1027') }
             assert file("${params.outdir}/top_ranked_structures/T1027_af3_mmseqs.cif").exists()
-            assert file("${params.outdir}/metrics/T1027_af3_mmseqs_iptm.tsv").exists()
+            assert file("${params.outdir}/reports/T1027_af3_mmseqs_report.html").exists()
         }
     }
 
@@ -71,7 +71,7 @@ nextflow_pipeline {
 
         then {
             assert workflow.success
-            def batches = workflow.trace.succeeded().findAll { it.name ==~ /.*:ALPHAFOLD3 \(batch_.*/ }
+            def batches = workflow.trace.succeeded().findAll { it.name.contains('ALPHAFOLD3') && it.name.contains('batch_') }
             assert batches.size() == 1
             assert batches[0].name.contains('batch_T1024_T1026_T1027')
         }
