@@ -27,7 +27,6 @@ process GENERATE_REPORT_BATCH {
     def model = head.mode_short ?: head.model
     // The task files carry the sanitised ids colabfold_batch bakes into its
     // outputs; the report name keeps the raw sample id.
-    def safe = { name -> "'" + (name as String).replaceAll("'", "'\\''") + "'" }
     def raw_ids = (batch_meta instanceof Collection ? batch_meta.collect() : [batch_meta])
         .collect { meta -> safe(meta.id) }.join(' ')
     def sample_ids = (batch_meta instanceof Collection ? batch_meta.collect() : [batch_meta])
@@ -76,4 +75,8 @@ ${stub_files}
         generate_report.py: \$(python3 --version)
     END_VERSIONS
     """
+}
+
+def safe(name) {
+    "'" + (name as String).replaceAll("'", "'\\''") + "'"
 }
