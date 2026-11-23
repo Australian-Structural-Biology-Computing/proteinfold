@@ -150,34 +150,34 @@ process COLABFOLD2_INFERENCE {
         --structs "\${ranked_structures[@]}"
 
     msa_file=\$(find raw -maxdepth 1 -type f -name '*.a3m' -print -quit)
-    if [[ -n "\$msa_file" ]]; then
-        extract_metrics.py --name "${meta.id}" --paired_a3m "\$msa_file"
+    input_file=${quoted_input_files}
+    if [[ "\$input_file" == *.json ]]; then
+        # The AF3 MSA JSON is the merged MSA the model consumed and names every
+        # chain copy, so the coverage columns expand and order exactly; the a3m
+        # ColabFold writes back out collapses copies into a cardinality header.
+        if extract_metrics.py --name "${meta.id}" --af3_msa_json "\$input_file" --structure "\${ranked_structures[0]}"; then
+            mv "${meta.id}_msa.tsv" "${meta.id}_colabfold2_msa.tsv"
+        else
+            extraction_status=\$?
+            if [[ "\$extraction_status" -eq 2 || "\$extraction_status" -eq 3 ]]; then
+                touch "${meta.id}_colabfold2_msa.tsv"
+            else
+                echo "COLABFOLD2_INFERENCE could not extract the MSA coverage" >&2
+                exit "\$extraction_status"
+            fi
+        fi
+    elif [[ -n "\$msa_file" ]]; then
+        extract_metrics.py --name "${meta.id}" --paired_a3m "\$msa_file" --structure "\${ranked_structures[0]}"
         mv "${meta.id}_msa.tsv" "${meta.id}_colabfold2_msa.tsv"
     elif [[ "${require_msa_output}" == "true" ]]; then
         echo "COLABFOLD2_INFERENCE received FASTA input but the MSA server produced no a3m files" >&2
         exit 1
+    elif [[ "\$input_file" == *.a3m ]]; then
+        extract_metrics.py --name "${meta.id}" --paired_a3m "\$input_file" --structure "\${ranked_structures[0]}"
+        mv "${meta.id}_msa.tsv" "${meta.id}_colabfold2_msa.tsv"
     else
-        input_file=${quoted_input_files}
-        if [[ "\$input_file" == *.a3m ]]; then
-            extract_metrics.py --name "${meta.id}" --paired_a3m "\$input_file"
-            mv "${meta.id}_msa.tsv" "${meta.id}_colabfold2_msa.tsv"
-        elif [[ "\$input_file" == *.json ]]; then
-            if af3_msa_json_to_a3m.py "\$input_file" --output "${meta.id}_input.a3m"; then
-                extract_metrics.py --name "${meta.id}" --paired_a3m "${meta.id}_input.a3m"
-                mv "${meta.id}_msa.tsv" "${meta.id}_colabfold2_msa.tsv"
-            else
-                conversion_status=\$?
-                if [[ "\$conversion_status" -eq 2 || "\$conversion_status" -eq 3 ]]; then
-                    touch "${meta.id}_colabfold2_msa.tsv"
-                else
-                    echo "COLABFOLD2_INFERENCE could not convert the input MSA" >&2
-                    exit "\$conversion_status"
-                fi
-            fi
-        else
-            echo "COLABFOLD2_INFERENCE cannot extract an MSA from \$input_file" >&2
-            exit 1
-        fi
+        echo "COLABFOLD2_INFERENCE cannot extract an MSA from \$input_file" >&2
+        exit 1
     fi
 
     touch \

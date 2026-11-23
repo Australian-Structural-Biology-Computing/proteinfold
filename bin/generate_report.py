@@ -180,6 +180,71 @@ def get_residue_atom_counts(struct_file):
         break  # first model only - predictions carry a single model
     return counts
 
+def parse_msa_spans_header(first_line):
+    """Parse a '#spans\tlengths\tentities' MSA TSV header.
+
+    The header describes the per-copy display layout the extractor verified
+    against the predicted structure: one span per chain copy, in display
+    column order, each holding its span's residue length and the index of the
+    collapsed entity row it mirrors. Returns the (length, entity) span list,
+    or None for plain matrices (legacy TSVs, unmatched layouts).
+    """
+    if not first_line.startswith("#spans"):
+        return None
+    fields = first_line[len("#spans"):].strip().split("\t")
+    if len(fields) != 2:
+        return None
+    try:
+        lengths = [int(x) for x in fields[0].split(",")]
+        entities = [int(x) for x in fields[1].split(",")]
+    except ValueError:
+        return None
+    if not lengths or len(lengths) != len(entities):
+        return None
+    if any(length <= 0 for length in lengths) or any(entity < 0 for entity in entities):
+        return None
+    return list(zip(lengths, entities))
+
+
+def expand_sorted_msa(sorted_msa, sorted_identities, spans):
+    """Split a sorted collapsed MSA out into one column span per chain copy.
+
+    The rows are sorted and identity-scaled in their collapsed per-entity
+    form, and the copies are split out column-wise: every display row carries
+    its entity's segment in each of that entity's copy spans, so all copies
+    of a subunit render identically row for row, and the row count stays the
+    true merged depth. Returns the display matrix (NaN for gaps) and the
+    per-row identities, or (None, None) when the spans do not describe the
+    collapsed matrix.
+    """
+    entity_lengths = {}
+    for length, entity in spans:
+        seen = entity_lengths.setdefault(entity, length)
+        if seen != length:
+            return None, None
+    n_entities = max(entity_lengths) + 1
+    if sorted(set(entity_lengths)) != list(range(n_entities)):
+        return None, None
+    if sum(entity_lengths.values()) != sorted_msa.shape[1]:
+        return None, None
+
+    # Collapsed column offset per entity (rows are in entity order) and the
+    # collapsed source column for every display column.
+    entity_offsets = {}
+    position = 0
+    for entity in range(n_entities):
+        entity_offsets[entity] = position
+        position += entity_lengths[entity]
+    src_columns = np.concatenate([
+        np.arange(entity_offsets[entity], entity_offsets[entity] + length)
+        for length, entity in spans
+    ])
+
+    values = sorted_msa[:, src_columns]
+    display = np.where(values != 21, sorted_identities[:, None], np.nan).astype(np.float32)
+    return display, sorted_identities
+
+
 def load_msa_matrix(msa_path):
     """Parse an MSA and compute the sorted identity-scaled coverage matrix.
 
@@ -188,49 +253,48 @@ def load_msa_matrix(msa_path):
     holds the per-row sequence identity to the query, and rows are ordered
     by ascending identity to the query. Returns None when the MSA file is
     missing.
+
+    A '#spans' header marks a collapsed multi-copy matrix: identity and
+    sorting are computed on the collapsed per-entity rows and the chain
+    copies are split out afterwards, so the copies of a subunit render
+    identically. Vectorised over numpy - expanded matrices reach tens of
+    millions of cells, which the earlier per-cell Python loops held several
+    times over in object memory.
     """
     if is_missing_input(msa_path):
         return None
-    msa = []
     with open(msa_path, "r") as in_file:
-        for line in in_file:
-            msa.append([int(x) for x in line.strip().split()])
-    if not msa:
+        first_line = in_file.readline()
+    spans = parse_msa_spans_header(first_line)
+    msa = np.loadtxt(msa_path, dtype=np.int8, delimiter="\t", ndmin=2, comments="#")
+    if msa.size == 0:
         return None
 
-    # Pad jagged MSAs to avoid shape errors in downstream plotting
-    max_len = max(len(row) for row in msa)
-    if any(len(row) != max_len for row in msa):
-        msa = [row + [21] * (max_len - len(row)) for row in msa]
+    # A gap-gap pair counts as a match, matching the original per-cell
+    # comparison against the full row width.
+    seqid = (msa == msa[0]).sum(axis=1) / msa.shape[1]
 
-    seqid = []
-    for sequence in msa:
-        matches = [
-            1.0 if first == other else 0.0 for first, other in zip(msa[0], sequence)
-        ]
-        seqid.append(sum(matches) / len(matches))
+    seqid_sort = np.argsort(seqid, kind="stable")
+    sorted_msa = msa[seqid_sort]
+    sorted_identities = seqid[seqid_sort]
 
-    seqid_sort = sorted(range(len(seqid)), key=seqid.__getitem__)
-
-    non_gaps = []
-    for sequence in msa:
-        non_gaps.append(
-            [float(num != 21) if num != 21 else float("nan") for num in sequence]
+    if spans is not None:
+        expanded, expanded_ids = expand_sorted_msa(sorted_msa, sorted_identities, spans)
+        if expanded is not None:
+            return expanded.shape[1], expanded, expanded_ids
+        warnings.warn(
+            f"{msa_path}: the #spans layout does not describe the matrix; "
+            "treating the collapsed rows as the display layout"
         )
 
-    sorted_non_gaps = [non_gaps[i] for i in seqid_sort]
-    final = []
-    for sorted_seq, identity in zip(
-        sorted_non_gaps, [seqid[i] for i in seqid_sort]
-    ):
-        final.append(
-            [
-                value * identity if not isinstance(value, str) else value
-                for value in sorted_seq
-            ]
-        )
+    # A covered cell holds exactly its row's identity, a gap is NaN
+    final = np.where(
+        sorted_msa != 21,
+        sorted_identities[:, None],
+        np.nan,
+    ).astype(np.float32)
 
-    return len(msa[0]), final, [seqid[i] for i in seqid_sort]
+    return msa.shape[1], final, sorted_identities
 
 def build_msa_payload(msa_path):
     """Pack the sorted MSA coverage matrix for the interactive report viewer.
@@ -254,8 +318,7 @@ def build_msa_payload(msa_path):
     # A covered cell holds exactly its row's identity, a gap is NaN; the
     # viewer reconstructs the quantised matrix from the 1-bit mask (row-major,
     # MSB first) plus the per-row identities
-    values = np.asarray(shown, dtype=float)
-    mask = np.packbits((~np.isnan(values)).astype(np.uint8).ravel())
+    mask = np.packbits((~np.isnan(shown)).astype(np.uint8).ravel())
     return {
         "nSeq": int(len(shown)),
         "nSeqShown": int(len(shown)),
@@ -288,11 +351,7 @@ def generate_msa_image(msa_path, name, out_dir, in_type):
         extent=(0, xaxis_size, 0, len(final))
     )
 
-    column_counts = [0] * xaxis_size
-    for col in range(xaxis_size):
-        for row in final:
-            if not (isinstance(row[col], float) and np.isnan(row[col])):
-                column_counts[col] += 1
+    column_counts = (~np.isnan(final)).sum(axis=0)
 
     plt.plot(column_counts, color="black")
     plt.xlim(0, xaxis_size)

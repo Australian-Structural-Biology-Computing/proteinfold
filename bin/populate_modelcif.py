@@ -252,8 +252,9 @@ def _read_msa_tsv(msa_tsv):
     """
     Parse the *_msa.tsv written by extract_metrics.py.
 
-    The file has no header; each row is one homologous sequence encoded as
-    tab-separated integers (0-21 per residue position).
+    The file may start with a '#spans' header describing the per-copy display
+    layout; each data row is one homologous sequence encoded as tab-separated
+    integers (0-21 per residue position), collapsed to one span per entity.
 
     Returns ``(num_seqs, alignment_length)`` where *num_seqs* is the MSA
     depth and *alignment_length* is the number of residue columns.
@@ -263,7 +264,7 @@ def _read_msa_tsv(msa_tsv):
     with open(msa_tsv) as fh:
         for line in fh:
             line = line.rstrip('\n')
-            if not line:
+            if not line or line.startswith("#"):
                 continue
             num_seqs += 1
             if alignment_length == 0:
