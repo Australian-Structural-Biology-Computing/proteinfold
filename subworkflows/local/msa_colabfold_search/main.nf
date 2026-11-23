@@ -15,6 +15,11 @@ include { batchMergeInputs                   } from '../utils_nfcore_proteinfold
 include { MMSEQS_COLABFOLDSEARCH_BATCH       } from '../../../modules/local/mmseqs_colabfoldsearch'
 include { MSA_CACHE_LOOKUP                   } from '../../../modules/local/msa_cache_lookup'
 
+def sanitise(id) {
+    (id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_')
+}
+
+
 workflow MSA_COLABFOLD_SEARCH {
 
     take:
@@ -123,7 +128,6 @@ workflow MSA_COLABFOLD_SEARCH {
     // merge belongs to the MSA stage, so it groups by --msa_batch_size like
     // the search itself.
     MERGE_ALPHAFOLD3_MSA(batchMergeInputs(ch_json_merge_input, batch_size))
-    def sanitise = { id -> (id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_') }
     ch_merged_json = MERGE_ALPHAFOLD3_MSA.out.json
         .flatMap { batch_meta, files ->
             def list = new ArrayList(files instanceof List ? files : [files])

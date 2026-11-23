@@ -18,6 +18,11 @@ include { UTILS_NFCORE_PIPELINE     } from '../../nf-core/utils_nfcore_pipeline'
 include { UTILS_NEXTFLOW_PIPELINE   } from '../../nf-core/utils_nextflow_pipeline'
 include { logColours                } from '../../nf-core/utils_nfcore_pipeline'
 
+def sanitise(id) {
+    (id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_')
+}
+
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     SUBWORKFLOW TO INITIALISE PIPELINE
@@ -254,7 +259,6 @@ def batchMergeInputs(ch_merge_input, analysis_batch) {
     if (analysis_batch == 0 || analysis_batch < -1) {
         error("Analysis batch size must be -1 or a positive integer, got ${analysis_batch}")
     }
-    def sanitise = { id -> (id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_') }
     return ch_merge_input
         .collect(flat: false)
         .filter { rows -> !rows.isEmpty() }

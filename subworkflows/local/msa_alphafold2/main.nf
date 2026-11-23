@@ -15,6 +15,11 @@ include { RUN_ALPHAFOLD2_MSA           } from '../../../modules/local/run_alphaf
 include { AF2_MSA_TO_COLABFOLD_JSON    } from '../../../modules/local/af2_msa_to_colabfold_json'
 include { batchMergeInputs             } from '../utils_nfcore_proteinfold_pipeline'
 
+def sanitise(id) {
+    (id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_')
+}
+
+
 workflow MSA_ALPHAFOLD2 {
 
     take:
@@ -105,7 +110,6 @@ workflow MSA_ALPHAFOLD2 {
     // The alphafold2 path keeps its merge per sample (batch size 1) for now:
     // it runs through the same batched process, but its granularity stays
     // fixed and independent of --msa_batch_size and --analysis_batch_size.
-    def sanitise = { id -> (id as String).replaceAll(/[^A-Za-z0-9_.-]/, '_') }
     MERGE_ALPHAFOLD3_MSA(batchMergeInputs(ch_af2_json_merge_input, 1))
     ch_merged_json = MERGE_ALPHAFOLD3_MSA.out.json
         .flatMap { batch_meta, files ->

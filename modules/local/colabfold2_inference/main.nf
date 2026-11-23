@@ -1,5 +1,10 @@
 include { batchTag } from '../../../subworkflows/local/utils_nfcore_proteinfold_pipeline'
 
+def shell_quote(name) {
+    "'" + name.replace("'", "'\\''") + "'"
+}
+
+
 process COLABFOLD2_INFERENCE_BATCH {
     tag "${batchTag(batch_meta)} ($model_type)"
     label 'process_medium'
@@ -72,7 +77,6 @@ process COLABFOLD2_INFERENCE_BATCH {
     def compile_cache = params.colabfold2_compile_cache ? file(params.colabfold2_compile_cache).toAbsolutePath().toString() : ''
     // The alphafold2 backends write PDB structures; the AF3-family writes mmCIF.
     def structure_ext = (model_type == 'auto' || model_type.startsWith('alphafold2')) ? 'pdb' : 'cif'
-    def shell_quote = { name -> "'" + name.replace("'", "'\\''") + "'" }
     def files = query_files instanceof Collection ? query_files.collect() : [query_files]
     def metas = batch_meta instanceof Collection ? batch_meta.collect() : [batch_meta]
     if (metas.size() != files.size()) {
