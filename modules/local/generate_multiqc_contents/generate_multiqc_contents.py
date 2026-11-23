@@ -169,7 +169,10 @@ def parse_packed_pair(scalars_path, arrays_path, rows, line_series, mode_label):
         rank_means = {}
         rank_points = {}
         for rank, values in rank_values.items():
-            points = [[position, value] for position, value in enumerate(values) if math.isfinite(value)]
+            # The packed arrays are plain per-residue lists whose first entry
+            # is residue 1; the legacy TSV path carried an explicit 1-based
+            # Positions column, so keep the same numbering here.
+            points = [[position, value] for position, value in enumerate(values, start=1) if math.isfinite(value)]
             if points:
                 rank_points[rank] = points
                 rank_means[rank] = sum(value for _, value in points) / len(points)

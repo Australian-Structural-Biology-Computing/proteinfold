@@ -41,7 +41,10 @@ def main():
     parser.add_argument("--out-prefix", required=True)
     parser.add_argument("--plddt", default="", help="rank_<n>=<tsv path with one float per residue>")
     parser.add_argument("--pae", default="", help="rank_<n>=<tsv matrix path>")
-    parser.add_argument("--scores", default="", help="rank_<n>=<float> shared by ptm/iptm")
+    parser.add_argument("--scores", default="", help="rank_<n>=<float> shared by ptm/iptm when --ptm/--iptm are absent")
+    parser.add_argument("--ptm", default="", help="rank_<n>=<float> per-rank pTM (overrides --scores)")
+    parser.add_argument("--iptm", default="", help="rank_<n>=<float> per-rank ipTM (overrides --scores)")
+    parser.add_argument("--msa-depth", default="", help="scalar MSA depth recorded for rank 0")
     parser.add_argument("--chainwise-iptm", default="", help="rank_<n>=<chainA>:<chainB>=<float>,...")
     parser.add_argument("--chainwise-ipsae", default="", help="rank_<n>=<chainA>:<chainB>=<float>,...")
     args = parser.parse_args()
@@ -49,6 +52,8 @@ def main():
     plddt = parse_rank_spec(args.plddt)
     pae = parse_rank_spec(args.pae)
     scores = parse_rank_spec(args.scores)
+    ptm_spec = parse_rank_spec(args.ptm) or scores
+    iptm_spec = parse_rank_spec(args.iptm) or scores
     chainwise_iptm = parse_rank_spec(args.chainwise_iptm)
     chainwise_ipsae = parse_rank_spec(args.chainwise_ipsae)
 
@@ -56,14 +61,20 @@ def main():
     arrays_path = f"{args.out_prefix}_metrics.npz"
 
     records = []
-    for rank, value in sorted(scores.items()):
+    for rank, value in sorted(ptm_spec.items()):
         records.append({
             "sample_id": args.sample_id, "rank": rank, "metric": "ptm",
             "chain_pair": None, "value": float(value),
         })
+    for rank, value in sorted(iptm_spec.items()):
         records.append({
             "sample_id": args.sample_id, "rank": rank, "metric": "iptm",
             "chain_pair": None, "value": float(value),
+        })
+    if args.msa_depth:
+        records.append({
+            "sample_id": args.sample_id, "rank": 0, "metric": "msa_depth",
+            "chain_pair": None, "value": int(args.msa_depth),
         })
     for rank, spec in sorted(chainwise_iptm.items()):
         for pair, value in (item.split("=") for item in spec.split(";")):
