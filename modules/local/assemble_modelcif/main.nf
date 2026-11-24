@@ -28,11 +28,14 @@ process MODELCIF_ASSEMBLE {
     def no_template_search = meta.no_template_search ? '--no-template-search' : ''
     def missing_metrics = meta.missing_metrics ? "--missing-metrics ${meta.missing_metrics.join(',')}" : ''
     def prediction_container = meta.prediction_container ? "--container_image ${meta.prediction_container}" : ''
-    def stage_pae = meta.missing_metrics?.contains('pae') ? '' : "mkdir -p pae && cp ${pae} pae/"
+    def output_prefix = "${meta.id}_${meta.mode_short ?: meta.model}${meta.msa_short ? "_" + meta.msa_short : ''}"
+    def pae_files = pae instanceof Collection ? pae : [pae]
+    def pae_prefix = meta.mode_short ? "${output_prefix}_" : ''
+    def stage_pae = meta.missing_metrics?.contains('pae') ? '' : "mkdir -p pae && " + pae_files.collect { file -> "cp '${file}' 'pae/${pae_prefix}${file.name}'" }.join(' && ')
     def pae_inputs = meta.missing_metrics?.contains('pae') ? "${pae}" : 'pae/*.tsv'
     def modelcif_params = (meta.modelcif_params ?: [:]).collect { key, value -> "--param ${key}=${value}" }.join(' ')
     def plddt_scale = meta.plddt_scale ? "--plddt-scale ${meta.plddt_scale}" : ''
-    def output_prefix = "${meta.id}_${meta.mode_short ?: meta.model}${meta.msa_short ? "_" + meta.msa_short : ''}"
+    def output_ext = args.tokenize().contains('--write_binary') ? 'bcif' : 'mmcif'
     """
     ${stage_pae}
 
@@ -45,6 +48,7 @@ process MODELCIF_ASSEMBLE {
         --iptm ${iptm} \\
         --name ${meta.id} \\
         --prog ${meta.model} \\
+        --output "${output_prefix}.${output_ext}" \\
         --versions_yml ${versions_yml} \\
         --msa_tool ${meta.msa_tool ?: 'None'} \\
         --software_details ${software_details} \\
