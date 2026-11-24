@@ -38,6 +38,73 @@ nextflow_process {
 '''
     }
 
+    test("skips protein-free JSON only for compatible backends") {
+        setup {
+            file("$outputDir/to_colabfold_fasta").mkdirs()
+            file("$outputDir/to_colabfold_fasta/ligand_only.json").text = '{"sequences":[{"ligand":{"id":["L1"],"ccdCodes":["ATP"]}}]}'
+        }
+        def ligandInput = new File("$outputDir/to_colabfold_fasta/ligand_only.json").absolutePath
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: 'ligand_only', skip_protein_free: true ],
+                    file('${ligandInput}', checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assert process.success
+            assert process.out.query_fasta.empty
+        }
+    }
+
+    test("skips protein-ligand JSON for AlphaFold2 server inference") {
+        def richInput = new File("$outputDir/to_colabfold_fasta/rich_input.json").absolutePath
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: 'rich_sample', skip_protein_free: true ],
+                    file('${richInput}', checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assert process.success
+            assert process.out.query_fasta.empty
+        }
+    }
+
+    test("rejects protein-free JSON for offline MSA generation") {
+        setup {
+            file("$outputDir/to_colabfold_fasta").mkdirs()
+            file("$outputDir/to_colabfold_fasta/ligand_only.json").text = '{"sequences":[{"ligand":{"id":["L1"],"ccdCodes":["ATP"]}}]}'
+        }
+        def ligandInput = new File("$outputDir/to_colabfold_fasta/ligand_only.json").absolutePath
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: 'ligand_only' ],
+                    file('${ligandInput}', checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assert !process.success
+        }
+    }
+
     test("colon-joins a multi-record FASTA into one ColabFold query") {
         def fastaInput = new File("$outputDir/to_colabfold_fasta/multichain.fasta").absolutePath
 

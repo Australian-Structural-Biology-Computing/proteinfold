@@ -87,7 +87,7 @@ nextflow_process {
                 new File(outputDir, 'iptm.tsv').text = scores
                 """
                 input[0] = [
-                    [id: 'test', model: 'alphafold2', msa_tool: 'jackhmmer'],
+                    [id: 'test', model: 'alphafold2', mode_short: 'af2', msa_short: 'jackhmmer', msa_tool: 'jackhmmer'],
                     [file("$outputDir/rank_0.mmcif"), file("$outputDir/rank_1.mmcif")],
                     file("$projectDir/tests/fixtures/DUMMY_MSA.tsv", checkIfExists: true),
                     file("$outputDir/two_rank_plddt.tsv", checkIfExists: true),
@@ -104,10 +104,11 @@ nextflow_process {
             assert snapshot(process.out).match()
             assert process.success
             def outputFile = path(process.out.modelcif[0][1])
+            assert outputFile.fileName.toString() == 'test_af2_jackhmmer.mmcif'
             assert outputFile.text.contains('_ma_qa_metric')
             assert outputFile.text.contains('_ma_protocol_step')
             (0..1).each { rank ->
-                def relativePath = "pae/rank_${rank}_pae.tsv"
+                def relativePath = "pae/test_af2_jackhmmer_rank_${rank}_pae.tsv"
                 assert outputFile.text.contains("model ${relativePath} file other other")
                 assert java.nio.file.Files.isRegularFile(outputFile.parent.resolve(relativePath))
             }

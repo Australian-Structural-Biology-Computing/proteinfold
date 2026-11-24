@@ -105,15 +105,17 @@
                         {
                             "id": "test",
                             "model": "alphafold2",
+                            "mode_short": "af2",
+                            "msa_short": "jackhmmer",
                             "msa_tool": "jackhmmer"
                         },
-                        "test_alphafold2.mmcif:md5,eb1b7b26a2c1d1604777cd27b154ff1d"
+                        "test_af2_jackhmmer.mmcif:md5,37fb5566392e7e446e343f497692ce8f"
                     ]
                 ],
                 "1": [
                     [
-                        "rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
+                        "test_af2_jackhmmer_rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_af2_jackhmmer_rank_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
                     ]
                 ],
                 "2": [
@@ -124,15 +126,17 @@
                         {
                             "id": "test",
                             "model": "alphafold2",
+                            "mode_short": "af2",
+                            "msa_short": "jackhmmer",
                             "msa_tool": "jackhmmer"
                         },
-                        "test_alphafold2.mmcif:md5,eb1b7b26a2c1d1604777cd27b154ff1d"
+                        "test_af2_jackhmmer.mmcif:md5,37fb5566392e7e446e343f497692ce8f"
                     ]
                 ],
                 "pae": [
                     [
-                        "rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
-                        "rank_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
+                        "test_af2_jackhmmer_rank_0_pae.tsv:md5,303948e029199ff88b8242abb5b01182",
+                        "test_af2_jackhmmer_rank_1_pae.tsv:md5,303948e029199ff88b8242abb5b01182"
                     ]
                 ],
                 "versions": [

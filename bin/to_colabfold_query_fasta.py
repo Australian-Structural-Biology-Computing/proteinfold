@@ -13,7 +13,12 @@ document is repopulated with the generated MSAs downstream
 
 import argparse
 import json
+import sys
 from pathlib import Path
+
+
+class MissingProteinError(ValueError):
+    pass
 
 
 def _single_job(document):
@@ -29,7 +34,12 @@ def _single_job(document):
     return document
 
 
-def protein_queries(document):
+def protein_queries(document, reject_non_protein=False):
+    if reject_non_protein and any(
+        isinstance(entity, dict) and any(key != "protein" for key in entity)
+        for entity in document.get("sequences", [])
+    ):
+        raise MissingProteinError("the AlphaFold2 backends cannot fold non-protein entities")
     queries = []
     for entity in document.get("sequences", []):
         if not isinstance(entity, dict) or "protein" not in entity:
@@ -42,10 +52,7 @@ def protein_queries(document):
         copies = len(entity_ids) if isinstance(entity_ids, list) else 1
         queries.extend([sequence] * max(1, copies))
     if not queries:
-        raise ValueError(
-            "Offline ColabFold2 MSA generation needs at least one protein entity; "
-            "use --use_msa_server for an RNA/ligand-only AlphaFold3 JSON"
-        )
+        raise MissingProteinError("the AlphaFold2 backends need at least one protein entity")
     return queries
 
 
@@ -75,11 +82,15 @@ def main():
     parser.add_argument("input")
     parser.add_argument("--id", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--reject-non-protein", action="store_true")
     args = parser.parse_args()
 
     input_path = Path(args.input)
     if input_path.suffix == ".json":
-        queries = protein_queries(_single_job(json.loads(input_path.read_text(encoding="utf-8"))))
+        queries = protein_queries(
+            _single_job(json.loads(input_path.read_text(encoding="utf-8"))),
+            reject_non_protein=args.reject_non_protein,
+        )
     else:
         queries = fasta_sequences(input_path)
         if not queries:
@@ -89,4 +100,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except MissingProteinError as error:
+        print(error, file=sys.stderr)
+        sys.exit(3)

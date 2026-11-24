@@ -124,6 +124,34 @@ nextflow_pipeline {
         }
     }
 
+    test("supplied MSA does not bypass AlphaFold2 entity check") {
+        tag "msa-byo-mixed"
+
+        setup {
+            def mixed = file("$outputDir/mixed.json")
+            mixed.text = '{"name":"mixed","sequences":[{"protein":{"id":"A","sequence":"MKTAY"}},{"ligand":{"id":"B","ligand":"ATP"}}]}'
+            def protein = file("$outputDir/protein.json")
+            protein.text = '{"name":"protein","sequences":[{"protein":{"id":"A","sequence":"MKTAY"}}]}'
+            def msa = file("$outputDir/byo.a3m")
+            msa.text = ">101\nMKTAY\n"
+            def samplesheet = file("$outputDir/byo_mixed.csv")
+            samplesheet.text = "id,fasta,msa\nmixed,${mixed},${msa}\nprotein,${protein},${msa}\n"
+        }
+        when {
+            params {
+                outdir = "$outputDir/results"
+                input = "$outputDir/byo_mixed.csv"
+                mode = 'alphafold2'
+                msa_tool = 'alphafold2_msa'
+            }
+        }
+        then {
+            assert workflow.success
+            assert file("${params.outdir}/top_ranked_structures/protein_af2_byo.pdb").exists()
+            assert !file("${params.outdir}/top_ranked_structures/mixed_af2_byo.pdb").exists()
+        }
+    }
+
     test("--use_msa_server bypasses local MSA generation") {
         tag "msa-server"
 

@@ -11,7 +11,7 @@ process TO_COLABFOLD_FASTA {
     tuple val(meta), path(input_file, stageAs: 'input/*')
 
     output:
-    tuple val(meta), path("${meta.id}.fasta"), emit: query_fasta
+    tuple val(meta), path("${meta.id}.fasta"), optional: true, emit: query_fasta
 
     when:
     task.ext.when == null || task.ext.when
@@ -23,10 +23,19 @@ process TO_COLABFOLD_FASTA {
     def staged = input_file instanceof Collection ? input_file[0].name : input_file.name
     def input_name = staged.tokenize('/')[-1]
     """
-    to_colabfold_query_fasta.py \\
+    if to_colabfold_query_fasta.py \\
         input/${input_name} \\
         --id ${meta.id} \\
-        --output ${meta.id}.fasta
+        --output ${meta.id}.fasta \\
+        ${meta.skip_protein_free ? '--reject-non-protein' : ''}; then
+        :
+    else
+        status=\$?
+        if [[ "${meta.skip_protein_free ?: false}" != "true" || "\$status" -ne 3 ]]; then
+            exit "\$status"
+        fi
+        echo "Skipping sample ${meta.id} with unsupported entities for the AlphaFold2 backend" >&2
+    fi
     """
 
     stub:
@@ -38,9 +47,17 @@ process TO_COLABFOLD_FASTA {
     def staged = input_file instanceof Collection ? input_file[0].name : input_file.name
     def input_name = staged.tokenize('/')[-1]
     """
-    to_colabfold_query_fasta.py \\
+    if to_colabfold_query_fasta.py \\
         input/${input_name} \\
         --id ${meta.id} \\
-        --output ${meta.id}.fasta
+        --output ${meta.id}.fasta \\
+        ${meta.skip_protein_free ? '--reject-non-protein' : ''}; then
+        :
+    else
+        status=\$?
+        if [[ "${meta.skip_protein_free ?: false}" != "true" || "\$status" -ne 3 ]]; then
+            exit "\$status"
+        fi
+    fi
     """
 }

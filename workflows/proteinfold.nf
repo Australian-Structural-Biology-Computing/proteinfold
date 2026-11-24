@@ -88,7 +88,7 @@ workflow PROTEINFOLD {
             def clean_meta = meta.clone()
             def msa = clean_meta.remove('msa')
             clean_meta.msa_short = 'byo'
-            [clean_meta, msa]
+            [clean_meta, msa, input]
         }
 
     ch_samplesheet
@@ -212,14 +212,31 @@ workflow PROTEINFOLD {
     def ch_af2_inference_input = null
 
     if (af3_specs) {
-        ch_af3_inference_input = ch_msa_input.mix(ch_byo_msa)
+        ch_af3_inference_input = ch_msa_input.mix(ch_byo_msa.map { meta, msa, input -> [meta, msa] })
     }
 
     if (af2_specs) {
+        def ch_byo_af2_msa = ch_byo_msa
+            .filter { meta, msa, input ->
+                if (input.extension.toLowerCase() != 'json') return true
+                def document = new groovy.json.JsonSlurper().parseText(input.text)
+                if (document instanceof List) document = document.size() == 1 ? document[0] : [:]
+                def entities = document instanceof Map ? document.sequences : null
+                def compatible = entities instanceof List && entities && entities.every { entity -> entity instanceof Map && entity.keySet() == (['protein'] as Set) }
+                if (!compatible) {
+                    log.warn "Sample '${meta.id}' cannot be folded by the AlphaFold2 backends (${af2_specs*.public_mode.join(', ')}): its supplied JSON carries non-protein entities or has no protein entity."
+                }
+                compatible
+            }
+            .map { meta, msa, input -> [meta, msa] }
         if (msa_tool == 'msa_server') {
             // Server mode: colabfold_batch runs the webserver search itself;
             // JSON inputs are reduced to their protein chains first.
-            TO_COLABFOLD_FASTA(ch_input_by_ext.json)
+            TO_COLABFOLD_FASTA(ch_input_by_ext.json.map { meta, input ->
+                def tagged = meta.clone()
+                tagged.skip_protein_free = true
+                [tagged, input]
+            })
             ch_af2_inference_input = ch_input_by_ext.fasta
                 .mix(TO_COLABFOLD_FASTA.out.query_fasta)
                 .map { meta, input ->
@@ -227,7 +244,7 @@ workflow PROTEINFOLD {
                     tagged.msa_short = 'server'
                     [tagged, input]
                 }
-                .mix(ch_byo_msa)
+                .mix(ch_byo_af2_msa)
         } else {
             // Convert the MSA JSON into ColabFold a3m queries. Samples whose
             // JSON cannot serve the AF2 graph (non-protein entities, no
@@ -246,7 +263,7 @@ workflow PROTEINFOLD {
             ch_af2_inference_input = ch_convertible
                 .filter { meta, a3m, compatible -> compatible }
                 .map { meta, a3m, compatible -> [meta, a3m] }
-                .mix(ch_byo_msa)
+                .mix(ch_byo_af2_msa)
         }
     }
 
