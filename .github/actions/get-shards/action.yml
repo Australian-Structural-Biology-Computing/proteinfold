@@ -11,7 +11,7 @@ inputs:
     description: "Tags to pass as argument for nf-test --tag parameter"
     required: false
   group_by_image:
-    description: "Use one image-affinity matrix entry per selected tag"
+    description: "Distribute shards across image-affinity groups by selected test count"
     required: false
     default: "false"
 outputs:
@@ -65,12 +65,15 @@ runs:
         import re
         import sys
 
-        files = set()
+        files = {}
         if os.path.exists(sys.argv[1]):
             with open(sys.argv[1], newline='') as handle:
-                files = {row['filename'] for row in csv.DictReader(handle)}
-        tags = set()
+                for row in csv.DictReader(handle):
+                    filename = row['filename']
+                    files[filename] = files.get(filename, 0) + 1
+        tags = {}
         other = []
+        other_count = 0
         for filename in files:
             with open(filename) as handle:
                 matches = re.findall(r'^    tag "(ci_img_[^"]+)"\s*$', handle.read(), re.MULTILINE)
@@ -79,18 +82,29 @@ runs:
                 print('[{"tag":"","paths":"[]","label":"1/1 | all"}]')
                 sys.exit(0)
             if matches:
-                tags.add(matches[0])
+                tags[matches[0]] = tags.get(matches[0], 0) + files[filename]
             else:
                 other.append(os.path.relpath(filename))
-        groups = [(tag, '[]') for tag in sorted(tags)]
+                other_count += files[filename]
+        groups = [(tag, '[]', tags[tag]) for tag in sorted(tags)]
         if other:
-            groups.append(('', json.dumps(sorted(other))))
+            groups.append(('', json.dumps(sorted(other)), other_count))
         if len(groups) > int(sys.argv[2]):
             print('::warning::Image groups exceed max_shards; running all tests together', file=sys.stderr)
             print('[{"tag":"","paths":"[]","label":"1/1 | all"}]')
             sys.exit(0)
-        matrix = [{'tag': tag, 'paths': paths, 'label': f'{index}/{len(groups)} | {tag.removeprefix("ci_img_") if tag else "other"}'}
-                  for index, (tag, paths) in enumerate(groups, 1)]
+        shards = [1] * len(groups)
+        while sum(shards) < int(sys.argv[2]):
+            candidates = [index for index, group in enumerate(groups) if shards[index] < group[2]]
+            if not candidates:
+                break
+            index = max(candidates, key=lambda index: groups[index][2] / shards[index])
+            shards[index] += 1
+        matrix = []
+        for (tag, paths, _), total in zip(groups, shards):
+            for shard in range(1, total + 1):
+                matrix.append({'tag': tag, 'paths': paths, 'shard': shard, 'total_shards': total,
+                               'label': f'{tag.removeprefix("ci_img_") if tag else "other"} | {shard}/{total}'})
         print(json.dumps(matrix, separators=(',', ':')))
         PY
           ) || { echo "Cannot assign image groups"; exit 1; }

@@ -98,8 +98,8 @@ jobs:
           SKIP_CPU_INTEGRATION: ${{ github.repository_owner != 'nf-core' }}
         with:
           profile: ${{ matrix.profile }}
-          shard: 1
-          total_shards: 1
+          shard: ${{ matrix.tag.shard || 1 }}
+          total_shards: ${{ matrix.tag.total_shards || 1 }}
           tags: ${{ matrix.tag.tag }}
           paths: ${{ matrix.tag.paths }}
 
