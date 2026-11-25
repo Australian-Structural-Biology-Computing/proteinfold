@@ -5,6 +5,26 @@ process COLABFOLD2_INFERENCE {
 
     container "ghcr.io/tlitfin/proteinfold_colabfold:af3-preview-38683c2"
 
+    // The compiled-kernel cache lives outside the work directory and is only
+    // referenced inside the script, so container autoMounts never sees it:
+    // bind it explicitly so users don't have to pass --singularity-args.
+    // A bind source must exist before the container starts, which the
+    // pipeline guarantees by creating it on the host at launch.
+    containerOptions {
+        if (params.colabfold2_compile_cache) {
+            // Resolve against the launch directory and canonicalise: a bind
+            // destination must be absolute (a relative --colabfold2_compile_cache
+            // makes apptainer abort the container with 'destination must be an
+            // absolute path').
+            def dir = file(params.colabfold2_compile_cache).toAbsolutePath().toString()
+            if (workflow.containerEngine in ['singularity', 'apptainer']) {
+                "--bind ${dir}"
+            } else if (workflow.containerEngine == 'docker') {
+                "-v ${dir}:${dir}"
+            }
+        }
+    }
+
     input:
     tuple val(meta), path(input), val(model_type), val(use_esm), path(params_path)
     val num_recycles
@@ -41,6 +61,13 @@ process COLABFOLD2_INFERENCE {
     def precision = task.ext.weights_precision ?: 'fp32'
     // Forward the global --random_seed; colabfold_batch defaults to 0 anyway.
     def random_seed_arg = params.random_seed != null ? "--random-seed ${params.random_seed}" : ''
+    // Persistent JIT cache for the AF3-family backends: their pinned build has no
+    // native compile-cache consumption, so jax's own persistent compilation cache
+    // (JAX_COMPILATION_CACHE_DIR) covers them. The AlphaFold2 backends get
+    // colabfold's per-shape executable cache via the --compile-cache ext.args entry.
+    // Same canonicalisation as the containerOptions bind above: the script
+    // text carries the absolute path so the mount and the flags always agree.
+    def compile_cache = params.colabfold2_compile_cache ? file(params.colabfold2_compile_cache).toAbsolutePath().toString() : ''
     def input_files = input instanceof Collection ? input.collect { file_path -> file_path.name } : [input.name]
     if (input_files.size() != 1) {
         error("COLABFOLD2_INFERENCE received multiple inputs for sample '${meta.id}'. Use --split_fasta to run each FASTA record independently.")
@@ -87,6 +114,10 @@ process COLABFOLD2_INFERENCE {
     _register_missing_gpu_kinds()
     EOF
     export PYTHONPATH="\$PWD\${PYTHONPATH:+:\$PYTHONPATH}"
+    if [ '${compile_cache}' != '' ]; then
+        mkdir -p '${compile_cache}'
+        export JAX_COMPILATION_CACHE_DIR='${compile_cache}'
+    fi
 
     mkdir raw
     colabfold_batch_af3_chainwise.py \
