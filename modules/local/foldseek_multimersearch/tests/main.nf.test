@@ -1,0 +1,49 @@
+nextflow_process {
+    name "Test Process FOLDSEEK_MULTIMERSEARCH"
+    script "../main.nf"
+    process "FOLDSEEK_MULTIMERSEARCH"
+    tag "modules"
+    tag "modules_local"
+    tag "foldseek_multimersearch"
+
+    profile "test_nostub"
+
+    test("all predicted structures of a sample are compared all-vs-all with chain assignments") {
+        when {
+            process {
+                """
+                input[0] = tuple(
+                    [id: 'S1'],
+                    [
+                        file("${projectDir}/tests/fixtures/S1_rank_001_alphafold3_seed_000_sample_0.pdb", checkIfExists: true),
+                        file("${projectDir}/tests/fixtures/S1_rank_002_alphafold3_seed_000_sample_0.pdb", checkIfExists: true),
+                        file("${projectDir}/tests/fixtures/S1_COMPLEX_rank_001_boltz2_seed_000_sample_0.pdb", checkIfExists: true),
+                        file("${projectDir}/tests/fixtures/S1_rank_001_chai1_seed_000_sample_0.pdb", checkIfExists: true)
+                    ]
+                )
+                """
+            }
+        }
+        then {
+            assert process.success
+            def report = path(process.out.multimer_report[0][1]).text
+            def rows = report.readLines().findAll { it }
+            assert rows.size() >= 16
+            assert rows.every { it.split('\t').size() == 9 }
+            def stems = [
+                'S1_rank_001_alphafold3_seed_000_sample_0',
+                'S1_rank_002_alphafold3_seed_000_sample_0',
+                'S1_COMPLEX_rank_001_boltz2_seed_000_sample_0',
+                'S1_rank_001_chai1_seed_000_sample_0'
+            ]
+            // Every structure self-aligns perfectly, so the report carries a
+            // complete distance basis for clustering.
+            for (stem in stems) {
+                def self_rows = rows.findAll { r -> r.split('\t')[0] == stem && r.split('\t')[1] == stem }
+                assert self_rows.size() >= 1
+                assert self_rows.any { r -> r.split('\t')[4].toBigDecimal() == 1.0 }
+            }
+            assert rows.findAll { it.startsWith('S1_rank_001_alphafold3_seed_000_sample_0\t') }.size() >= 4
+        }
+    }
+}

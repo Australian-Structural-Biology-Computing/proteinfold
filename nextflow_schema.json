@@ -228,6 +228,17 @@
             "fa_icon": "fas fa-flask",
             "description": "Experimental multi-model predictors provided by the ColabFold AlphaFold3 preview. MSA generation is split from inference: it either runs offline via the MMseqs2 ColabFold search or uses the consented MSA server.",
             "properties": {
+                "colabfold_num_seeds": {
+                    "type": "integer",
+                    "default": 1,
+                    "description": "Number of random seeds to predict with per model. Seeds run from --random_seed to --random_seed + N - 1, multiplying the number of predicted structures (and the inference wall time) by N.",
+                    "fa_icon": "fas fa-random"
+                },
+                "colabfold_max_msa": {
+                    "type": "string",
+                    "description": "Downsample the MSA used for prediction as `max-seq:max-extra-seq` (e.g. `128:512`; model defaults include 508:2048 for alphafold3 and 512:5120 for protenix2). Fewer MSA sequences make the prediction more stochastic and increase conformational diversity.",
+                    "fa_icon": "fas fa-filter"
+                },
                 "colabfold2_params_path": {
                     "type": "string",
                     "format": "directory-path",
@@ -304,6 +315,26 @@
                     "type": "boolean",
                     "description": "Skip visualisation reports.",
                     "fa_icon": "fas fa-fast-forward"
+                }
+            }
+        },
+        "conformational_analysis_options": {
+            "title": "Conformational analysis options",
+            "type": "object",
+            "fa_icon": "fas fa-shapes",
+            "description": "Optional downstream analysis that clusters and projects all predicted structures of a sample onto a 2D plot.",
+            "properties": {
+                "conformational_analysis": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Cluster all predicted structures for each sample and project them onto an interactive 2D conformational plot. Every pair of structures of a sample is aligned with Foldseek-Multimer, which optimises the chain pairing between complexes so the resulting complex TM-scores are invariant to chain naming, ordering and composition differences between prediction backends. Clustering and 2D embedding (classical MDS) are computed from those scores, and the generated HTML report offers options to color and filter the structures by prediction model and confidence scores.",
+                    "fa_icon": "fas fa-object-group"
+                },
+                "conformational_analysis_cluster_cutoff": {
+                    "type": "number",
+                    "default": 0.5,
+                    "description": "Complex TM-score similarity at or above which two predicted structures are joined into the same conformational cluster when --conformational_analysis is active (0.5 is the conventional Foldseek structure clustering threshold).",
+                    "fa_icon": "fas fa-ruler-horizontal"
                 }
             }
         },
@@ -838,6 +869,9 @@
         },
         {
             "$ref": "#/$defs/process_skipping_options"
+        },
+        {
+            "$ref": "#/$defs/conformational_analysis_options"
         },
         {
             "$ref": "#/$defs/institutional_config_options"

@@ -132,4 +132,30 @@ nextflow_pipeline {
             ).match()
         }
     }
+
+    test("conformational analysis clusters and projects the predicted structures") {
+        tag "proteinfold-conformations"
+
+        when {
+            params {
+                outdir                  = "$outputDir"
+                mode                    = 'opendde'
+                conformational_analysis = true
+            }
+        }
+
+        then {
+            def stableName = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
+            assert workflow.success
+            def versions_path = new File(params.outdir.toString() + "/pipeline_info/nf_core_proteinfold_software_mqc_versions.yml").absolutePath
+            def versions_report = new File(versions_path).readLines()
+            assert versions_report.any { it.contains(":CONFORMATIONAL_ANALYSIS:FOLDSEEK_MULTIMERSEARCH:") }
+            assert versions_report.any { it.contains(":CONFORMATIONAL_ANALYSIS:CLUSTER_CONFORMATIONS:") }
+            ['T1024', 'T1026'].each { id ->
+                assert stableName.contains("conformations/${id}_conformations.html".toString())
+                assert stableName.contains("conformations/${id}_conformations.tsv".toString())
+                assert stableName.contains("conformations/${id}_multimer_report.tsv".toString())
+            }
+        }
+    }
 }

@@ -1,0 +1,64 @@
+nextflow_process {
+    name "Test Process CLUSTER_CONFORMATIONS"
+    script "../main.nf"
+    process "CLUSTER_CONFORMATIONS"
+    tag "modules"
+    tag "modules_local"
+    tag "cluster_conformations"
+
+    profile "test_nostub"
+
+    test("conformations are clustered by Foldseek-Multimer similarity and reported with confidence metrics") {
+        when {
+            process {
+                """
+                input[0] = tuple(
+                    [id: 'S1'],
+                    [
+                        file("${projectDir}/tests/fixtures/S1_rank_001_alphafold3_seed_000_sample_0.pdb", checkIfExists: true),
+                        file("${projectDir}/tests/fixtures/S1_rank_002_alphafold3_seed_000_sample_0.pdb", checkIfExists: true),
+                        file("${projectDir}/tests/fixtures/S1_COMPLEX_rank_001_boltz2_seed_000_sample_0.pdb", checkIfExists: true),
+                        file("${projectDir}/tests/fixtures/S1_rank_001_chai1_seed_000_sample_0.pdb", checkIfExists: true)
+                    ],
+                    [
+                        file("${projectDir}/tests/fixtures/S1_scores_rank_001_alphafold3_seed_000_sample_0.json", checkIfExists: true),
+                        file("${projectDir}/tests/fixtures/S1_scores_rank_002_alphafold3_seed_000_sample_0.json", checkIfExists: true),
+                        file("${projectDir}/tests/fixtures/S1_COMPLEX_scores_rank_001_boltz2_seed_000_sample_0.json", checkIfExists: true)
+                    ],
+                    file("${projectDir}/tests/fixtures/DUMMY_MULTIMER_REPORT.tsv", checkIfExists: true),
+                    [
+                        [model: 'alphafold3', mode_short: 'af3'],
+                        [model: 'alphafold3', mode_short: 'af3'],
+                        [model: 'boltz2', mode_short: 'bz2'],
+                        [model: 'chai1', mode_short: 'chai1']
+                    ]
+                )
+                input[1] = 0.5
+                """
+            }
+        }
+        then {
+            assert process.success
+            def table = path(process.out.table[0][1]).text
+            def rows = table.readLines()
+            assert rows[0] == "structure\tmodel\tmode_short\trank\tseed\tsample\tcluster\tptm\tiptm\tipsae\tranking_score\tplddt\tmds1\tmds2"
+            assert rows.size() == 5
+            assert rows.count { it.split('\t')[6] == 'cluster_1' } == 3
+            assert rows.count { it.split('\t')[6] == 'cluster_2' } == 1
+            def chai1 = rows.find { it.contains('chai1') }
+            assert chai1.split('\t')[1] == 'chai1' && chai1.split('\t')[6] == 'cluster_2'
+            def af3 = rows.find { it.contains('alphafold3_seed_000') }
+            assert af3.split('\t')[7] == '0.91' && af3.split('\t')[8] == '0.87'
+            assert rows.find { it.contains('boltz2') }.split('\t')[9] == '0.77'
+            def html = path(process.out.html[0][1]).text
+            assert html.contains('cdn.plot.ly/plotly')
+            assert !html.contains('__PAYLOAD__') && !html.contains('__SAMPLE__')
+            def matcher = html =~ /(?s)<script type="application\/json" id="conformations-data">(.*?)<\/script>/
+            assert matcher.count == 1
+            def config = new groovy.json.JsonSlurper().parseText(matcher[0][1].replace('<\\/', '</'))
+            assert config.sample == "S1" && config.cutoff == 0.5
+            assert config.points.size() == 4
+            assert config.points.every { it.containsKey('cluster') && it.containsKey('metrics') }
+        }
+    }
+}

@@ -187,6 +187,20 @@ Additional PAE features:
 
 </details>
 
+### Conformational analysis
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `conformations/`
+  - `<SEQUENCE NAME>_conformations.html`: interactive 2D conformational plot of all predicted structures of the sequence, with options to color and filter by prediction model and confidence scores.
+  - `<SEQUENCE NAME>_conformations.tsv`: per-structure table with prediction model, rank, seed, conformational cluster, confidence metrics and 2D MDS coordinates.
+  - `<SEQUENCE NAME>_multimer_report.tsv`: Foldseek-Multimer all-vs-all complex alignment report with the chain assignments and complex TM-scores used for clustering.
+
+</details>
+
+Only generated when `--conformational_analysis` is active.
+
 ### Foldseek structural similarity search
 
 ### MultiQC report
