@@ -15,6 +15,59 @@
       #molstar-root .msp-viewport {
         background: transparent;
       }
+      .seq-row {
+        position: relative;
+        display: flex;
+        align-items: flex-end;
+        gap: 1px;
+        margin-bottom: 3px;
+        width: max-content;
+      }
+      .seq-band,
+      .seq-band-preview {
+        position: absolute;
+        bottom: -3px;
+        height: 3px;
+        border-radius: 2px;
+        pointer-events: none;
+      }
+      .seq-band {
+        background: #c2410c;
+      }
+      .seq-band-preview {
+        background: rgba(194, 65, 12, 0.4);
+      }
+      .seq-gutter {
+        flex: 0 0 4ch;
+        padding-right: 8px;
+        text-align: right;
+        font-size: 10px;
+        color: #9ca3af;
+        line-height: 1.55;
+      }
+      .seq-chainhead {
+        margin: 3px 0 1px;
+      }
+      .seq-chip {
+        display: inline-block;
+        min-width: 2.5ch;
+        padding: 0 3px;
+        border-radius: 2px;
+        text-align: center;
+        font-family: system-ui, sans-serif;
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 1.5;
+      }
+      .seq-residue {
+        width: 1.3ch;
+        border-radius: 2px;
+        line-height: 1.45;
+        text-align: center;
+      }
+      .seq-residue:hover {
+        filter: brightness(0.88);
+      }
     </style>
   </head>
   <body class="bg-gray-50 text-gray-900 antialiased">
@@ -155,8 +208,8 @@
             </div>
           </div>
           <p class="text-xs text-gray-500">
-            Drag to select a block of residues; click a cell to pair two residues. Selections highlight in the structure
-            and MSA.
+            Drag to select a block of residues; click a cell to pair two residues; Shift adds to the selection.
+            Selections highlight in the structure and MSA.
           </p>
           <div class="rounded-lg border border-gray-200 bg-white p-3">
             <div id="pae_placeholder"></div>
@@ -164,10 +217,36 @@
         </section>
       </div>
 
+      <!-- Sequence panel, cross-linked with the viewer and the matrices -->
+      <section id="sequence_container" class="min-w-0 space-y-2" aria-label="Sequence">
+        <div class="flex flex-wrap items-baseline justify-between gap-4">
+          <div class="flex items-baseline gap-2">
+            <h2 class="text-sm font-semibold text-gray-900">Sequence</h2>
+            <button
+              id="sequence-toggle"
+              type="button"
+              class="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600 shadow-sm transition-all hover:bg-gray-50"
+              aria-expanded="true"
+              aria-controls="sequence-card"
+            >
+              Hide
+            </button>
+          </div>
+          <p class="text-xs text-gray-500">
+            Click a residue to highlight it across views &middot; drag for a range &middot; Shift adds or removes
+            &middot; Esc clears.
+          </p>
+        </div>
+        <div id="sequence-card" class="overflow-x-auto rounded-lg border border-gray-200 bg-white p-3">
+          <div id="sequence-root" class="w-full"></div>
+        </div>
+      </section>
+
       <!-- Lower row: MSA coverage beside the chainwise interface matrices -->
       <div id="lower_panels" class="grid gap-8 xl:auto-cols-fr xl:grid-flow-col xl:items-start">
         <section id="seq_coverage_container" class="min-w-0 space-y-2 xl:col-span-2" aria-label="MSA sequence coverage">
           <h2 class="text-sm font-semibold text-gray-900">MSA sequence coverage</h2>
+          <p class="text-xs text-gray-500">Drag to select a position range; Shift adds to the selection.</p>
           <div class="rounded-lg border border-gray-200 bg-white p-3">
             <div id="seq_cov_placeholder"></div>
           </div>
@@ -1218,16 +1297,17 @@
         canvas.addEventListener("pointerdown", (ev) => {
           const cell = widget.cellAt(ev);
           if (!widget.inPlot(cell)) return;
-          widget.drag = { anchor: cell, current: cell };
+          // Shift held at press time adds the new selection to the existing one
+          widget.drag = { anchor: cell, current: cell, shift: ev.shiftKey };
           canvas.setPointerCapture(ev.pointerId);
           ev.preventDefault();
         });
 
         const finish = () => {
           if (!widget.drag) return;
-          const { anchor, current } = widget.drag;
+          const { anchor, current, shift } = widget.drag;
           widget.drag = null;
-          widget.commitSelection(anchor, current);
+          widget.commitSelection(anchor, current, shift);
           widget.draw();
         };
         canvas.addEventListener("pointerup", finish);
@@ -1236,16 +1316,18 @@
 
       // Shared selection commit: a drag selects the covered range, a plain click
       // toggles the single-cell selection (click again, Esc or empty space clears)
-      const commitRangeSelection = (widget, anchor, current, axisOf) => {
+      const commitRangeSelection = (widget, anchor, current, axisOf, shift) => {
         const axis = axisOf(anchor, current);
         const sameAsAnchor = anchor.row === current.row && anchor.col === current.col;
         if (sameAsAnchor) {
           const indices = widget.singleCellIndices(anchor);
           const sorted = [...indices].sort((a, b) => a - b);
-          if (sameIndexSet(hub.selection, sorted)) hub.clear(widget.id);
+          if (shift) hub.set([...hub.selection, ...indices], widget.id);
+          else if (sameIndexSet(hub.selection, sorted)) hub.clear(widget.id);
           else hub.set(indices, widget.id);
         } else {
-          hub.set(indicesFromRange(axis.from, axis.to), widget.id);
+          const range = indicesFromRange(axis.from, axis.to);
+          hub.set(shift ? [...hub.selection, ...range] : range, widget.id);
         }
       };
 
@@ -1479,6 +1561,9 @@
           highlightRows: [],
           highlightCols: [],
           pendingSplit: null,
+          // Row/column provenance of the widget's own last selection, kept
+          // across colouring switches so the PAE re-applies the same bands
+          ownSplit: null,
           get mode() {
             return mode;
           },
@@ -1570,7 +1655,7 @@
             return { rows, cols, indices: [...rows, ...cols] };
           },
 
-          commitSelection(anchor, current) {
+          commitSelection(anchor, current, shift) {
             // Without a matching label list the PAE indices cannot be mapped onto
             // the structure or the MSA, so selections stay local (tooltips only)
             if (!linked) return;
@@ -1580,7 +1665,14 @@
               // that leaves the pressed block selects nothing
               if (!this.sameBlock(anchor, current)) return;
               const block = this.chainBlockIndices(anchor);
-              if (block) {
+              const indices = block ? block.indices : this.singleCellIndices(anchor);
+              if (shift) {
+                // Additive: union with the current selection; the flat
+                // row+column highlight stands in for the block split
+                const union = [...new Set([...hub.selection, ...this.toResidueIndices(indices)])];
+                this.pendingSplit = { rows: this.tokensOfResidues(union), cols: this.tokensOfResidues(union) };
+                hub.set(union, this.id);
+              } else if (block) {
                 this.toggleSelection(block.indices, { rows: block.rows, cols: block.cols });
               } else {
                 this.toggleSelection(this.singleCellIndices(anchor), {
@@ -1592,24 +1684,43 @@
             }
             const sameCell = anchor.row === current.row && anchor.col === current.col;
             if (sameCell) {
-              this.toggleSelection(this.singleCellIndices(anchor), {
-                rows: snapToLigands([anchor.row]),
-                cols: snapToLigands([anchor.col]),
-              });
+              if (shift) {
+                const union = [...new Set([...hub.selection, ...this.toResidueIndices([anchor.row, anchor.col])])];
+                this.pendingSplit = { rows: this.tokensOfResidues(union), cols: this.tokensOfResidues(union) };
+                hub.set(union, this.id);
+              } else {
+                this.toggleSelection(this.singleCellIndices(anchor), {
+                  rows: snapToLigands([anchor.row]),
+                  cols: snapToLigands([anchor.col]),
+                });
+              }
             } else {
               // Off-diagonal drags select both the row and the column ranges:
               // the residues of the aligned block and of the scored block,
               // snapped so a range ending inside a ligand covers it fully
               const rows = snapToLigands(indicesFromRange(anchor.row, current.row));
               const cols = snapToLigands(indicesFromRange(anchor.col, current.col));
-              this.pendingSplit = { rows, cols };
-              hub.set(this.toResidueIndices([...rows, ...cols]), this.id);
+              if (shift) {
+                const union = [...new Set([...hub.selection, ...this.toResidueIndices([...rows, ...cols])])];
+                this.pendingSplit = { rows: this.tokensOfResidues(union), cols: this.tokensOfResidues(union) };
+                hub.set(union, this.id);
+              } else {
+                this.pendingSplit = { rows, cols };
+                hub.set(this.toResidueIndices([...rows, ...cols]), this.id);
+              }
             }
           },
 
           // Matrix selections are token indices; the hub speaks residue indices
           toResidueIndices(tokens) {
             return [...new Set(tokens.map(PAE_TOKEN_TO_RESIDUE))].sort((a, b) => a - b);
+          },
+
+          // ...and back again: the bands are drawn at token positions
+          tokensOfResidues(residues) {
+            const tokens = [];
+            residues.forEach((r) => residueTokens(r).forEach((t) => tokens.push(t)));
+            return tokens;
           },
 
           toggleSelection(indices, split) {
@@ -1632,13 +1743,29 @@
           },
 
           setMode(next) {
-            // A PAE selection (specific residue pairs) has no meaning in the
-            // chain-block score colourings, so switching modes clears it
-            if (next !== mode && hub.selection.length) hub.clear(this.id);
+            // The selection itself persists across colouring switches (the
+            // structure, MSA and sequence keep their highlights); the PAE
+            // matrix just does not draw residue-level bands in the chain-block
+            // score colourings. Returning to the PAE colouring re-applies the
+            // current selection's highlight.
             mode = next;
             // A tooltip rendered for the previous colouring would be stale
             tooltip.classList.add("hidden");
-            this.draw();
+            if (next === "pae" && hub.selection.length) {
+              if (this.ownSplit) {
+                // Same bands as before the switch
+                this.highlightRows = this.ownSplit.rows;
+                this.highlightCols = this.ownSplit.cols;
+                this.draw();
+              } else {
+                this.setHighlight([...hub.selection], "other");
+              }
+            } else {
+              this.highlightRows = [];
+              this.highlightCols = [];
+              this.pendingSplit = null;
+              this.draw();
+            }
           },
           setScores(next) {
             scores = next;
@@ -1649,9 +1776,11 @@
             if (source === this.id && this.pendingSplit) {
               // Own selection: keep the row/column split so the PAE can draw a
               // horizontal band for the aligned block and a vertical one for the
-              // scored block instead of guessing from the flat index list
-              this.highlightRows = this.pendingSplit.rows;
-              this.highlightCols = this.pendingSplit.cols;
+              // scored block instead of guessing from the flat index list, and
+              // remember it so a colouring switch re-applies the same bands
+              this.ownSplit = this.pendingSplit;
+              this.highlightRows = this.ownSplit.rows;
+              this.highlightCols = this.ownSplit.cols;
               this.pendingSplit = null;
             } else if (mode !== "pae") {
               // The score colourings read as chain blocks: residue-level bands
@@ -1663,12 +1792,14 @@
                 this.highlightCols = [];
                 this.draw();
               }
+              this.ownSplit = null;
               return;
             } else {
               // Hub indices are residue indices; expand them to the tokens that
               // represent them on the matrix axes
               const tokens = [];
               indices.forEach((r) => residueTokens(r).forEach((t) => tokens.push(t)));
+              this.ownSplit = null;
               this.highlightRows = tokens;
               this.highlightCols = tokens;
             }
@@ -1948,14 +2079,20 @@
             return [MSA_COL_TO_TOKEN ? MSA_COL_TO_TOKEN[cell.col] : cell.col];
           },
 
-          commitSelection(anchor, current) {
+          commitSelection(anchor, current, shift) {
             // Positions cannot be mapped onto the structure when the query length
             // differs from the polymer, so selections stay local (tooltips only)
             if (!linked) return;
-            commitRangeSelection(this, anchor, current, (a, c) => ({
-              from: Math.min(a.col, c.col),
-              to: Math.max(a.col, c.col),
-            }));
+            commitRangeSelection(
+              this,
+              anchor,
+              current,
+              (a, c) => ({
+                from: Math.min(a.col, c.col),
+                to: Math.max(a.col, c.col),
+              }),
+              shift,
+            );
           },
 
           setHighlight(indices) {
@@ -2104,6 +2241,253 @@
       }
 
       // ---------------------------------------------------------------------------
+      // ---------------------------------------------------------------------------
+      // Sequence panel
+      // ---------------------------------------------------------------------------
+
+      // One-letter codes for the standard residues; anything else (non-polymer
+      // ligands, exotic residues) falls back to its three-letter name
+      const ONE_LETTER_CODES = {
+        ALA: "A",
+        ARG: "R",
+        ASN: "N",
+        ASP: "D",
+        CYS: "C",
+        GLN: "Q",
+        GLU: "E",
+        GLY: "G",
+        HIS: "H",
+        ILE: "I",
+        LEU: "L",
+        LYS: "K",
+        MET: "M",
+        PHE: "F",
+        PRO: "P",
+        SER: "S",
+        THR: "T",
+        TRP: "W",
+        TYR: "Y",
+        VAL: "V",
+        ASX: "B",
+        GLX: "Z",
+        SEC: "U",
+        PYL: "O",
+        MSE: "M",
+        DA: "A",
+        DC: "C",
+        DG: "G",
+        DT: "T",
+        DI: "I",
+        A: "A",
+        C: "C",
+        G: "G",
+        U: "U",
+      };
+
+      function createSequencePanel(container) {
+        const frame = document.createElement("div");
+        frame.className = "select-none font-mono text-sm leading-[1.5] cursor-pointer pt-1";
+        container.appendChild(frame);
+
+        const spans = []; // token index -> residue span
+        const bands = []; // active selection bands
+        const previewBands = []; // bands for the drag preview
+
+        // Selections render as one continuous band under the covered residues
+        // (split per row), not as per-character rings: the band keeps the
+        // sequence readable. Contiguous token runs are split again at row
+        // boundaries so each row draws a single band for its part of the run.
+        const drawBands = (store, indices, className) => {
+          store.splice(0).forEach((band) => band.remove());
+          const sorted = [...indices].sort((a, b) => a - b);
+          // Scan run ends from i = 1: a run is [start .. i-1], and an empty
+          // selection simply produces no bands
+          let start = 0;
+          for (let i = 1; i <= sorted.length; i++) {
+            const boundary =
+              i === sorted.length ||
+              sorted[i] !== sorted[i - 1] + 1 ||
+              spans[sorted[i]].parentNode !== spans[sorted[i - 1]].parentNode;
+            if (!boundary) continue;
+            const first = spans[sorted[start]];
+            const last = spans[sorted[i - 1]];
+            const band = document.createElement("span");
+            band.className = className;
+            band.style.left = `${first.offsetLeft}px`;
+            band.style.width = `${last.offsetLeft + last.offsetWidth - first.offsetLeft}px`;
+            first.parentNode.appendChild(band);
+            store.push(band);
+            start = i;
+          }
+        };
+
+        const chainOf = (seg) => RESIDUES[seg.start][0];
+
+        // Residues keep a neutral character colour; the chain identity lives in
+        // the chip that labels each block
+        let widgetRef = null;
+        let row = null;
+        let rowCount = 0;
+        let chipBand = null;
+        let chipFg = null;
+        const startRow = (ix, seg) => {
+          row = document.createElement("div");
+          row.className = "seq-row";
+          const gutter = document.createElement("span");
+          gutter.className = "seq-gutter";
+          gutter.textContent = String(RESIDUES[ix][1]);
+          row.appendChild(gutter);
+          frame.appendChild(row);
+          rowCount = 0;
+        };
+
+        // Chain label on its own heading line above the chain's rows - inline
+        // chips read like an extra residue character and shifted the count
+        const startChain = (seg) => {
+          // Ligand chains are coloured by their chain id like every other chain
+          const { band, text } = chainColorPair(seg);
+          chipBand = band;
+          chipFg = text;
+          const head = document.createElement("div");
+          head.className = "seq-chainhead";
+          const chip = document.createElement("span");
+          chip.className = "seq-chip";
+          chip.style.background = chipBand;
+          chip.style.color = chipFg;
+          chip.textContent = chainOf(seg);
+          head.appendChild(chip);
+          frame.appendChild(head);
+        };
+
+        // The row length adapts to the panel width: measure the monospace cell
+        // once, then fit as many residues as the available width takes
+        const probe = document.createElement("span");
+        probe.className = "seq-residue";
+        probe.style.visibility = "hidden";
+        probe.textContent = "M";
+        frame.appendChild(probe);
+        const cellWidth = probe.getBoundingClientRect().width + 0.5; // + column gap
+        const reservedWidth = 76; // gutter + chip slot
+        probe.remove();
+        const residuesPerRow = () => {
+          const fitted = Math.floor((container.clientWidth - reservedWidth) / cellWidth);
+          // Snap to a multiple of ten so row gutters land on predictable numbers
+          return Math.max(20, Math.min(160, Math.floor(fitted / 10) * 10));
+        };
+
+        const render = () => {
+          frame.replaceChildren();
+          spans.length = 0;
+          const perRow = residuesPerRow();
+          CHAIN_SEGMENTS.forEach((seg) => {
+            for (let ix = seg.start; ix <= seg.end; ix++) {
+              if (ix === seg.start) startChain(seg);
+              if (!row || rowCount >= perRow || ix === seg.start) startRow(ix, seg);
+              const r = RESIDUES[ix];
+              const span = document.createElement("span");
+              span.className = "seq-residue";
+              const one = ONE_LETTER_CODES[r[2].toUpperCase()];
+              span.textContent = r[4] ? r[2] : one || "?";
+              if (r[4]) {
+                // Ligand names are three-plus characters: let the cell grow so
+                // the name stays readable instead of overflowing the box
+                span.style.width = "auto";
+                span.style.minWidth = "1.5ch";
+                span.style.padding = "0 2px";
+                span.style.fontWeight = "600";
+              }
+              span.title = `${r[0]}:${r[1]} ${r[2]}${r[4] ? " (ligand)" : ""}`;
+              span.dataset.ix = String(ix);
+              row.appendChild(span);
+              spans[ix] = span;
+              rowCount++;
+            }
+          });
+        };
+        render();
+
+        // Re-flow when the panel width changes (the height-only resize of the
+        // first layout pass is filtered out)
+        let lastWidth = container.clientWidth;
+        const seqObserver = new ResizeObserver(() => {
+          const width = container.clientWidth;
+          // Collapsed panels report zero width: nothing to re-flow
+          if (width === 0) return;
+          if (Math.abs(width - lastWidth) < 12) return;
+          lastWidth = width;
+          previewBands.splice(0).forEach((band) => band.remove());
+          render();
+          if (widgetRef) widgetRef.setHighlight(hub.selection);
+        });
+        seqObserver.observe(container);
+
+        const spanAt = (ev) => {
+          const el = document.elementFromPoint(ev.clientX, ev.clientY);
+          const target = el && el.closest ? el.closest(".seq-residue") : null;
+          return target ? Number(target.dataset.ix) : null;
+        };
+
+        let drag = null; // { anchor, current }
+
+        // Shift toggles: a click or range that is already fully selected is
+        // removed from the selection (shift-deselect); anything else is added
+        const shiftSelection = (range) => {
+          const selected = new Set(hub.selection);
+          if (range.length && range.every((ix) => selected.has(ix))) {
+            const remove = new Set(range);
+            return hub.selection.filter((ix) => !remove.has(ix));
+          }
+          return [...new Set([...hub.selection, ...range])];
+        };
+
+        frame.addEventListener("pointerdown", (ev) => {
+          const ix = spanAt(ev);
+          if (ix === null) return;
+          // Shift held at press time adds the new range to the existing
+          // selection instead of replacing it
+          drag = { anchor: ix, current: ix, shift: ev.shiftKey };
+          frame.setPointerCapture(ev.pointerId);
+          ev.preventDefault();
+        });
+        frame.addEventListener("pointermove", (ev) => {
+          if (!drag) return;
+          const ix = spanAt(ev);
+          if (ix === null || ix === drag.current) return;
+          drag.current = ix;
+          const range = indicesFromRange(drag.anchor, drag.current);
+          drawBands(previewBands, drag.shift ? shiftSelection(range) : range, "seq-band-preview");
+        });
+        const finish = () => {
+          if (!drag) return;
+          const { anchor, current, shift } = drag;
+          drag = null;
+          previewBands.splice(0).forEach((band) => band.remove());
+          if (shift) {
+            // Shift toggles: fully selected ranges are removed, others added
+            const next = shiftSelection(anchor === current ? [anchor] : indicesFromRange(anchor, current));
+            if (next.length) hub.set(next, "seq");
+            else hub.clear("seq");
+          } else if (anchor === current) {
+            // Plain click toggles the single residue
+            if (sameIndexSet(hub.selection, [anchor])) hub.clear("seq");
+            else hub.set([anchor], "seq");
+          } else {
+            hub.set(indicesFromRange(anchor, current), "seq");
+          }
+        };
+        frame.addEventListener("pointerup", finish);
+        frame.addEventListener("pointercancel", finish);
+
+        const widget = {
+          id: "seq",
+          setHighlight(indices) {
+            drawBands(bands, indices, "seq-band");
+          },
+        };
+        widgetRef = widget;
+        return widget;
+      }
+
       // Panels: scores banner, chainwise matrices, widget wiring
       // ---------------------------------------------------------------------------
 
@@ -2257,6 +2641,23 @@
             }
           }
         }
+        const sequenceRoot = document.getElementById("sequence-root");
+        const sequenceContainer = document.getElementById("sequence_container");
+        if (sequenceRoot && CHAIN_SEGMENTS.length) {
+          widgets.push(createSequencePanel(sequenceRoot));
+        } else if (sequenceContainer) {
+          sequenceContainer.classList.add("hidden");
+        }
+        const sequenceToggle = document.getElementById("sequence-toggle");
+        const sequenceCard = document.getElementById("sequence-card");
+        if (sequenceToggle && sequenceCard) {
+          sequenceToggle.addEventListener("click", () => {
+            const hidden = sequenceCard.classList.toggle("hidden");
+            sequenceToggle.textContent = hidden ? "Show" : "Hide";
+            sequenceToggle.setAttribute("aria-expanded", String(!hidden));
+          });
+        }
+
         if (MSA_PAYLOAD) {
           const root = document.getElementById("msa-root");
           if (root) {
