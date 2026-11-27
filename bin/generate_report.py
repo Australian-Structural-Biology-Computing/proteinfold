@@ -7,10 +7,9 @@ import csv
 import json
 from matplotlib import pyplot as plt
 import numpy as np
-from collections import OrderedDict
 import base64
-import plotly.graph_objects as go
 import re
+import warnings
 from Bio import PDB
 
 def is_missing_input(path):
@@ -21,262 +20,352 @@ def is_missing_input(path):
     this treats the same as a missing file.
     """
     return not path or not os.path.exists(path) or os.path.getsize(path) == 0
+# PAE values above this cap are clipped before quantisation; the report viewer
+# uses the same cap, so displayed values and colours stay consistent.
+PAE_MAX = 30.0
+# Maximum number of MSA rows embedded in the interactive report. Rows are
+# sorted by sequence identity before sampling, so the identity gradient of the
+# coverage plot is preserved even for very deep MSAs.
 
-def generate_pae_plot(pae_path, out_dir, name, save_image=False):
-    #save_image=False because plotly needs a local install of Google Chrome to save images.....
+def encode_u8_b64(values):
+    """Quantise floats in [0, 1] to uint8 and return a base64 string."""
+    arr = np.clip(np.round(np.asarray(values, dtype=float) * 255.0), 0, 255).astype(np.uint8)
+    return base64.b64encode(arr.tobytes()).decode("ascii")
+
+def encode_pae_payload(pae_path, struct_file=None, residue_list=None):
+    """Load a PAE matrix and pack it for the interactive report viewer.
+
+    A '# token_chains' header row (written by extract_metrics.py when the
+    prediction output carries per-token chain ids) is decoded into token-space
+    chain segments. When the tokens can be mapped onto the structure's
+    residues - 1:1 for polymer chains of equal length, all-tokens-to-one
+    residue for single-residue chains, and by per-residue atom counts for
+    ligand chains scored one token per atom - a tokenRes uint16 array is
+    embedded as well, so the viewer can cross-highlight between the matrix
+    and the structure even though the matrix covers more positions than the
+    structure has residues.
+
+    Returns None if the matrix is missing, empty or not square.
     """
-    Generate a Plotly heatmap for Predicted Aligned Error (PAE) data.
+    if is_missing_input(pae_path):
+        return None
+    token_runs = []
+    try:
+        with open(pae_path) as handle:
+            first = handle.readline()
+        if first.startswith("# token_chains"):
+            header = next(csv.reader([first], delimiter="\t"))
+            token_runs = json.loads(header[1])
+        pae = np.genfromtxt(pae_path, delimiter="\t", comments="#")
+    except (ValueError, IOError, json.JSONDecodeError):
+        return None
+    if pae.ndim != 2 or pae.shape[0] == 0 or pae.shape[0] != pae.shape[1]:
+        return None
+    if not np.isfinite(pae).all():
+        pae = np.nan_to_num(pae, nan=PAE_MAX, posinf=PAE_MAX, neginf=0.0)
+    scaled = np.clip(pae, 0.0, PAE_MAX) / PAE_MAX
+    payload = {
+        "size": int(pae.shape[0]),
+        "max": PAE_MAX,
+        "data": encode_u8_b64(scaled.ravel(order="C")),
+    }
+    if token_runs:
+        payload.update(
+            build_token_payload(token_runs, int(pae.shape[0]), struct_file, residue_list)
+        )
+    return payload
 
-    Args:
-        pae (2D array): The PAE matrix.
-    Returns:
-        fig: A Plotly figure object of the PAE heatmap in green color scale
+
+def build_token_payload(token_runs, pae_size, struct_file, residue_list):
+    """Token-space chain segments plus an optional token-to-residue map.
+
+    The chain segments come straight from the run-length header. The residue
+    map is only emitted when every token can be assigned unambiguously:
+    within a chain, equal token and residue counts map 1:1 in order, a single
+    residue absorbs all of its chain's tokens, and otherwise the tokens are
+    distributed over the chain's residues by atom count when the totals match
+    (ligand atoms are scored one token per atom in AF3-dialect outputs).
     """
-    pae = np.genfromtxt(pae_path, delimiter="\t")
-    fig = go.Figure()
+    payload = {}
+    segments = []
+    cursor = 0
+    for chain_id, count in token_runs:
+        count = int(count)
+        if count <= 0 or cursor + count > pae_size:
+            return {"chains": []}
+        segments.append({"chain": str(chain_id), "start": cursor, "end": cursor + count - 1})
+        cursor += count
+    if cursor != pae_size:
+        return {"chains": []}
+    payload["chains"] = [[seg["chain"], seg["start"], seg["end"]] for seg in segments]
+    if residue_list is None or struct_file is None:
+        return payload
 
-    # Add heatmap
-    fig.add_trace(
-        go.Heatmap(
-            z=pae,
-            colorscale="Greens_r",
-            zmin=0,
-            zmax=30,
-        )
-    )
-    fig.update_layout(
-        xaxis=dict(title="Scored Residue", minallowed=0, maxallowed=pae.shape[0]-1),
-        yaxis=dict(title="Aligned Residue", minallowed=0, maxallowed=pae.shape[1]-1, autorange="reversed"),
-        width=600,
-        height=600,
-    )
+    residues_by_chain = {}
+    for ix, residue in enumerate(residue_list):
+        residues_by_chain.setdefault(residue[0], []).append(ix)
 
-    if save_image:
-            image_path = f"{out_dir}/{name+('_' if name else '')}PAE.png"
-            fig.write_image(image_path, width=800, height=800)
+    token_to_residue = [None] * pae_size
+    for seg in segments:
+        chain_residues = residues_by_chain.get(seg["chain"], [])
+        tokens = list(range(seg["start"], seg["end"] + 1))
+        if len(tokens) == len(chain_residues):
+            for token, residue_ix in zip(tokens, chain_residues):
+                token_to_residue[token] = residue_ix
+        elif len(chain_residues) == 1:
+            for token in tokens:
+                token_to_residue[token] = chain_residues[0]
+        else:
+            # Ligand chains scored per atom: hand out tokens in residue order
+            # by cumulative atom count, matching the tokenizer's atom ordering
+            atom_counts = get_residue_atom_counts(struct_file)
+            chain_atoms = sum(atom_counts[ix] for ix in chain_residues)
+            if chain_atoms == len(tokens) and all(atom_counts[ix] > 0 for ix in chain_residues):
+                cursor = 0
+                for residue_ix in chain_residues:
+                    for token in tokens[cursor:cursor + atom_counts[residue_ix]]:
+                        token_to_residue[token] = residue_ix
+                    cursor += atom_counts[residue_ix]
+            else:
+                return payload  # ambiguous chain: ship segments without the map
+    if any(ix is None for ix in token_to_residue):
+        return payload
+    payload["tokenRes"] = base64.b64encode(
+        np.asarray(token_to_residue, dtype="<u2").tobytes()
+    ).decode("ascii")
+    return payload
 
-    return fig
+def get_residue_list(struct_file):
+    """Ordered [chain id, residue number, residue name, insertion code, is_ligand]
+    list for a structure.
 
-def generate_output_images(msa_path, plddt_data, name, out_dir, in_type, generate_tsv, pdb):
-    msa = []
-    if not is_missing_input(msa_path):
-        with open(msa_path, "r") as in_file:
-            for line in in_file:
-                msa.append([int(x) for x in line.strip().split()])
+    The order must match the residue/token order of the PAE matrix, which for
+    prediction outputs follows the input sequence order: chains in file order,
+    residues in ascending order within a chain. Waters are excluded because
+    they are never scored tokens. HETATM residues (ligands, cofactors,
+    modifications) are flagged so the report viewer can give them a fixed,
+    selectable lane width on the PAE axes.
+    """
+    structure = parse_structure(struct_file, "report_ref")
+    residues = []
+    for model in structure:
+        for chain in model:
+            for residue in chain:
+                if residue.id[0] == "W":
+                    continue
+                hetflag, resseq, icode = residue.id
+                residues.append([
+                    chain.id,
+                    int(resseq),
+                    residue.resname,
+                    icode.strip() or None,
+                    hetflag != " ",
+                ])
+        break  # first model only - predictions carry a single model
+    return residues
 
-        # Pad jagged MSAs to avoid shape errors in downstream plotting
-        if msa:
-            max_len = max(len(row) for row in msa)
-            if any(len(row) != max_len for row in msa):
-                msa = [row + [21] * (max_len - len(row)) for row in msa]
+def get_residue_atom_counts(struct_file):
+    """Atom count per non-water residue, in get_residue_list order.
 
-        seqid = []
-        for sequence in msa:
-            matches = [
-                1.0 if first == other else 0.0 for first, other in zip(msa[0], sequence)
-            ]
-            seqid.append(sum(matches) / len(matches))
+    Used to distribute per-atom PAE tokens over the residues of a multi-
+    residue ligand chain.
+    """
+    structure = parse_structure(struct_file, "report_ref")
+    counts = []
+    for model in structure:
+        for chain in model:
+            for residue in chain:
+                if residue.id[0] == "W":
+                    continue
+                counts.append(len(residue))
+        break  # first model only - predictions carry a single model
+    return counts
 
-        seqid_sort = sorted(range(len(seqid)), key=seqid.__getitem__)
+def parse_msa_spans_header(first_line):
+    """Parse a '#spans\tlengths\tentities' MSA TSV header.
 
-        non_gaps = []
-        for sequence in msa:
-            non_gaps.append(
-                [float(num != 21) if num != 21 else float("nan") for num in sequence]
-            )
+    The header describes the per-copy display layout the extractor verified
+    against the predicted structure: one span per chain copy, in display
+    column order, each holding its span's residue length and the index of the
+    collapsed entity row it mirrors. Returns the (length, entity) span list,
+    or None for plain matrices (legacy TSVs, unmatched layouts).
+    """
+    if not first_line.startswith("#spans"):
+        return None
+    fields = first_line[len("#spans"):].strip().split("\t")
+    if len(fields) != 2:
+        return None
+    try:
+        lengths = [int(x) for x in fields[0].split(",")]
+        entities = [int(x) for x in fields[1].split(",")]
+    except ValueError:
+        return None
+    if not lengths or len(lengths) != len(entities):
+        return None
+    if any(length <= 0 for length in lengths) or any(entity < 0 for entity in entities):
+        return None
+    return list(zip(lengths, entities))
 
-        sorted_non_gaps = [non_gaps[i] for i in seqid_sort]
-        final = []
-        for sorted_seq, identity in zip(
-            sorted_non_gaps, [seqid[i] for i in seqid_sort]
-        ):
-            final.append(
-                [
-                    value * identity if not isinstance(value, str) else value
-                    for value in sorted_seq
-                ]
-            )
 
-        xaxis_size = len(final[0])
-        yaxis_size = len(final)
+def expand_sorted_msa(sorted_msa, sorted_identities, spans):
+    """Split a sorted collapsed MSA out into one column span per chain copy.
 
-        # ##################################################################
-        plt.figure(figsize=(16, 10), dpi=100)
-        # ##################################################################
-        plt.title("Sequence coverage", fontsize=30, pad=36)
-        plt.imshow(
-            final,
-            interpolation="nearest",
-            aspect="auto",
-            cmap="rainbow_r",
-            vmin=0,
-            vmax=1,
-            origin="lower",
-            extent=(0, xaxis_size, 0, yaxis_size)
-        )
+    The rows are sorted and identity-scaled in their collapsed per-entity
+    form, and the copies are split out column-wise: every display row carries
+    its entity's segment in each of that entity's copy spans, so all copies
+    of a subunit render identically row for row, and the row count stays the
+    true merged depth. Returns the display matrix (NaN for gaps) and the
+    per-row identities, or (None, None) when the spans do not describe the
+    collapsed matrix.
+    """
+    entity_lengths = {}
+    for length, entity in spans:
+        seen = entity_lengths.setdefault(entity, length)
+        if seen != length:
+            return None, None
+    n_entities = max(entity_lengths) + 1
+    if sorted(set(entity_lengths)) != list(range(n_entities)):
+        return None, None
+    if sum(entity_lengths.values()) != sorted_msa.shape[1]:
+        return None, None
 
-        column_counts = [0] * len(msa[0])
-        for col in range(len(msa[0])):
-            for row in msa:
-                if row[col] != 21:
-                    column_counts[col] += 1
+    # Collapsed column offset per entity (rows are in entity order) and the
+    # collapsed source column for every display column.
+    entity_offsets = {}
+    position = 0
+    for entity in range(n_entities):
+        entity_offsets[entity] = position
+        position += entity_lengths[entity]
+    src_columns = np.concatenate([
+        np.arange(entity_offsets[entity], entity_offsets[entity] + length)
+        for length, entity in spans
+    ])
 
-        plt.plot(column_counts, color="black")
-        plt.xlim(0, len(msa[0]))
-        plt.ylim(0, len(msa))
+    values = sorted_msa[:, src_columns]
+    display = np.where(values != 21, sorted_identities[:, None], np.nan).astype(np.float32)
+    return display, sorted_identities
 
-        plt.tick_params(axis="both", which="both", labelsize=18)
 
-        cbar = plt.colorbar()
-        cbar.set_label("Sequence identity to query", fontsize=24, labelpad=24)
-        cbar.ax.tick_params(labelsize=18)
-        plt.xlabel("Positions", fontsize=24, labelpad=24)
-        plt.ylabel("Sequences", fontsize=24, labelpad=36)
-        plt.savefig(f"{out_dir}/{name}_{in_type}_seq_coverage.png")
+def load_msa_matrix(msa_path):
+    """Parse an MSA and compute the sorted identity-scaled coverage matrix.
 
-        # ##################################################################
+    Returns (n_cols, rows, identities) where each covered cell of a row
+    holds that sequence's identity to the query (NaN for gaps), identities
+    holds the per-row sequence identity to the query, and rows are ordered
+    by ascending identity to the query. Returns None when the MSA file is
+    missing.
 
-    plddt_per_model = OrderedDict()
-    output_data = plddt_data
-
-    if generate_tsv == "y":
-        for plddt_path in output_data:
-            with open(plddt_path, "r") as in_file:
-                plddt_per_model[os.path.basename(plddt_path)[:-4]] = [
-                    float(x) for x in in_file.read().strip().split()
-                ]
-    else:
-        for i, plddt_values_str in enumerate(output_data):
-            plddt_per_model[i] = []
-            plddt_per_model[i] = [float(x) for x in plddt_values_str.strip().split()]
-
-    fig = go.Figure()
-    for idx, (model_name, value_plddt) in enumerate(plddt_per_model.items()):
-        rank_label = os.path.splitext(pdb[idx])[0]
-        fig.add_trace(
-            go.Scatter(
-                x=list(range(len(value_plddt))),
-                y=value_plddt,
-                mode="lines",
-                name=rank_label,
-                text=[f"({i}, {value:.2f})" for i, value in enumerate(value_plddt)],
-                hoverinfo="text",
-            )
-        )
-    fig.update_layout(
-        title=dict(text="Predicted LDDT per position", x=0.5, xanchor="center"),
-        xaxis=dict(
-            title="Positions", showline=True, linecolor="black", gridcolor="WhiteSmoke", minallowed=0, maxallowed=len(value_plddt)-1
-        ),
-        yaxis=dict(
-            title="Predicted LDDT",
-            range=[0, 100],
-            fixedrange=True,
-            showline=True,
-            linecolor="black",
-            gridcolor="WhiteSmoke",
-        ),
-        legend=dict(yanchor="bottom", y=0.02, xanchor="right", x=1, bordercolor="Black", borderwidth=1),
-        plot_bgcolor="white",
-        width=600,
-        height=600,
-        modebar_remove=["toImage", "zoomIn", "zoomOut"],
-    )
-    html_content = fig.to_html(
-        full_html=False,
-        include_plotlyjs="cdn",
-        config={"displayModeBar": True, "displaylogo": False, "scrollZoom": True},
-    )
-
-    with open(
-        f"{out_dir}/{name+('_' if name else '')}coverage_LDDT.html", "w"
-    ) as out_file:
-        out_file.write(html_content)
-
-    if not is_missing_input(args.pae):
-        pae_fig = generate_pae_plot(args.pae, out_dir, name)
-        pae_html_content = pae_fig.to_html(
-            full_html=False,
-            include_plotlyjs="cdn",
-            config={"displayModeBar": True, "displaylogo": False, "scrollZoom": True},
-        )
-        with open(
-            f"{out_dir}/{name+('_' if name else '')}PAE.html", "w"
-        ) as pae_out_file:
-            pae_out_file.write(pae_html_content)
-
-def generate_plots(msa_path, plddt_paths, name, out_dir):
-    msa = []
+    A '#spans' header marks a collapsed multi-copy matrix: identity and
+    sorting are computed on the collapsed per-entity rows and the chain
+    copies are split out afterwards, so the copies of a subunit render
+    identically. Vectorised over numpy - expanded matrices reach tens of
+    millions of cells, which the earlier per-cell Python loops held several
+    times over in object memory.
+    """
+    if is_missing_input(msa_path):
+        return None
     with open(msa_path, "r") as in_file:
-        for line in in_file:
-            msa.append([int(x) for x in line.strip().split()])
+        first_line = in_file.readline()
+    spans = parse_msa_spans_header(first_line)
+    msa = np.loadtxt(msa_path, dtype=np.int8, delimiter="\t", ndmin=2, comments="#")
+    if msa.size == 0:
+        return None
 
-    seqid = []
-    for sequence in msa:
-        matches = [
-            1.0 if first == other else 0.0 for first, other in zip(msa[0], sequence)
-        ]
-        seqid.append(sum(matches) / len(matches))
+    # A gap-gap pair counts as a match, matching the original per-cell
+    # comparison against the full row width.
+    seqid = (msa == msa[0]).sum(axis=1) / msa.shape[1]
 
-    seqid_sort = sorted(range(len(seqid)), key=seqid.__getitem__)
+    seqid_sort = np.argsort(seqid, kind="stable")
+    sorted_msa = msa[seqid_sort]
+    sorted_identities = seqid[seqid_sort]
 
-    non_gaps = []
-    for sequence in msa:
-        non_gaps.append(
-            [float(num != 21) if num != 21 else float("nan") for num in sequence]
+    if spans is not None:
+        expanded, expanded_ids = expand_sorted_msa(sorted_msa, sorted_identities, spans)
+        if expanded is not None:
+            return expanded.shape[1], expanded, expanded_ids
+        warnings.warn(
+            f"{msa_path}: the #spans layout does not describe the matrix; "
+            "treating the collapsed rows as the display layout"
         )
 
-    sorted_non_gaps = [non_gaps[i] for i in seqid_sort]
-    final = []
-    for sorted_seq, identity in zip(sorted_non_gaps, [seqid[i] for i in seqid_sort]):
-        final.append(
-            [
-                value * identity if not isinstance(value, str) else value
-                for value in sorted_seq
-            ]
-        )
+    # A covered cell holds exactly its row's identity, a gap is NaN
+    final = np.where(
+        sorted_msa != 21,
+        sorted_identities[:, None],
+        np.nan,
+    ).astype(np.float32)
 
-    # Plotting Sequence Coverage using Plotly
-    fig = go.Figure()
-    fig.add_trace(
-        go.Heatmap(
-            z=final,
-            colorscale="Rainbow",
-            zmin=0,
-            zmax=1,
-        )
+    return msa.shape[1], final, sorted_identities
+
+def build_msa_payload(msa_path):
+    """Pack the sorted MSA coverage matrix for the interactive report viewer.
+
+    Values are quantised to uint8; every sequence is embedded and the viewer
+    resamples the full matrix into the plot area.
+    """
+    loaded = load_msa_matrix(msa_path)
+    if loaded is None:
+        return None
+    n_cols, rows, identities = loaded
+    # All rows are embedded - the viewer squeezes the full matrix into the
+    # plot area instead of subsampling
+    shown = rows
+    shown_identities = identities
+    # Row 0 is the most similar sequence (the query): the original coverage
+    # plot drew the identity-sorted rows with origin="lower", which puts the
+    # query at the top of the image
+    shown = shown[::-1]
+    shown_identities = shown_identities[::-1]
+    # A covered cell holds exactly its row's identity, a gap is NaN; the
+    # viewer reconstructs the quantised matrix from the 1-bit mask (row-major,
+    # MSB first) plus the per-row identities
+    mask = np.packbits((~np.isnan(shown)).astype(np.uint8).ravel())
+    return {
+        "nSeq": int(len(shown)),
+        "nSeqShown": int(len(shown)),
+        "nCol": int(n_cols),
+        "mask": base64.b64encode(mask.tobytes()).decode("ascii"),
+        "seqid": encode_u8_b64(shown_identities),
+    }
+
+def generate_msa_image(msa_path, name, out_dir, in_type):
+    """Render the static MSA sequence-coverage PNG published with the run.
+
+    The interactive report embeds the same data directly; the PNG stays as a
+    lightweight artifact for downstream use.
+    """
+    loaded = load_msa_matrix(msa_path)
+    if loaded is None:
+        return
+    xaxis_size, final, _ = loaded
+
+    plt.figure(figsize=(16, 10), dpi=100)
+    plt.title("Sequence coverage", fontsize=30, pad=36)
+    plt.imshow(
+        final,
+        interpolation="nearest",
+        aspect="auto",
+        cmap="rainbow_r",
+        vmin=0,
+        vmax=1,
+        origin="lower",
+        extent=(0, xaxis_size, 0, len(final))
     )
-    fig.update_layout(
-        title="Sequence coverage", xaxis_title="Positions", yaxis_title="Sequences"
-    )
-    # Save as interactive HTML instead of an image
-    fig.savefig(f"{out_dir}/{name+('_' if name else '')}seq_coverage.png")
 
-    # Plotting Predicted LDDT per position using Plotly
-    plddt_per_model = OrderedDict()
-    plddt_paths.sort()
-    for plddt_path in plddt_paths:
-        with open(plddt_path, "r") as in_file:
-            plddt_per_model[os.path.basename(plddt_path)[:-4]] = [
-                float(x) for x in in_file.read().strip().split()
-            ]
+    column_counts = (~np.isnan(final)).sum(axis=0)
 
-    i = 0
-    for model_name, value_plddt in plddt_per_model.items():
-        fig = go.Figure()
-        fig.add_trace(
-            go.Scatter(
-                x=list(range(len(value_plddt))),
-                y=value_plddt,
-                mode="lines",
-                name=model_name,
-            )
-        )
-        fig.update_layout(title="Predicted LDDT per Position")
-        fig.savefig(f"{out_dir}/{name+('_' if name else '')}coverage_LDDT_{i}.png")
-        i += 1
+    plt.plot(column_counts, color="black")
+    plt.xlim(0, xaxis_size)
+    plt.ylim(0, len(final))
 
+    plt.tick_params(axis="both", which="both", labelsize=18)
 
+    cbar = plt.colorbar()
+    cbar.set_label("Sequence identity to query", fontsize=24, labelpad=24)
+    cbar.ax.tick_params(labelsize=18)
+    plt.xlabel("Positions", fontsize=24, labelpad=24)
+    plt.ylabel("Sequences", fontsize=24, labelpad=36)
+    plt.savefig(f"{out_dir}/{name}_{in_type}_seq_coverage.png")
 
 def get_structure_parser(struct_file):
     suffix = os.path.splitext(struct_file)[1].lower()
@@ -292,101 +381,43 @@ def parse_structure(struct_file, structure_id):
     return parser.get_structure(structure_id, struct_file)
 
 
-def get_atom_id(atom):
-    residue = atom.get_parent()
-    chain = residue.get_parent()
-    return (chain.get_id(), residue.get_id(), atom.name)
-
-
-def get_non_hydrogen_atoms_by_id(structure):
-    return {
-        get_atom_id(atom): atom
-        for atom in structure.get_atoms()
-        if atom.element != "H"
-    }
-
-
-def align_structures(structures):
-    parsed_structures = [
-        parse_structure(structure, f"Structure_{i}")
-        for i, structure in enumerate(structures)
-    ]
-    ref_structure = parsed_structures[0]
-    atom_maps = [get_non_hydrogen_atoms_by_id(structure) for structure in parsed_structures]
-    common_atom_ids = set(atom_maps[0])
-
-    for atom_map in atom_maps[1:]:
-        common_atom_ids.intersection_update(atom_map)
-
-    if not common_atom_ids:
-        raise ValueError("No common non-hydrogen atoms found between structures.")
-
-    ref_atom_ids = [atom_id for atom_id in atom_maps[0] if atom_id in common_atom_ids]
-    ref_atoms = [atom_maps[0][atom_id] for atom_id in ref_atom_ids]
-    super_imposer = PDB.Superimposer()
-    aligned_structures = [ref_structure]
-
-    for i, structure in enumerate(parsed_structures[1:], start=1):
-        target_atoms = [atom_maps[i][atom_id] for atom_id in ref_atom_ids]
-        super_imposer.set_atoms(ref_atoms, target_atoms)
-        super_imposer.apply(structure.get_atoms())
-
-        aligned_structure = f"aligned_structure_{i}.cif"
-        io = PDB.MMCIFIO()
-        io.set_structure(structure)
-        io.save(aligned_structure)
-        aligned_structures.append(aligned_structure)
-
-    return aligned_structures
-
-
 def natural_path_sort_key(path):
     return [int(part) if part.isdigit() else part.lower() for part in re.split(r"(\d+)", str(path))]
 
 
-def pdb_to_lddt(struct_files, generate_tsv):
-    struct_files_sorted = sorted(struct_files, key=natural_path_sort_key)
+def pdb_to_lddt(struct_file, generate_tsv):
+    """Per-residue pLDDT for the top-ranked structure, from B-factors.
 
-    output_lddt = []
-    averages = []
+    Returns (values, average). When generate_tsv is "y" the per-residue values
+    are also written next to the structure file as <name>_plddt.tsv.
+    """
+    plddt_values = []
 
-    for struct_file in struct_files_sorted:
-        plddt_values = []
+    structure = parse_structure(struct_file, "")
 
-        structure = parse_structure(struct_file, "")
+    for residue in structure.get_residues():
+        res_pLDDT_tot = 0
+        res_atom_count = 0
 
-        for residue in structure.get_residues():
-            res_pLDDT_tot = 0
-            res_atom_count = 0
+        for atom in residue.get_atoms():
+            res_atom_count += 1
+            res_pLDDT_tot += atom.get_bfactor()
 
-            for atom in residue.get_atoms():
-                res_atom_count +=1
-                res_pLDDT_tot += atom.get_bfactor()
+        # Residue-level mean for ESMfold atom-level pLDDT
+        res_pLDDT_ave = res_pLDDT_tot / res_atom_count
 
-            # Residue-level mean for ESMfold atom-level pLDDT
-            res_pLDDT_ave = res_pLDDT_tot/res_atom_count
+        if res_pLDDT_ave < 1.0:
+            res_pLDDT_ave *= 100
+        plddt_values.append(res_pLDDT_ave)
 
-            if res_pLDDT_ave < 1.0:
-                res_pLDDT_ave *= 100
-            plddt_values.append(res_pLDDT_ave)
+    average = round(sum(plddt_values) / len(plddt_values), 3) if plddt_values else 0.0
 
-        # Calculate the average PLDDT value for the current file
-        if plddt_values:
-            avg_plddt = sum(plddt_values) / len(plddt_values)
-            averages.append(round(avg_plddt, 3))
-        else:
-            averages.append(0.0)
+    if generate_tsv == "y":
+        output_file = f"{os.path.splitext(struct_file)[0]}_plddt.tsv"
+        with open(output_file, "w") as outfile:
+            outfile.write(" ".join(map(str, plddt_values)) + "\n")
 
-        if generate_tsv == "y":
-            output_file = f"{os.path.splitext(struct_file)[0]}_plddt.tsv"
-            with open(output_file, "w") as outfile:
-                outfile.write(" ".join(map(str, plddt_values)) + "\n")
-            output_lddt.append(output_file)
-        else:
-            plddt_values_string = " ".join(map(str, plddt_values))
-            output_lddt.append(plddt_values_string)
-
-    return output_lddt, averages
+    return plddt_values, average
 
 
 def read_ranked_score_tsv(tsv_path, model_count):
@@ -499,7 +530,7 @@ version = "1.0.0"
 # Display names keyed by the shorthand mode tokens the pipeline passes as
 # --type (the same tokens baked into the report file names); unknown tokens
 # fall back to the token itself in programName (see below).
-model_name = {
+model_name_map = {
     "af2": "AlphaFold2",
     "af3": "AlphaFold3",
     "bz2": "Boltz2",
@@ -529,6 +560,11 @@ parser.add_argument("--chainwise_ipsae", dest="chainwise_ipsae", default=None)
 parser.add_argument("--name", dest="name")
 parser.add_argument("--output_dir", dest="output_dir")
 parser.add_argument("--html_template", dest="html_template")
+parser.add_argument(
+    "--entities", dest="entities", default=None,
+    help="Entity map JSON written by extract_metrics.py: chain groups per "
+         "AlphaFold3 entity, powering the report's entity colouring",
+)
 parser.add_argument("--version", action="version", version=f"{version}")
 parser.set_defaults(output_dir="")
 parser.set_defaults(in_type="af3")
@@ -536,37 +572,51 @@ parser.set_defaults(name="")
 args = parser.parse_args()
 file_tag = args.file_tag or args.in_type
 
-lddt_data, lddt_averages = pdb_to_lddt(args.pdb, args.generate_tsv)
+# The report shows a single prediction per method: the top-ranked structure.
+# Additional ranked models may be passed for provenance but are not embedded.
+top_structure = sorted(args.pdb, key=natural_path_sort_key)[0]
 
-generate_output_images(
-    args.msa, lddt_data, args.name, args.output_dir, file_tag, args.generate_tsv, args.pdb
-)
+_, plddt_average = pdb_to_lddt(top_structure, args.generate_tsv)
+
+generate_msa_image(args.msa, args.name, args.output_dir, file_tag)
 
 print("generating html report...")
-structures = sorted(args.pdb, key=natural_path_sort_key)
-iptm_scores = read_ranked_score_tsv(args.iptm, len(structures))
-ipsae_scores = read_ranked_score_tsv(args.ipsae, len(structures))
+iptm_score = read_ranked_score_tsv(args.iptm, 1)[0]
+ipsae_score = read_ranked_score_tsv(args.ipsae, 1)[0]
 # The chainwise iPTM store carries the per-chain pTM on the diagonal and
 # the pairwise interface ipTM off it; the ipSAE store is a full
 # asymmetric chain-pair matrix from colabfold's native interface scores.
-chainwise_scores = read_pair_score_tsv(args.chainwise, len(structures))
-chainwise_ipsae_scores = read_pair_score_tsv(args.chainwise_ipsae, len(structures))
-chainwise_matrices = build_pair_score_matrices(chainwise_scores)
-chainwise_ipsae_matrices = build_pair_score_matrices(chainwise_ipsae_scores)
-aligned_structures = align_structures(structures)
+chainwise_matrix = build_pair_score_matrices(
+    read_pair_score_tsv(args.chainwise, 1)
+)[0]
+chainwise_ipsae_matrix = build_pair_score_matrices(
+    read_pair_score_tsv(args.chainwise_ipsae, 1)
+)[0]
 
-io = PDB.MMCIFIO()
-ref_structure_path = "aligned_structure_0.cif"
-io.set_structure(aligned_structures[0])
-io.save(ref_structure_path)
-aligned_structures[0] = ref_structure_path
+# Residue labels follow the PAE/token order of the top-ranked model.
+# Cross-highlighting between the PAE/MSA and the structure is only enabled
+# when this list length matches the matrix dimensions (checked client-side).
+residue_list = get_residue_list(top_structure)
+
+# Entity groups (which chains are copies of one declared entity) power the
+# report's entity colouring; extract_metrics.py derives them from the input
+# JSON's id lists, ordered for the labels by the structure's chain order.
+entity_map = []
+if not is_missing_input(args.entities):
+    try:
+        with open(args.entities, "r") as handle:
+            entity_map = json.load(handle).get("entities") or []
+    except (OSError, ValueError) as error:
+        warnings.warn(f"Could not read the entity map {args.entities}: {error}")
+        entity_map = []
+pae_payload = encode_pae_payload(args.pae, top_structure, residue_list)
+msa_payload = build_msa_payload(args.msa)
 
 proteinfold_template = open(args.html_template, "r").read()
 
-model_names = [
-    f"{os.path.splitext(os.path.basename(model))[0]}.cif" for model in structures
-]
-models_data = [open(s, "r").read() for s in aligned_structures]
+model_name = os.path.basename(top_structure)
+model_format = "pdb" if os.path.splitext(model_name)[1].lower() == ".pdb" else "mmcif"
+model_data = open(top_structure, "r").read()
 
 
 def script_safe_json_dumps(obj):
@@ -581,17 +631,20 @@ def script_safe_json_dumps(obj):
 
 
 report_config = {
-    "reportType": "standard",
     "sampleName": args.name,
-    "programName": model_name.get(args.in_type.lower(), args.in_type),
-    "structFormat": "cif",
-    "models": model_names,
-    "models_data": models_data,
-    "lddt_averages": lddt_averages,
-    "iptm_scores": iptm_scores,
-    "ipsae_scores": ipsae_scores,
-    "chainwise": chainwise_matrices,
-    "chainwise_ipsae": chainwise_ipsae_matrices,
+    "programName": model_name_map.get(args.in_type.lower(), args.in_type),
+    "structFormat": model_format,
+    "model": model_name,
+    "modelData": model_data,
+    "plddtAverage": plddt_average,
+    "iptmScore": iptm_score,
+    "ipsaeScore": ipsae_score,
+    "chainwise": chainwise_matrix,
+    "chainwise_ipsae": chainwise_ipsae_matrix,
+    "residues": residue_list,
+    "pae": pae_payload,
+    "msa": msa_payload,
+    "entities": entity_map,
 }
 config_blob = (
     '<script type="application/json" id="report-config">'
@@ -601,40 +654,27 @@ proteinfold_template = proteinfold_template.replace(
     "</head>", f"{config_blob}\n  </head>", 1
 )
 
-if not is_missing_input(args.msa):
-    image_path = f"{args.output_dir}/{args.name}_{file_tag}_seq_coverage.png"
-    with open(image_path, "rb") as in_file:
-        data_uri = f"data:image/png;base64,{base64.b64encode(in_file.read()).decode('utf-8')}"
-        proteinfold_template = proteinfold_template.replace(
-            '<div id="seq_cov_placeholder"></div>',
-            f'<img src="{data_uri}" alt="Sequence coverage (MSA)" '
-            'class="w-full h-auto rounded" />',
-        )
-else:
-    pattern = r'<div id="seq_coverage_container".*?>.*?(<!--.*?-->.*?)*?</div>\s*</div>\s*</div>\s*</div>'
-    proteinfold_template = re.sub(pattern, "", proteinfold_template, flags=re.DOTALL)
-
-with open(
-    f"{args.output_dir}/{args.name + ('_' if args.name else '')}coverage_LDDT.html",
-    "r",
-) as in_file:
-    lddt_html = in_file.read()
+# The template marks optional sections with *-placeholder markers; the Python
+# side swaps in mount points for data that exists and strips the whole section
+# otherwise, so the page never shows empty panels.
+if msa_payload is not None:
     proteinfold_template = proteinfold_template.replace(
-        '<div id="lddt_placeholder"></div>', lddt_html
+        '<div id="seq_cov_placeholder"></div>',
+        '<div id="msa-root" class="w-full"></div>',
     )
-
-if not is_missing_input(args.pae):
-    with open(
-        f"{args.output_dir}/{args.name + ('_' if args.name else '')}PAE.html",
-        "r",
-    ) as pae_in_file:
-        pae_html = pae_in_file.read()
-        proteinfold_template = proteinfold_template.replace(
-            '<div id="pae_placeholder"></div>', pae_html
-        )
 else:
-    pattern = r'<div id="pae_container".*?>.*?(<!--.*?-->.*?)*?</div>\s*</div>'
+    pattern = r'<section[^>]*id="seq_coverage_container".*?</section>'
     proteinfold_template = re.sub(pattern, "", proteinfold_template, flags=re.DOTALL)
+
+if pae_payload is not None:
+    proteinfold_template = proteinfold_template.replace(
+        '<div id="pae_placeholder"></div>',
+        '<div id="pae-root" class="w-full"></div>',
+    )
+else:
+    pattern = r'<section[^>]*id="pae_container".*?</section>'
+    proteinfold_template = re.sub(pattern, "", proteinfold_template, flags=re.DOTALL)
+
 
 with open(
     f"{args.output_dir}/{args.name}_{file_tag.lower()}_report.html", "w"

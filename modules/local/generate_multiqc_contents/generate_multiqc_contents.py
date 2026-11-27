@@ -201,7 +201,7 @@ def parse_ranked_score(filepath, sample_name, metric, rows):
 def parse_msa(filepath, sample_name, rows):
     """MSA depth: the number of sequence rows in ``<id>[_<mode>]_msa.tsv``."""
     with open(filepath) as handle:
-        depth = sum(1 for line in handle if line.strip())
+        depth = sum(1 for line in handle if line.strip() and not line.startswith("#"))
     if depth == 0:
         warn(f"MSA file {filepath.name} is empty; skipping")
         return

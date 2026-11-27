@@ -22,7 +22,8 @@ nextflow_process {
                     [file(params.pipelines_testdata_base_path + 'testdata/metrics/S1_scalar.tsv', checkIfExists: true)],
                     [file(params.pipelines_testdata_base_path + 'testdata/metrics/S1_scalar.tsv', checkIfExists: true)],
                     [file(params.pipelines_testdata_base_path + 'testdata/metrics/S1_chainwise.tsv', checkIfExists: true)],
-                    [file("${projectDir}/tests/fixtures/NO_FILE")]
+                    [file("${projectDir}/tests/fixtures/NO_FILE")],
+                    [file("${projectDir}/tests/fixtures/entities_empty.json", checkIfExists: true)]
                 )
                 input[1] = file("${projectDir}/assets/report_template.html", checkIfExists: true)
                 """
@@ -36,23 +37,38 @@ nextflow_process {
             def config = new groovy.json.JsonSlurper().parseText(matcher[0][1])
             assert config.programName == "Boltz2"
             assert config.sampleName == "S1"
-            assert config.structFormat == "cif"
-            assert config.models == ["rank_0.cif", "rank_1.cif"]
-            assert config.models_data.size() == 2 && config.models_data.every { it.contains("_atom_site.group_PDB") }
-            assert config.lddt_averages.size() == 2
-            assert config.iptm_scores == ["0.725", "n/a"] && config.ipsae_scores == ["0.725", "n/a"]
+            // Only the top-ranked structure is embedded, in its original format
+            assert config.model == "rank_0.pdb"
+            assert config.structFormat == "pdb"
+            assert config.modelData.count("ATOM") >= 1 && !config.modelData.contains("rank_1")
+            assert config.plddtAverage == 80.5 || config.plddtAverage instanceof Number
+            assert config.iptmScore == "0.725" && config.ipsaeScore == "0.725"
             def payload = "</script><img src=x onerror=alert(1)>"
-            assert config.chainwise[0].chains.contains(payload)
-            assert config.chainwise_ipsae[0].chains == []
+            assert config.chainwise.chains.contains(payload)
+            assert config.chainwise_ipsae.chains == []
             assert !html.contains("<img src=x onerror=alert(1)>")
-            assert !((html =~ /(?s)const renderScoreMatrix = .*?const updatePairScoreTables/)[0]).contains("innerHTML")
-            assert html.contains('onclick="downloadStructure()"') && !html.contains("downloadPdb")
-            assert html.contains('id="structure-download-label"') && html.contains('structure-download-label").textContent')
-            assert (html =~ /image\.id =/).count == 1
-            def downloader = (html =~ /(?s)const downloadStructure = .*?const makeDownload/)[0]
-            assert downloader.contains("MODELS[state.model]")
-            assert !downloader.contains(".cif.cif") && !downloader.contains("SAMPLE_NAME")
-            assert html.contains("const modelLabel = ")
+            assert !((html =~ /(?s)const renderScoreMatrix = .*?const buildInteractivePanels/)[0]).contains("innerHTML")
+            // The viewer's custom floating action buttons (reset view,
+            // download) were dropped in favour of Molstar's own controls
+            assert !html.contains("downloadStructure") && !html.contains("makeDownload")
+            // Molstar-based viewer with cross-highlighting scaffolding
+            assert config.residues && config.residues[0][0] == "A"
+            assert config.pae == null && config.msa == null
+            // The empty entity map keeps the entity colouring hidden
+            assert config.entities == []
+            assert html.contains("cdn.jsdelivr.net/npm/molstar@") && !html.contains("ngl.js") && !html.contains("NGL.Stage")
+            assert html.contains("id=\"molstar-root\"")
+            assert html.contains("id=\"selection-readout\"")
+            assert html.contains("structureInteractivity")
+            // SBP-portal-style layout: no per-model carousel, no pLDDT trace
+            assert !html.contains("canvas_button_container") && !html.contains("plotly")
+            assert html.contains("scores-banner") && html.contains("pLDDT colour legend")
+            // Chainwise scores overlay on the PAE blocks via a colouring toggle
+            assert html.contains("matrix-mode-toggle") && html.contains("drawScoreBlocks")
+            // Ligand tokens flagged so the PAE axes give them fixed lanes
+            assert config.residues.every { it.size() == 5 }
+            // Structure colouring toggle (pLDDT bins vs shared chain palette)
+            assert html.contains("color-mode-toggle") && html.contains("chain-element")
         }
     }
 }

@@ -8,13 +8,12 @@ process GENERATE_REPORT {
         'community.wave.seqera.io/library/biopython_matplotlib_pip_plotly:35975fa0fc54b2d3' }"
 
     input:
-    tuple val(meta), path(pdb), path(msa, stageAs: 'input_msa'), path(pae, stageAs: 'input_pae'), path(iptm, stageAs: 'input_iptm'), path(ipsae, stageAs: 'input_ipsae'), path(chainwise, stageAs: 'input_chainwise'), path(chainwise_ipsae, stageAs: 'input_chainwise_ipsae')
+    tuple val(meta), path(pdb), path(msa, stageAs: 'input_msa'), path(pae, stageAs: 'input_pae'), path(iptm, stageAs: 'input_iptm'), path(ipsae, stageAs: 'input_ipsae'), path(chainwise, stageAs: 'input_chainwise'), path(chainwise_ipsae, stageAs: 'input_chainwise_ipsae'), path(entities, stageAs: 'input_entities')
     path(template)
 
     output:
     tuple val(meta), path ("*report.html")     , emit: report
     tuple val(meta), path ("*seq_coverage.png"), optional: true, emit: sequence_coverage
-    tuple val(meta), path ("*_LDDT.html")      , emit: plddt
     tuple val("${task.process}"), val('python'), eval("python3 --version | sed 's/Python //g'"), emit: versions_python, topic: versions
     tuple val("${task.process}"), val('generate_report.py'), eval("python3 --version | sed 's/Python //g'"), emit: versions_generate_report, topic: versions
 
@@ -34,6 +33,7 @@ process GENERATE_REPORT {
         --ipsae ${ipsae} \\
         --chainwise ${chainwise} \\
         --chainwise_ipsae ${chainwise_ipsae} \\
+        --entities ${entities} \\
         --pdb ${pdb.join(' ')} \\
         --html_template ${template} \\
         --output_dir ./ \\
@@ -45,7 +45,6 @@ process GENERATE_REPORT {
     """
     touch ${meta.id}_${meta.mode_short}_${meta.msa_short ?: 'msa'}_report.html
     touch ${meta.id}_${meta.mode_short}_${meta.msa_short ?: 'msa'}_seq_coverage.png
-    touch ${meta.id}_coverage_LDDT.html
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

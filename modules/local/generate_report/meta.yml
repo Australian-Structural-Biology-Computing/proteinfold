@@ -44,14 +44,6 @@ output:
           type: file
           description: Sequence coverage plot.
           pattern: "*seq_coverage.png"
-  plddt:
-    - - meta:
-          type: map
-          description: Groovy Map containing sample information and model type.
-      - "*_LDDT.html":
-          type: file
-          description: Per-residue LDDT confidence report.
-          pattern: "*_LDDT.html"
   versions_python:
     - - "${task.process}":
           type: string
