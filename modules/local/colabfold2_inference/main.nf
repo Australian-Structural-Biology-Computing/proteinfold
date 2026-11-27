@@ -5,6 +5,30 @@ process COLABFOLD2_INFERENCE {
 
     container "ghcr.io/tlitfin/proteinfold_colabfold:af3-preview-38683c2"
 
+    // The compiled-kernel cache lives outside the work directory and is only
+    // referenced inside the script, so container autoMounts never sees it:
+    // bind it explicitly so users don't have to pass --singularity-args.
+    // A bind source must exist before the container starts, which the
+    // pipeline guarantees by creating it on the host at launch.
+    containerOptions {
+        if (params.colabfold2_compile_cache) {
+            // Resolve against the launch directory and canonicalise: a bind
+            // destination must be absolute (a relative --colabfold2_compile_cache
+            // makes apptainer abort the container with 'destination must be an
+            // absolute path').
+            def dir = file(params.colabfold2_compile_cache).toAbsolutePath().toString()
+            if (dir.contains(':') || dir.contains(',')) {
+                error("--colabfold2_compile_cache must not contain ':' or ',' (container bind delimiters)")
+            }
+            def quoted_dir = "'" + dir.replace("'", "'\\''") + "'"
+            if (workflow.containerEngine in ['singularity', 'apptainer']) {
+                "--bind ${quoted_dir}"
+            } else if (workflow.containerEngine == 'docker') {
+                "-v ${quoted_dir}:${quoted_dir}"
+            }
+        }
+    }
+
     input:
     tuple val(meta), path(input), val(model_type), val(use_esm), path(params_path)
     val num_recycles
@@ -41,6 +65,13 @@ process COLABFOLD2_INFERENCE {
     def precision = task.ext.weights_precision ?: 'fp32'
     // Forward the global --random_seed; colabfold_batch defaults to 0 anyway.
     def random_seed_arg = params.random_seed != null ? "--random-seed ${params.random_seed}" : ''
+    // Persistent JIT cache for the AF3-family backends: their pinned build has no
+    // native compile-cache consumption, so jax's own persistent compilation cache
+    // (JAX_COMPILATION_CACHE_DIR) covers them. The AlphaFold2 backends get
+    // colabfold's per-shape executable cache via --compile-cache.
+    // Same canonicalisation as the containerOptions bind above: the script
+    // text carries the absolute path so the mount and the flags always agree.
+    def compile_cache = params.colabfold2_compile_cache ? file(params.colabfold2_compile_cache).toAbsolutePath().toString() : ''
     def input_files = input instanceof Collection ? input.collect { file_path -> file_path.name } : [input.name]
     if (input_files.size() != 1) {
         error("COLABFOLD2_INFERENCE received multiple inputs for sample '${meta.id}'. Use --split_fasta to run each FASTA record independently.")
@@ -50,6 +81,8 @@ process COLABFOLD2_INFERENCE {
     def structure_ext = (model_type == 'auto' || model_type.startsWith('alphafold2')) ? 'pdb' : 'cif'
     def shell_quote = { name -> "'" + name.replace("'", "'\\''") + "'" }
     def quoted_input_files = input_files.collect(shell_quote).join(' ')
+    def quoted_compile_cache = shell_quote.call(compile_cache)
+    def compile_cache_arg = compile_cache ? "--compile-cache ${quoted_compile_cache}" : ''
 
     """
     if ! command -v colabfold_batch >/dev/null 2>&1; then
@@ -87,6 +120,10 @@ process COLABFOLD2_INFERENCE {
     _register_missing_gpu_kinds()
     EOF
     export PYTHONPATH="\$PWD\${PYTHONPATH:+:\$PYTHONPATH}"
+    if [ ${quoted_compile_cache} != '' ]; then
+        mkdir -p ${quoted_compile_cache}
+        export JAX_COMPILATION_CACHE_DIR=${quoted_compile_cache}
+    fi
 
     mkdir raw
     colabfold_batch_af3_chainwise.py \
@@ -97,6 +134,7 @@ process COLABFOLD2_INFERENCE {
         --weights-precision ${precision} \
         --data "${params_path}" \
         ${random_seed_arg} \
+        ${compile_cache_arg} \
         $args \
         msa_in/ \
         raw/

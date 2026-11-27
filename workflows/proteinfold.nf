@@ -65,6 +65,16 @@ workflow PROTEINFOLD {
     ch_af3_rnacentral   // channel: path(rnacentral)
 
     main:
+    // The compiled-kernel cache is bound into the inference containers, and
+    // a bind source must exist before a container starts -- create it on the
+    // host, owned by the launching user, ahead of any task.
+    if (params.colabfold2_compile_cache) {
+        // Resolved against the launch directory, matching the module's bind.
+        def cache_dir = new File(file(params.colabfold2_compile_cache).toAbsolutePath().toString())
+        if (!cache_dir.mkdirs() && !cache_dir.isDirectory()) {
+            error("Cannot create --colabfold2_compile_cache directory: ${cache_dir}")
+        }
+    }
     def COLABFOLD2_BACKENDS = [
         'auto'                   : 'ALPHAFOLD2',   // the plain alphafold2 token
         'alphafold2'             : 'ALPHAFOLD2',   // defensive alias for the same token
