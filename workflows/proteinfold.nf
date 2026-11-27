@@ -70,7 +70,10 @@ workflow PROTEINFOLD {
     // host, owned by the launching user, ahead of any task.
     if (params.colabfold2_compile_cache) {
         // Resolved against the launch directory, matching the module's bind.
-        new File(file(params.colabfold2_compile_cache).toAbsolutePath().toString()).mkdirs()
+        def cache_dir = new File(file(params.colabfold2_compile_cache).toAbsolutePath().toString())
+        if (!cache_dir.mkdirs() && !cache_dir.isDirectory()) {
+            error("Cannot create --colabfold2_compile_cache directory: ${cache_dir}")
+        }
     }
     def COLABFOLD2_BACKENDS = [
         'auto'                   : 'ALPHAFOLD2',   // the plain alphafold2 token

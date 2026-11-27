@@ -81,6 +81,8 @@ time would then invalidate `-resume` on every run. This way tasks hash only
 the directory's path, and the cache contents can evolve freely between
 resumed runs.
 
+Relative cache paths resolve against the Nextflow launch directory. Paths containing spaces or apostrophes are supported; `:` and `,` are rejected because they are container bind delimiters.
+
 Both mechanisms cache compiled executables that a run loads and executes, so
 a cache directory is code, not data: anyone who can write to it can run code
 with the privileges of every user whose runs consume it. Keep the cache

@@ -1,0 +1,134 @@
+nextflow_process {
+    name 'Test ColabFold2 compile cache command wiring'
+    script '../main.nf'
+    process 'COLABFOLD2_INFERENCE'
+    config './nextflow.config'
+    profile 'test_nostub'
+    tag 'colabfold2_compile_cache'
+
+    setup {
+        def mocks = file("$outputDir/mock-bin")
+        mocks.mkdirs()
+        file("$outputDir/input.a3m").text = '>sample\nACDE\n'
+        file("$outputDir/params").mkdirs()
+        def commands = [
+            'colabfold_batch': '#!/bin/bash\nexit 0\n',
+            'python3': '#!/bin/bash\nprintf "mock\\n"\n',
+            'extract_metrics.py': '#!/bin/bash\ntouch sample_msa.tsv\n',
+            'colabfold_batch_af3_chainwise.py': '''#!/bin/bash
+printf '%s\\n' "$@" > raw/cache-args.txt
+printf '%s' "${JAX_COMPILATION_CACHE_DIR-}" > raw/cache-env.txt
+cp cache-bind.txt cache-launch-dir.txt raw/
+touch raw/sample_rank_001.pdb raw/sample_scores_rank_001.json raw/sample.a3m
+'''
+        ]
+        commands.each { name, text ->
+            def command = file("${mocks}/${name}")
+            command.text = text
+            command.setExecutable(true)
+        }
+    }
+
+    test('rejects ambiguous container bind delimiters') {
+        when {
+            params {
+                mock_bin = "$outputDir/mock-bin"
+                outdir = "$outputDir/results"
+                colabfold2_compile_cache = "$outputDir/cache:invalid"
+            }
+            process {
+                """
+                input[0] = [[id: 'sample', mode_short: 'af2', msa_short: 'a3m'], file('$outputDir/input.a3m'), 'alphafold2', false, file('$outputDir/params')]
+                input[1] = 1
+                """
+            }
+        }
+        then {
+            assert process.failed
+            assert (process.stdout + process.stderr).join('\n').contains('container bind delimiters')
+        }
+    }
+
+    test('cache disabled adds neither CLI flag nor JAX override') {
+        when {
+            params {
+                mock_bin = "$outputDir/mock-bin"
+                outdir = "$outputDir/results"
+                colabfold2_compile_cache = null
+            }
+            process {
+                """
+                input[0] = [[id: 'sample', mode_short: 'af2', msa_short: 'a3m'], file('$outputDir/input.a3m'), 'alphafold2', false, file('$outputDir/params')]
+                input[1] = 1
+                """
+            }
+        }
+        then {
+            assert process.success
+            def raw = process.out.raw.flatten()
+            def args = new File(raw.find { it.toString().endsWith('cache-args.txt') }.toString()).readLines()
+            assert !args.contains('--compile-cache')
+            assert new File(raw.find { it.toString().endsWith('cache-env.txt') }.toString()).text == ''
+            assert new File(raw.find { it.toString().endsWith('cache-bind.txt') }.toString()).text == ''
+        }
+    }
+
+    test('relative cache with spaces uses one absolute CLI and JAX path') {
+        when {
+            params {
+                mock_bin = "$outputDir/mock-bin"
+                outdir = "$outputDir/results"
+                colabfold2_compile_cache = 'relative cache'
+            }
+            process {
+                """
+                input[0] = [[id: 'sample', mode_short: 'af2', msa_short: 'a3m'], file('$outputDir/input.a3m'), 'alphafold2', false, file('$outputDir/params')]
+                input[1] = 1
+                """
+            }
+        }
+        then {
+            assert process.success
+            def raw = process.out.raw.flatten()
+            def args = new File(raw.find { it.toString().endsWith('cache-args.txt') }.toString()).readLines()
+            def cache = args[args.indexOf('--compile-cache') + 1]
+            assert args.count('--compile-cache') == 1
+            assert new File(cache).isAbsolute()
+            def launchDir = new File(raw.find { it.toString().endsWith('cache-launch-dir.txt') }.toString()).text
+            assert cache == new File(launchDir, 'relative cache').absolutePath
+            assert new File(raw.find { it.toString().endsWith('cache-env.txt') }.toString()).text == cache
+            assert new File(cache).isDirectory()
+            def bind = new File(raw.find { it.toString().endsWith('cache-bind.txt') }.toString()).text
+            def tokens = ['bash', '-c', 'set -- ' + bind + '; printf "%s\\n" "$@"'].execute().text.readLines()
+            assert tokens == ['--bind', cache]
+        }
+    }
+
+    test('absolute cache preserves spaces and apostrophes') {
+        when {
+            params {
+                mock_bin = "$outputDir/mock-bin"
+                outdir = "$outputDir/results"
+                colabfold2_compile_cache = "$outputDir/cache space's"
+            }
+            process {
+                """
+                input[0] = [[id: 'sample', mode_short: 'af2', msa_short: 'a3m'], file('$outputDir/input.a3m'), 'alphafold2', false, file('$outputDir/params')]
+                input[1] = 1
+                """
+            }
+        }
+        then {
+            assert process.success
+            def raw = process.out.raw.flatten()
+            def args = new File(raw.find { it.toString().endsWith('cache-args.txt') }.toString()).readLines()
+            assert args.count('--compile-cache') == 1
+            assert args[args.indexOf('--compile-cache') + 1] == params.colabfold2_compile_cache
+            assert new File(raw.find { it.toString().endsWith('cache-env.txt') }.toString()).text == params.colabfold2_compile_cache
+            assert new File(params.colabfold2_compile_cache).isDirectory()
+            def bind = new File(raw.find { it.toString().endsWith('cache-bind.txt') }.toString()).text
+            def tokens = ['bash', '-c', 'set -- ' + bind + '; printf "%s\\n" "$@"'].execute().text.readLines()
+            assert tokens == ['--bind', params.colabfold2_compile_cache]
+        }
+    }
+}
